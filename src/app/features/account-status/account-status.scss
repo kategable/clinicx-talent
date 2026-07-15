@@ -1,0 +1,90 @@
+:host {
+  display: block;
+  min-height: 100vh;
+  background: #f3f1e8;
+  color: #12332f;
+}
+main {
+  min-height: 100vh;
+  padding: 2rem clamp(1.25rem, 6vw, 6rem);
+}
+header a {
+  color: inherit;
+  font:
+    700 1.5rem Georgia,
+    serif;
+  text-decoration: none;
+}
+header span,
+.eyebrow {
+  color: #bd6249;
+}
+section {
+  width: min(100%, 48rem);
+  margin: clamp(4rem, 12vh, 8rem) auto;
+}
+.eyebrow {
+  font-size: 0.75rem;
+  font-weight: 700;
+  letter-spacing: 0.15em;
+  text-transform: uppercase;
+}
+.status-mark {
+  display: grid;
+  place-items: center;
+  width: 3.5rem;
+  height: 3.5rem;
+  margin: 2rem 0;
+  border-radius: 50%;
+  background: #dfe9df;
+  font-weight: 800;
+}
+.status-mark.hold {
+  background: #f0ddcf;
+  color: #9b432f;
+}
+.status-mark.approved {
+  background: #d9eadf;
+  color: #276247;
+}
+h1 {
+  max-width: 42rem;
+  margin: 0 0 1.5rem;
+  font:
+    500 clamp(3rem, 8vw, 6rem)/0.94 Georgia,
+    serif;
+}
+section > p:not(.eyebrow) {
+  max-width: 38rem;
+  color: #596d68;
+  font-size: 1.15rem;
+  line-height: 1.65;
+}
+button,
+.primary {
+  display: inline-block;
+  margin-top: 2rem;
+  border: 0;
+  background: #12332f;
+  color: white;
+  padding: 1rem 1.35rem;
+  font: 700 1rem inherit;
+  text-decoration: none;
+  cursor: pointer;
+}
+small {
+  display: block;
+  margin-top: 0.75rem;
+  color: #6a7975;
+}
+.confirmed {
+  display: grid;
+  gap: 0.35rem;
+  margin-top: 2rem;
+  border-left: 3px solid #bd6249;
+  padding: 1rem 1.25rem;
+  background: #fffdf7;
+}
+.confirmed span {
+  color: #687773;
+}

@@ -1,0 +1,206 @@
+<main>
+  <header>
+    <a class="brand" routerLink="/">Clinic<span>X</span> Talent</a>
+    <nav>
+      <a routerLink="/account/status">Account status</a>
+      <button mat-button type="button" (click)="signOut()" routerLink="/">Sign out</button>
+    </nav>
+  </header>
+
+  @if (account(); as talent) {
+    <section class="welcome">
+      <div>
+        <p class="eyebrow">Talent workspace</p>
+        <h1>Tell your whole professional story.</h1>
+        <p>
+          Build a richer profile so ClinicX can understand your clinical experience, strengths,
+          availability, and goals.
+        </p>
+        <app-theme-picker />
+      </div>
+      <aside [class.approved]="talent.status === 'approved'">
+        <span>Account status</span>
+        <strong>{{ talent.status === 'under-review' ? 'Under review' : talent.status }}</strong>
+        <a routerLink="/account/status">View review status →</a>
+      </aside>
+    </section>
+
+    <section class="profile">
+      <div class="profile-intro">
+        <p class="eyebrow">Professional profile</p>
+        <h2>Help the right clinic see your potential.</h2>
+        <p>
+          Only your professional name is required for now. Add as much context as you’re ready to
+          share.
+        </p>
+      </div>
+
+      <form (submit)="$event.preventDefault(); saveProfile()">
+        <div class="form-actions">
+          <div>
+            <strong>Talent profile</strong>
+            @if (saved()) {
+              <span class="saved" role="status">Saved locally</span>
+            } @else {
+              <span>Professional name is required</span>
+            }
+          </div>
+          <button mat-flat-button class="save" type="submit" [disabled]="profileForm().invalid()">
+            Save profile
+          </button>
+        </div>
+
+        <mat-form-field appearance="outline">
+          <mat-label>Professional name</mat-label>
+          <input matInput autocomplete="name" [formField]="profileForm.professionalName" />
+          <mat-hint>AI assist coming later · Tab will accept a suggestion</mat-hint>
+          @if (profileForm.professionalName().touched() && profileForm.professionalName().invalid()) {
+            <mat-error>{{ profileForm.professionalName().errors()[0].message }}</mat-error>
+          }
+        </mat-form-field>
+
+        <h3>Photo and introduction video</h3>
+        <div class="upload-grid">
+          <label class="upload-card">
+            <strong>Profile photo</strong>
+            <span>JPG, PNG, or WebP</span>
+            <input
+              type="file"
+              accept="image/jpeg,image/png,image/webp"
+              (change)="selectFiles($event, 'photoName')"
+            />
+            <b>{{ model().photoName || 'Choose a photo' }}</b>
+          </label>
+          <label class="upload-card">
+            <strong>Introduction video</strong>
+            <span>A short MP4 or WebM introduction</span>
+            <input
+              type="file"
+              accept="video/mp4,video/webm"
+              (change)="selectFiles($event, 'videoName')"
+            />
+            <b>{{ model().videoName || 'Choose a video' }}</b>
+          </label>
+        </div>
+        <p class="storage-note">
+          MVP preview: only file names are saved locally. TODO(media): upload actual files securely
+          through the backend to object storage.
+        </p>
+
+        <h3 class="section-break">Experience and qualifications</h3>
+        <mat-form-field appearance="outline">
+          <mat-label>Professional role</mat-label>
+          <input matInput placeholder="RN Injector, NP, Esthetician" [formField]="profileForm.role" />
+          <mat-hint>AI assist coming later · Tab will accept a suggestion</mat-hint>
+        </mat-form-field>
+        <mat-form-field appearance="outline">
+          <mat-label>Location</mat-label>
+          <input
+            matInput
+            autocomplete="address-level2"
+            placeholder="Chicago, IL"
+            [formField]="profileForm.location"
+          />
+          <mat-hint>AI assist coming later · Tab will accept a suggestion</mat-hint>
+        </mat-form-field>
+        <mat-form-field appearance="outline">
+          <mat-label>Years of experience</mat-label>
+          <input matInput placeholder="6 years" [formField]="profileForm.yearsExperience" />
+          <mat-hint>AI assist coming later · Tab will accept a suggestion</mat-hint>
+        </mat-form-field>
+        <mat-form-field appearance="outline">
+          <mat-label>Experience timeline</mat-label>
+          <textarea
+            matInput
+            rows="6"
+            placeholder="2022–Present · Lead RN Injector&#10;2020–2022 · Aesthetic RN"
+            [formField]="profileForm.experienceTimeline"
+          ></textarea>
+          <mat-hint>AI assist coming later · Tab will accept a suggestion</mat-hint>
+        </mat-form-field>
+        <mat-form-field appearance="outline">
+          <mat-label>Skills and treatments</mat-label>
+          <textarea
+            matInput
+            rows="4"
+            placeholder="Injectables, lasers, Morpheus8, consultations, sales"
+            [formField]="profileForm.skills"
+          ></textarea>
+          <mat-hint>AI assist coming later · Tab will accept a suggestion</mat-hint>
+        </mat-form-field>
+        <label class="upload-card wide">
+          <strong>Certificates and licenses</strong>
+          <span>Choose one or more PDF or image files</span>
+          <input
+            type="file"
+            multiple
+            accept="application/pdf,image/jpeg,image/png,image/webp"
+            (change)="selectFiles($event, 'certificateNames')"
+          />
+          <b>{{
+            model().certificateNames.length
+              ? model().certificateNames.join(', ')
+              : 'Choose certificates'
+          }}</b>
+        </label>
+
+        <h3 class="section-break">Preferences and profile</h3>
+        <mat-form-field appearance="outline">
+          <mat-label>Availability</mat-label>
+          <select matNativeControl [formField]="profileForm.availability">
+            <option value="">Select availability</option>
+            <option value="Full time">Full time</option>
+            <option value="Part time">Part time</option>
+            <option value="Contract">Contract</option>
+            <option value="Open to options">Open to options</option>
+          </select>
+          <mat-hint>AI assist coming later · Tab will accept a suggestion</mat-hint>
+        </mat-form-field>
+        <mat-form-field appearance="outline">
+          <mat-label>Salary expectation</mat-label>
+          <input matInput placeholder="$95,000–$115,000" [formField]="profileForm.salaryExpectation" />
+          <mat-hint>AI assist coming later · Tab will accept a suggestion</mat-hint>
+        </mat-form-field>
+        <mat-form-field appearance="outline">
+          <mat-label>Languages</mat-label>
+          <input matInput placeholder="English, Spanish" [formField]="profileForm.languages" />
+          <mat-hint>AI assist coming later · Tab will accept a suggestion</mat-hint>
+        </mat-form-field>
+        <mat-form-field appearance="outline">
+          <mat-label>Portfolio</mat-label>
+          <input
+            matInput
+            type="url"
+            inputmode="url"
+            placeholder="https://your-portfolio.com"
+            [formField]="profileForm.portfolioUrl"
+          />
+          <mat-hint>AI assist coming later · Tab will accept a suggestion</mat-hint>
+        </mat-form-field>
+        <mat-form-field appearance="outline">
+          <mat-label>Professional introduction</mat-label>
+          <textarea
+            matInput
+            rows="6"
+            placeholder="Tell clinics about your approach to patients, service, and professional growth."
+            [formField]="profileForm.introduction"
+          ></textarea>
+          <mat-hint>AI assist coming later · Tab will accept a suggestion</mat-hint>
+        </mat-form-field>
+        <label class="upload-card wide">
+          <strong>Before/After gallery <span>Optional</span></strong>
+          <span>Select multiple JPG, PNG, or WebP images</span>
+          <input
+            type="file"
+            multiple
+            accept="image/jpeg,image/png,image/webp"
+            (change)="selectFiles($event, 'galleryNames')"
+          />
+          <b>{{
+            model().galleryNames.length ? model().galleryNames.join(', ') : 'Choose gallery images'
+          }}</b>
+        </label>
+      </form>
+    </section>
+  }
+</main>

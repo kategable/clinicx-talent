@@ -1,0 +1,77 @@
+<main>
+  <header>
+    <a class="brand" routerLink="/">Clinic<span>X</span> Talent</a
+    ><span class="status">Account under review</span>
+  </header>
+  @if (currentAccount(); as account) {
+    <section>
+      <div class="intro">
+        <div class="eyebrow">
+          {{ account.type === 'clinic' ? 'Clinic profile' : 'Talent profile' }}
+        </div>
+        <h1>Build the profile we’ll review.</h1>
+        <p>
+          You can complete your account now. It remains private until a ClinicX administrator
+          approves it for matching.
+        </p>
+        <div class="review-card">
+          <strong>What happens next?</strong>
+          <ol>
+            <li>Complete your core profile</li>
+            <li>ClinicX verifies your information</li>
+            <li>An admin approves or places the account on hold</li>
+          </ol>
+        </div>
+      </div>
+      <div class="form-card">
+        @if (!saved()) {
+          <span class="step-label">Core details · 1 of 4</span>
+          <h2>
+            {{
+              account.type === 'clinic' ? 'Tell us about your clinic.' : 'Tell us about yourself.'
+            }}
+          </h2>
+          <form (submit)="saveProfile(); $event.preventDefault()">
+            <label for="name">{{
+              account.type === 'clinic' ? 'Clinic name' : 'Professional name'
+            }}</label
+            ><input id="name" [formField]="profileForm.name" />
+            @if (profileForm.name().touched() && profileForm.name().errors().length) {
+              <p class="error">{{ profileForm.name().errors()[0].message }}</p>
+            }
+            <label for="city">Primary city</label><input id="city" [formField]="profileForm.city" />
+            @if (profileForm.city().touched() && profileForm.city().errors().length) {
+              <p class="error">{{ profileForm.city().errors()[0].message }}</p>
+            }
+            <label for="headline">{{
+              account.type === 'clinic'
+                ? 'What makes your clinic special?'
+                : 'Professional headline'
+            }}</label
+            ><textarea id="headline" rows="4" [formField]="profileForm.headline"></textarea>
+            @if (profileForm.headline().touched() && profileForm.headline().errors().length) {
+              <p class="error">{{ profileForm.headline().errors()[0].message }}</p>
+            }
+            <button type="submit">Save and continue <span>→</span></button>
+          </form>
+        } @else {
+          <div class="success">
+            <span>✓</span>
+            <h2>Core profile saved.</h2>
+            <p>
+              Your account is still under review. The next MVP step will add experience, skills,
+              licenses, and media.
+            </p>
+            <a routerLink="/">Return home</a>
+          </div>
+        }
+      </div>
+    </section>
+  } @else {
+    <div class="missing">
+      <h1>Start with phone verification.</h1>
+      <p>We need an active account before building a profile.</p>
+      <a routerLink="/register">Create or access an account</a>
+    </div>
+  }
+</main>

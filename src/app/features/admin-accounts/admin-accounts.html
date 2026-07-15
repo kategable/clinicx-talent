@@ -1,0 +1,69 @@
+<main>
+  <aside>
+    <a class="brand" routerLink="/">Clinic<span>X</span></a>
+    <nav>
+      <a class="active" routerLink="/admin/accounts"
+        >Account review <b>{{ pendingCount() }}</b></a
+      ><span>Talent</span><span>Clinics</span><span>Jobs</span><span>Placements</span>
+    </nav>
+    <a class="site-link" routerLink="/">View website →</a>
+  </aside>
+  <section>
+    <header>
+      <div>
+        <p>ClinicX admin</p>
+        <h1>Account review</h1>
+      </div>
+      <button class="admin-user" type="button" (click)="signOut()" aria-label="Sign out of admin">
+        KM
+      </button>
+    </header>
+    <div class="summary">
+      <div>
+        <span>Needs review</span><strong>{{ pendingCount() }}</strong>
+      </div>
+      <div>
+        <span>Total accounts</span><strong>{{ accounts().length }}</strong>
+      </div>
+      <div><span>Default state</span><strong>On hold</strong></div>
+    </div>
+    <div class="table-heading">
+      <div>
+        <h2>New accounts</h2>
+        <p>Verify every clinic and talent before approving marketplace access.</p>
+      </div>
+      <span>Local MVP data</span>
+    </div>
+    <div class="account-list">
+      @for (account of accounts(); track account.id) {
+        <article>
+          <div class="identity">
+            <span class="avatar">{{ account.type === 'clinic' ? 'CX' : 'PR' }}</span>
+            <div>
+              <strong>{{ account.displayName }}</strong
+              ><small>{{ account.phone }} · {{ account.createdAt }}</small>
+            </div>
+          </div>
+          <span class="type">{{ account.type }}</span
+          ><span class="profile" [class.complete]="account.profileComplete">{{
+            account.profileComplete ? 'Profile ready' : 'Profile started'
+          }}</span
+          ><span
+            class="review"
+            [class.approved]="account.status === 'approved'"
+            [class.hold]="account.status === 'on-hold'"
+            >{{ statusLabel(account.status) }}</span
+          >
+          <div class="actions">
+            <button type="button" (click)="setStatus(account.id, 'approved')">Allow in</button
+            ><button type="button" (click)="setStatus(account.id, 'on-hold')">On hold</button>
+          </div>
+        </article>
+      }
+    </div>
+    <p class="security-note">
+      MVP admin access is locally simulated. TODO(auth): replace the hard-coded login, client-side
+      guard, and review mutations with server authentication, role authorization, and audited APIs.
+    </p>
+  </section>
+</main>

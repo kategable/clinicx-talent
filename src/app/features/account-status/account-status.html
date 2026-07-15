@@ -1,0 +1,51 @@
+<main>
+  <header>
+    <a routerLink="/">Clinic<span>X</span> Talent</a>
+  </header>
+  @if (account(); as current) {
+    <section>
+      <p class="eyebrow">Account status</p>
+      @if (current.status === 'under-review') {
+        <div class="status-mark">01</div>
+        <h1>Your account is under review.</h1>
+        <p>
+          Our team is reviewing your {{ current.type === 'clinic' ? 'clinic' : 'talent' }}
+          profile. We’ll let you know when marketplace access is ready.
+        </p>
+      } @else if (current.status === 'on-hold') {
+        <div class="status-mark hold">!</div>
+        <h1>Your account is currently on hold.</h1>
+        <p>
+          We need additional review before opening marketplace access. ClinicX will follow up if
+          more information is required.
+        </p>
+      } @else {
+        <div class="status-mark approved">✓</div>
+        <h1>Your account is approved.</h1>
+        <p>Your ClinicX marketplace access is ready.</p>
+        @if (current.type === 'clinic') {
+          <a class="primary" routerLink="/clinic/talents">Start talent search</a>
+        } @else {
+          <a class="primary" routerLink="/talent/home">Open your profile</a>
+        }
+      }
+
+      @if (current.status !== 'approved') {
+        @if (reminderSent()) {
+          <div class="confirmed" role="status">
+            <strong>We noted that you’re waiting.</strong>
+            <span>This local MVP action won’t send a message yet.</span>
+          </div>
+        } @else {
+          <button type="button" (click)="requestReminder()">I’m waiting — let ClinicX know</button>
+          <small>You can send this reminder once during this browser session.</small>
+        }
+      }
+    </section>
+  } @else {
+    <section>
+      <h1>Sign in to view your account status.</h1>
+      <a class="primary" routerLink="/signin">Sign in</a>
+    </section>
+  }
+</main>

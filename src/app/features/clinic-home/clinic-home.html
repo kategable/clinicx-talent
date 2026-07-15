@@ -1,0 +1,167 @@
+<main>
+  <header>
+    <a class="brand" routerLink="/">Clinic<span>X</span> Talent</a>
+    <nav>
+      <a routerLink="/clinic/talents">Talent search</a>
+      <button mat-button type="button" (click)="signOut()" routerLink="/">Sign out</button>
+    </nav>
+  </header>
+
+  @if (account(); as clinic) {
+    <section class="welcome">
+      <div>
+        <p class="eyebrow">Clinic workspace</p>
+        <h1>Welcome back,<br />{{ clinic.displayName }}.</h1>
+        <p>Keep your clinic profile current so we can curate talent that fits your team.</p>
+      </div>
+      <aside [class.approved]="clinic.status === 'approved'">
+        <span>Account status</span>
+        <strong>{{ clinic.status === 'under-review' ? 'Under review' : clinic.status }}</strong>
+        @if (clinic.status === 'approved') {
+          <a routerLink="/clinic/talents">Start talent search →</a>
+        } @else {
+          <a routerLink="/account/status">View review status →</a>
+          <small>Talent search opens after approval.</small>
+        }
+      </aside>
+    </section>
+
+    <section class="details">
+      <div class="details-intro">
+        <p class="eyebrow">Clinic profile</p>
+        <h2>Help us understand your clinic.</h2>
+        <p>
+          These details give ClinicX more context when reviewing your account and preparing future
+          talent matches.
+        </p>
+        <app-theme-picker />
+      </div>
+      <form (submit)="$event.preventDefault(); saveDetails()">
+        <div class="form-actions">
+          <div>
+            <strong>Clinic and hiring details</strong>
+            @if (saved()) {
+              <span class="saved" role="status">Saved locally</span>
+            } @else {
+              <span>Clinic name is required</span>
+            }
+          </div>
+          <button mat-flat-button class="save" type="submit" [disabled]="detailsForm().invalid()">
+            Save details
+          </button>
+        </div>
+        <h3>Clinic details</h3>
+        <mat-form-field appearance="outline">
+          <mat-label>Clinic name</mat-label>
+          <input matInput autocomplete="organization" [formField]="detailsForm.clinicName" />
+          <mat-hint>AI assist coming later · Tab will accept a suggestion</mat-hint>
+          @if (detailsForm.clinicName().touched() && detailsForm.clinicName().invalid()) {
+            <mat-error>{{ detailsForm.clinicName().errors()[0].message }}</mat-error>
+          }
+        </mat-form-field>
+        <mat-form-field appearance="outline">
+          <mat-label>Location</mat-label>
+          <input
+            matInput
+            autocomplete="street-address"
+            placeholder="Neighborhood, city, or full address"
+            [formField]="detailsForm.location"
+          />
+          <mat-hint>AI assist coming later · Tab will accept a suggestion</mat-hint>
+        </mat-form-field>
+        <div class="two-column">
+          <mat-form-field appearance="outline">
+            <mat-label>City</mat-label>
+            <input matInput autocomplete="address-level2" [formField]="detailsForm.city" />
+            <mat-hint>AI assist coming later</mat-hint>
+          </mat-form-field>
+          <mat-form-field appearance="outline">
+            <mat-label>State</mat-label>
+            <input matInput autocomplete="address-level1" [formField]="detailsForm.state" />
+            <mat-hint>Two-letter abbreviation</mat-hint>
+            @if (detailsForm.state().touched() && detailsForm.state().invalid()) {
+              <mat-error>{{ detailsForm.state().errors()[0].message }}</mat-error>
+            }
+          </mat-form-field>
+        </div>
+        <mat-form-field appearance="outline">
+          <mat-label>Website (optional)</mat-label>
+          <input
+            matInput
+            type="url"
+            inputmode="url"
+            placeholder="https://"
+            [formField]="detailsForm.website"
+          />
+          <mat-hint>AI assist coming later · Tab will accept a suggestion</mat-hint>
+        </mat-form-field>
+        <mat-form-field appearance="outline">
+          <mat-label>Treatments and specialties</mat-label>
+          <textarea matInput rows="3" [formField]="detailsForm.specialties"></textarea>
+          <mat-hint>AI assist coming later · Tab will accept a suggestion</mat-hint>
+        </mat-form-field>
+        <mat-form-field appearance="outline">
+          <mat-label>About your clinic</mat-label>
+          <textarea matInput rows="5" [formField]="detailsForm.about"></textarea>
+          <mat-hint>AI assist coming later · Tab will accept a suggestion</mat-hint>
+        </mat-form-field>
+
+        <h3 class="section-break">Hiring brief</h3>
+        <mat-form-field appearance="outline">
+          <mat-label>Position</mat-label>
+          <input matInput placeholder="RN Injector" [formField]="detailsForm.position" />
+          <mat-hint>AI assist coming later · Tab will accept a suggestion</mat-hint>
+        </mat-form-field>
+        <mat-form-field appearance="outline">
+          <mat-label>Must-have skills</mat-label>
+          <textarea
+            matInput
+            rows="3"
+            placeholder="Injectables, Morpheus8, consultative sales"
+            [formField]="detailsForm.mustHaveSkills"
+          ></textarea>
+          <mat-hint>AI assist coming later · Tab will accept a suggestion</mat-hint>
+        </mat-form-field>
+        <mat-form-field appearance="outline">
+          <mat-label>Pay range</mat-label>
+          <input matInput placeholder="$85,000–$110,000" [formField]="detailsForm.payRange" />
+          <mat-hint>AI assist coming later · Tab will accept a suggestion</mat-hint>
+        </mat-form-field>
+        <mat-form-field appearance="outline">
+          <mat-label>Benefits (optional)</mat-label>
+          <textarea
+            matInput
+            rows="3"
+            placeholder="Health insurance, paid time off, treatment allowance"
+            [formField]="detailsForm.benefits"
+          ></textarea>
+          <mat-hint>AI assist coming later · Tab will accept a suggestion</mat-hint>
+        </mat-form-field>
+        <mat-form-field appearance="outline">
+          <mat-label>Urgency</mat-label>
+          <select matNativeControl [formField]="detailsForm.urgency">
+            <option value="">Select an urgency</option>
+            <option value="Immediately">Immediately</option>
+            <option value="Within 30 days">Within 30 days</option>
+            <option value="Within 60 days">Within 60 days</option>
+            <option value="Exploring options">Exploring options</option>
+          </select>
+          <mat-hint>AI assist coming later · Tab will accept a suggestion</mat-hint>
+        </mat-form-field>
+        <mat-form-field appearance="outline">
+          <mat-label>Tell us about your ideal hire</mat-label>
+          <textarea
+            matInput
+            rows="5"
+            placeholder="Describe the experience, mindset, and personality that thrive at your clinic."
+            [formField]="detailsForm.idealHire"
+          ></textarea>
+          <mat-hint>AI assist coming later · Tab will accept a suggestion</mat-hint>
+        </mat-form-field>
+        @if (detailsForm().touched() && detailsForm().invalid()) {
+          <p class="error" role="alert">Add a clinic name and correct any invalid details.</p>
+        }
+      </form>
+    </section>
+  }
+</main>

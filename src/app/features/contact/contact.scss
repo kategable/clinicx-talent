@@ -1,0 +1,53 @@
+:host {
+  display: block;
+  min-height: 100vh;
+  background: #f3f1e8;
+  color: #12332f;
+}
+main {
+  padding: 2rem clamp(1.25rem, 6vw, 6rem);
+}
+.brand {
+  color: inherit;
+  font:
+    700 1.5rem Georgia,
+    serif;
+  text-decoration: none;
+}
+.brand span,
+section > p:first-child {
+  color: #bd6249;
+}
+section {
+  width: min(100%, 43rem);
+  margin: clamp(5rem, 15vh, 10rem) auto;
+}
+h1 {
+  margin: 0.5rem 0 1.5rem;
+  font:
+    500 clamp(3rem, 9vw, 6rem)/0.92 Georgia,
+    serif;
+}
+section > p {
+  max-width: 38rem;
+  font-size: 1.1rem;
+  line-height: 1.65;
+}
+.button {
+  display: inline-block;
+  margin: 1rem 1rem 2rem 0;
+  background: #12332f;
+  color: white;
+  padding: 1rem 1.4rem;
+  text-decoration: none;
+}
+section > a:not(.button) {
+  color: inherit;
+}
+small {
+  display: block;
+  border-top: 1px solid #ccd2ca;
+  padding-top: 1.5rem;
+  color: #687773;
+  line-height: 1.5;
+}

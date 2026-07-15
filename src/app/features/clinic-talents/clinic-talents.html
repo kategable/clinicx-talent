@@ -1,0 +1,22 @@
+<main>
+  <header>
+    <a routerLink="/">Clinic<span>X</span> Talent</a>
+  </header>
+  <section>
+    <p>Clinic workspace</p>
+    <h1>Find your next exceptional hire.</h1>
+    @if (account(); as current) {
+      <p>Welcome, {{ current.displayName }}. Your talent search will start here.</p>
+    } @else {
+      <p>Sign in with an approved clinic account to begin.</p>
+    }
+    <div>
+      <strong>Talent search is coming next.</strong>
+      <span
+        >Filters, curated matches, talent profiles, and interview requests are not implemented
+        yet.</span
+      >
+    </div>
+    <a routerLink="/clinic">← Back to clinic home</a>
+  </section>
+</main>

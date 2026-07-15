@@ -1,0 +1,241 @@
+<header class="site-header">
+  <a class="brand" href="#top" aria-label="ClinicX Talent home">Clinic<span>X</span> Talent</a>
+  <nav aria-label="Main navigation">
+    <a href="#for-clinics">For clinics</a>
+    <a href="#for-talents">For talent</a>
+    <a href="#how-it-works">How it works</a>
+    @if (currentAccount(); as account) {
+      <a class="sign-in account-link" [routerLink]="accountLink()">{{ account.displayName }}</a>
+    } @else {
+      <a class="sign-in" routerLink="/signin">Sign in</a>
+    }
+  </nav>
+</header>
+
+<main id="top">
+  <section class="hero">
+    <div class="hero-copy">
+      <div class="eyebrow">The talent standard for aesthetics</div>
+      <h1>Exceptional clinics deserve exceptional people.</h1>
+      <p>
+        ClinicX connects med spas with thoughtfully vetted professionals—so every introduction is
+        worth your time.
+      </p>
+      <div class="hero-actions">
+        <a class="button button-primary" routerLink="/register" [queryParams]="{ type: 'clinic' }"
+          >Register your clinic <span aria-hidden="true">→</span></a
+        >
+        <a class="button button-secondary" routerLink="/register" [queryParams]="{ type: 'talent' }"
+          >Create a talent profile</a
+        >
+      </div>
+      <p class="hero-note">No job-board noise. Just curated introductions.</p>
+    </div>
+    <aside class="hero-proof" aria-label="ClinicX vetting overview">
+      <div class="proof-kicker">Every talent is reviewed for</div>
+      <ul>
+        <li><span>01</span>Verified experience</li>
+        <li><span>02</span>Licensing and skills</li>
+        <li><span>03</span>Luxury service mindset</li>
+        <li><span>04</span>Communication and culture</li>
+      </ul>
+      <div class="proof-seal"><strong>Human</strong><span>vetted</span></div>
+    </aside>
+  </section>
+
+  <section class="credibility" aria-label="ClinicX benefits">
+    <p>Built exclusively for the aesthetics industry</p>
+    <div><strong>Less noise</strong><span>Curated, relevant talent</span></div>
+    <div><strong>More context</strong><span>Beyond the résumé</span></div>
+    <div><strong>Better fit</strong><span>Skills meet culture</span></div>
+  </section>
+
+  <section class="story" id="for-clinics">
+    <div class="story-copy">
+      <div class="eyebrow">For clinic owners</div>
+      <h2>Stop interviewing people you would never hire.</h2>
+      <p>
+        Tell us what excellence looks like inside your clinic. We review the market, vet the people,
+        and present a shortlist shaped around your role and culture.
+      </p>
+      <ul class="check-list">
+        <li>Post your first role in minutes</li>
+        <li>Review richer, human profiles</li>
+        <li>Request interviews with confidence</li>
+      </ul>
+      <a class="button button-dark" routerLink="/register" [queryParams]="{ type: 'clinic' }"
+        >Register your clinic <span aria-hidden="true">→</span></a
+      >
+    </div>
+    <div class="owner-panel">
+      <p class="panel-label">Your hiring brief</p>
+      <div class="brief-role">
+        <span>Open role</span><strong>RN Injector</strong><small>Chicago · Full time</small>
+      </div>
+      <div class="brief-row">
+        <span>Must have</span>
+        <p>Injectables · Morpheus8 · Consultative sales</p>
+      </div>
+      <div class="brief-row">
+        <span>Culture</span>
+        <p>Warm, polished, ownership mindset</p>
+      </div>
+      <div class="brief-status">
+        <span>ClinicX shortlist</span><strong>3 vetted matches</strong>
+      </div>
+    </div>
+  </section>
+
+  <section class="shortlist" id="talents">
+    <div class="section-heading">
+      <div>
+        <div class="eyebrow">A better talent profile</div>
+        <h2>See the person,<br />not just the résumé.</h2>
+      </div>
+      <p>Sample profiles · Chicago market</p>
+    </div>
+
+    <div class="talent-grid">
+      @for (talent of talents; track talent.name) {
+        <article class="talent-card">
+          <div class="talent-top">
+            <div class="avatar" [style.background]="talent.color" aria-hidden="true">
+              {{ initials(talent.name) }}
+            </div>
+            <div class="match">
+              <strong>{{ talent.match }}%</strong><span>match</span>
+            </div>
+          </div>
+          <div>
+            <p class="verified">✓ ClinicX verified</p>
+            <h3>{{ talent.name }}</h3>
+            <p class="role">{{ talent.title }} · {{ talent.location }}</p>
+          </div>
+          <ul>
+            @for (highlight of talent.highlights; track highlight) {
+              <li>{{ highlight }}</li>
+            }
+          </ul>
+          <div class="skills">
+            @for (skill of talent.skills; track skill) {
+              <span>{{ skill }}</span>
+            }
+          </div>
+          <a class="talent-action" routerLink="/signin">Sign in to view profile</a>
+        </article>
+      }
+    </div>
+  </section>
+
+  <section class="talent-story" id="for-talents">
+    <div class="talent-quote">
+      <span class="quote-mark" aria-hidden="true">“</span>
+      <blockquote>
+        Your profile should show the way you care for clients—not only where you worked.
+      </blockquote>
+      <p>
+        ClinicX profiles bring your clinical skill, service mindset, personality, and ambitions into
+        one beautiful introduction.
+      </p>
+    </div>
+    <div class="talent-benefits">
+      <div class="eyebrow">For talent</div>
+      <h2>Make your next move with intention.</h2>
+      <div class="benefit">
+        <span>01</span>
+        <div>
+          <strong>Tell your whole story</strong>
+          <p>Showcase your experience, skills, portfolio, and a short introduction.</p>
+        </div>
+      </div>
+      <div class="benefit">
+        <span>02</span>
+        <div>
+          <strong>Be discovered thoughtfully</strong>
+          <p>Get considered for clinics aligned with your goals and working style.</p>
+        </div>
+      </div>
+      <div class="benefit">
+        <span>03</span>
+        <div>
+          <strong>Stay in control</strong>
+          <p>Explore opportunities without becoming another résumé in a crowded inbox.</p>
+        </div>
+      </div>
+      <a class="button button-dark" routerLink="/register" [queryParams]="{ type: 'talent' }"
+        >Create your profile <span aria-hidden="true">→</span></a
+      >
+    </div>
+  </section>
+
+  <section class="workflow" id="how-it-works">
+    <div>
+      <div class="eyebrow">Built for better hiring</div>
+      <h2>Less sorting.<br />More certainty.</h2>
+    </div>
+    <ol>
+      <li>
+        <span>01</span>
+        <div>
+          <strong>Tell us who you need</strong>
+          <p>
+            Share the role, must-have skills, pay range, and what makes someone thrive at your
+            clinic.
+          </p>
+        </div>
+      </li>
+      <li>
+        <span>02</span>
+        <div>
+          <strong>We vet the talent</strong>
+          <p>ClinicX reviews experience, licensing, communication, and culture fit.</p>
+        </div>
+      </li>
+      <li>
+        <span>03</span>
+        <div>
+          <strong>Meet your shortlist</strong>
+          <p>Review curated profiles and request an interview when the fit feels right.</p>
+        </div>
+      </li>
+    </ol>
+  </section>
+
+  <section class="account-gateway" id="account">
+    <div class="gateway-heading">
+      <div class="eyebrow">Your next introduction starts here</div>
+      <h2>Choose your path.</h2>
+    </div>
+    <div class="gateway-options">
+      <a routerLink="/register" [queryParams]="{ type: 'clinic' }" class="gateway-card owner-card">
+        <span class="card-number">01</span>
+        <div>
+          <strong>I’m hiring</strong>
+          <p>Register your clinic and tell us who you need.</p>
+        </div>
+        <span aria-hidden="true">→</span>
+      </a>
+      <a
+        routerLink="/register"
+        [queryParams]="{ type: 'talent' }"
+        class="gateway-card talent-card-link"
+      >
+        <span class="card-number">02</span>
+        <div>
+          <strong>I’m looking</strong>
+          <p>Create your professional profile and get discovered.</p>
+        </div>
+        <span aria-hidden="true">→</span>
+      </a>
+    </div>
+  </section>
+</main>
+
+<footer>
+  <a class="brand footer-brand" href="#top">Clinic<span>X</span> Talent</a>
+  <p>Curated talent for exceptional clinics.</p>
+  <div>
+    <a href="#for-clinics">For clinics</a><a href="#for-talents">For talent</a
+    ><a routerLink="/signin">Sign in</a>
+  </div>
+</footer>

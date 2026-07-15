@@ -1,0 +1,168 @@
+<main class="auth-page">
+  <header>
+    <a class="brand" routerLink="/">Clinic<span>X</span> Talent</a
+    ><a routerLink="/">Back to home</a>
+  </header>
+  <section class="auth-layout">
+    <div class="auth-intro">
+      <div class="eyebrow">{{ isSignIn ? 'Welcome back' : 'Join the ClinicX network' }}</div>
+      <h1>
+        {{
+          isSignIn ? 'Return to your ClinicX account.' : 'One number. One thoughtful introduction.'
+        }}
+      </h1>
+      <p>
+        @if (isSignIn) {
+          Enter the number connected to your profile. We’ll verify it and return you to the right
+          clinic or talent account.
+        } @else {
+          We use your mobile number to keep access simple and secure. Every clinic and talent begins
+          under review before entering the network.
+        }
+      </p>
+      <div class="review-note">
+        <span>{{ isSignIn ? 'One secure step' : 'Review first' }}</span>
+        <p>
+          {{
+            isSignIn
+              ? 'Recognized numbers return to their existing account and profile type.'
+              : 'Creating an account lets you build your profile immediately. Matching access begins after ClinicX approval.'
+          }}
+        </p>
+      </div>
+    </div>
+
+    <div class="auth-card">
+      <div class="steps" aria-label="Registration progress">
+        @if (isSignIn) {
+          <span [class.active]="step() === 'phone'">1</span><i></i
+          ><span [class.active]="step() === 'code'">2</span>
+        } @else {
+          <span [class.active]="step() === 'type'">1</span><i></i
+          ><span [class.active]="step() === 'phone'">2</span><i></i
+          ><span [class.active]="step() === 'code'">3</span>
+        }
+      </div>
+
+      @if (step() === 'type') {
+        <div class="card-heading">
+          <span>Step 1 of 3</span>
+          <h2>How will you use ClinicX?</h2>
+          <p>Choose the profile you want to create first.</p>
+        </div>
+        <div class="type-options">
+          <button type="button" (click)="chooseType('clinic')">
+            <span class="type-icon">CX</span>
+            <div>
+              <strong>I represent a clinic</strong><small>Hire and vet exceptional talent</small>
+            </div>
+            <b>→</b>
+          </button>
+          <button type="button" (click)="chooseType('talent')">
+            <span class="type-icon">ME</span>
+            <div>
+              <strong>I’m joining as talent</strong
+              ><small>Build a profile and explore clinics</small>
+            </div>
+            <b>→</b>
+          </button>
+        </div>
+        <p class="account-note">Already have an account? <a routerLink="/signin">Sign in</a>.</p>
+      }
+
+      @if (step() === 'phone') {
+        <div class="card-heading">
+          <span>
+            {{
+              isSignIn
+                ? 'Secure sign in · Step 1 of 2'
+                : 'Step 2 of 3 · ' + (accountType() === 'clinic' ? 'Clinic' : 'Talent')
+            }}
+          </span>
+          <h2>What’s your mobile number?</h2>
+          <p>
+            {{
+              isSignIn
+                ? 'Use the number connected to your existing account.'
+                : 'We’ll send a one-time verification code.'
+            }}
+          </p>
+          @if (!isSignIn) {
+            <p class="returning-note">
+              Already have an account? If we recognize this number, we’ll sign you in and take you
+              back to your account.
+            </p>
+          }
+        </div>
+        <form (submit)="sendCode(); $event.preventDefault()">
+          <label for="phone">Mobile number</label>
+          <input
+            id="phone"
+            type="tel"
+            autocomplete="tel"
+            inputmode="tel"
+            placeholder="(312) 555-0101"
+            [formField]="phoneForm.phone"
+            (input)="maskPhone($event)"
+          />
+          @if (phoneForm.phone().touched() && phoneForm.phone().errors().length) {
+            <p class="field-error">{{ phoneForm.phone().errors()[0].message }}</p>
+          }
+          @if (errorMessage()) {
+            <p class="field-error" role="alert">{{ errorMessage() }}</p>
+          }
+          <button class="continue" type="submit">Send verification code <span>→</span></button>
+        </form>
+        @if (!isSignIn) {
+          <button class="back-link" type="button" (click)="changeType()">
+            ← Change account type
+          </button>
+        } @else {
+          <p class="account-note">
+            New to ClinicX? <a routerLink="/register">Create an account</a>.
+          </p>
+        }
+      }
+
+      @if (step() === 'code') {
+        <div class="card-heading">
+          <span>{{ isSignIn ? 'Secure sign in · Step 2 of 2' : 'Step 3 of 3' }}</span>
+          <h2>Enter your code.</h2>
+          <p>
+            We sent a six-digit code to <strong>{{ phoneModel().phone }}</strong
+            >.
+          </p>
+        </div>
+        <form (submit)="verifyCode(); $event.preventDefault()">
+          <label for="code">Verification code</label>
+          <input
+            id="code"
+            class="code-input"
+            inputmode="numeric"
+            autocomplete="one-time-code"
+            placeholder="000000"
+            [formField]="codeForm.code"
+          />
+          @if (codeForm.code().touched() && codeForm.code().errors().length) {
+            <p class="field-error">{{ codeForm.code().errors()[0].message }}</p>
+          }
+          @if (errorMessage()) {
+            <p class="field-error" role="alert">{{ errorMessage() }}</p>
+          }
+          <button class="continue" type="submit">Verify and continue <span>→</span></button>
+        </form>
+        <button class="back-link" type="button" (click)="changePhone()">
+          ← Use a different number
+        </button>
+      }
+
+      <aside class="test-access">
+        <strong>MVP test access</strong>
+        <p>No SMS is sent yet. Use a paired phone number and code:</p>
+        @for (credential of credentials; track credential.phone) {
+          <code>{{ credential.phone }} · {{ credential.code }}</code>
+        }
+      </aside>
+    </div>
+  </section>
+</main>

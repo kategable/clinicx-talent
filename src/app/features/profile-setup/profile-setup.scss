@@ -1,0 +1,185 @@
+:host {
+  display: block;
+  min-height: 100vh;
+  background: #f4f0e8;
+  color: #18312c;
+}
+header {
+  height: 76px;
+  padding: 0 clamp(24px, 6vw, 96px);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  border-bottom: 1px solid #d5d3cb;
+}
+.brand {
+  font:
+    700 23px Georgia,
+    serif;
+  color: #18312c;
+  text-decoration: none;
+}
+.brand span,
+.eyebrow,
+.step-label {
+  color: #b7664f;
+}
+.status {
+  border: 1px solid #b7664f;
+  border-radius: 99px;
+  padding: 9px 15px;
+  color: #8c4d3b;
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+}
+section {
+  display: grid;
+  grid-template-columns: 0.85fr 1.15fr;
+  min-height: calc(100vh - 77px);
+}
+.intro {
+  background: #18312c;
+  color: white;
+  padding: clamp(65px, 8vw, 125px);
+}
+.eyebrow,
+.step-label {
+  text-transform: uppercase;
+  letter-spacing: 2px;
+  font-size: 9px;
+}
+.intro h1 {
+  font:
+    500 clamp(48px, 5vw, 72px)/1 Georgia,
+    serif;
+  letter-spacing: -2.5px;
+  margin: 24px 0;
+}
+.intro > p {
+  color: #bdcac6;
+  line-height: 1.7;
+}
+.review-card {
+  border-top: 1px solid #49605b;
+  margin-top: 45px;
+  padding-top: 25px;
+}
+.review-card strong {
+  font:
+    500 19px Georgia,
+    serif;
+}
+.review-card ol {
+  padding-left: 18px;
+  color: #9fb0aa;
+  font-size: 12px;
+  line-height: 2;
+}
+.form-card {
+  padding: clamp(55px, 8vw, 120px);
+  max-width: 760px;
+  width: 100%;
+  margin: auto;
+}
+.form-card h2,
+.success h2 {
+  font:
+    500 clamp(34px, 4vw, 50px)/1.1 Georgia,
+    serif;
+  margin: 14px 0 35px;
+}
+.form-card form {
+  display: grid;
+}
+.form-card label {
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  margin: 18px 0 8px;
+}
+.form-card input,
+.form-card textarea {
+  border: 1px solid #c8c7bf;
+  background: white;
+  padding: 15px;
+  font: 16px inherit;
+  color: #18312c;
+  outline: none;
+}
+.form-card input {
+  height: 54px;
+}
+.form-card input:focus,
+.form-card textarea:focus {
+  border-color: #18312c;
+  box-shadow: 0 0 0 3px #18312c10;
+}
+.form-card button {
+  height: 54px;
+  border: 0;
+  background: #b7664f;
+  color: white;
+  margin-top: 25px;
+  padding: 0 20px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  cursor: pointer;
+}
+.error {
+  color: #a63e2d;
+  font-size: 11px;
+  margin: 6px 0 0;
+}
+.success > span {
+  width: 60px;
+  height: 60px;
+  border: 1px solid #66877e;
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  color: #66877e;
+  font-size: 25px;
+}
+.success p {
+  color: #687873;
+  line-height: 1.6;
+}
+.success a,
+.missing a {
+  display: inline-block;
+  background: #18312c;
+  color: white;
+  padding: 15px 20px;
+  text-decoration: none;
+  margin-top: 15px;
+}
+.missing {
+  padding: 120px 24px;
+  text-align: center;
+}
+.missing h1 {
+  font:
+    500 50px Georgia,
+    serif;
+  margin: 0;
+}
+@media (max-width: 850px) {
+  section {
+    grid-template-columns: 1fr;
+  }
+  .intro,
+  .form-card {
+    padding: 60px 24px;
+  }
+}
+@media (max-width: 500px) {
+  .status {
+    font-size: 8px;
+    padding: 7px 9px;
+  }
+  .brand {
+    font-size: 19px;
+  }
+}

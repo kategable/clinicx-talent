@@ -1,0 +1,56 @@
+:host {
+  display: block;
+  min-height: 100vh;
+  background: #12332f;
+  color: #f7f3e9;
+}
+main {
+  min-height: 100vh;
+  padding: 2rem clamp(1.25rem, 6vw, 6rem);
+}
+header a {
+  color: inherit;
+  font:
+    700 1.5rem Georgia,
+    serif;
+  text-decoration: none;
+}
+header span,
+section > p:first-child {
+  color: #dc846b;
+}
+section {
+  width: min(100%, 65rem);
+  margin: clamp(5rem, 14vh, 9rem) auto;
+}
+h1 {
+  max-width: 55rem;
+  margin: 0.5rem 0 1.5rem;
+  font:
+    500 clamp(3.5rem, 9vw, 7rem)/0.9 Georgia,
+    serif;
+}
+section > p {
+  max-width: 42rem;
+  color: #c2cfca;
+  font-size: 1.15rem;
+  line-height: 1.6;
+}
+section div {
+  display: grid;
+  gap: 0.5rem;
+  margin: 3rem 0 2rem;
+  border-top: 1px solid #526a64;
+  padding-top: 2rem;
+}
+section div strong {
+  font:
+    500 1.7rem Georgia,
+    serif;
+}
+section div span {
+  color: #aebdb8;
+}
+section > a {
+  color: #f7f3e9;
+}
