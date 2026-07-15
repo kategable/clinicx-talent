@@ -1,6 +1,7 @@
 import { AppActions } from './app.actions';
 import { appReducer } from './app.reducer';
 import { existingAccountDestination } from './app.navigation';
+import { resolveTheme } from '../theme-manager';
 import { initialAppState } from './app.state';
 
 describe('ClinicX NgRx state', () => {
@@ -146,5 +147,19 @@ describe('ClinicX NgRx state', () => {
     expect(
       state.accounts.find((account) => account.id === 'talent-demo')?.talentDetails?.role,
     ).toBe('RN Injector');
+  });
+
+  it('stores an account theme preference and resolves automatic day and night themes', () => {
+    const state = appReducer(
+      { ...initialAppState, activeAccountId: 'clinic-demo' },
+      AppActions.setThemePreference({ preference: 'dark' }),
+    );
+
+    expect(state.themePreference).toBe('dark');
+    expect(state.accounts.find((account) => account.id === 'clinic-demo')?.themePreference).toBe(
+      'dark',
+    );
+    expect(resolveTheme('auto', 12)).toBe('light');
+    expect(resolveTheme('auto', 22)).toBe('dark');
   });
 });

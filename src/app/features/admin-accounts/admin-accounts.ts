@@ -1,5 +1,6 @@
 import { Component, inject } from '@angular/core';
 import { RouterLink } from '@angular/router';
+import { MatButtonModule } from '@angular/material/button';
 import { Store } from '@ngrx/store';
 import { ReviewStatus } from '../../core/account';
 import { AppActions } from '../../core/store/app.actions';
@@ -7,7 +8,7 @@ import { selectAccounts, selectPendingCount } from '../../core/store/app.selecto
 
 @Component({
   selector: 'app-admin-accounts',
-  imports: [RouterLink],
+  imports: [RouterLink, MatButtonModule],
   templateUrl: './admin-accounts.html',
   styleUrl: './admin-accounts.scss',
 })

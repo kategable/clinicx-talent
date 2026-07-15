@@ -14,7 +14,13 @@
         <p>ClinicX admin</p>
         <h1>Account review</h1>
       </div>
-      <button class="admin-user" type="button" (click)="signOut()" aria-label="Sign out of admin">
+      <button
+        mat-icon-button
+        class="admin-user"
+        type="button"
+        (click)="signOut()"
+        aria-label="Sign out of admin"
+      >
         KM
       </button>
     </header>
@@ -55,8 +61,11 @@
             >{{ statusLabel(account.status) }}</span
           >
           <div class="actions">
-            <button type="button" (click)="setStatus(account.id, 'approved')">Allow in</button
-            ><button type="button" (click)="setStatus(account.id, 'on-hold')">On hold</button>
+            <button mat-flat-button type="button" (click)="setStatus(account.id, 'approved')">
+              Allow in</button
+            ><button mat-button type="button" (click)="setStatus(account.id, 'on-hold')">
+              On hold
+            </button>
           </div>
         </article>
       }

@@ -1,6 +1,9 @@
 import { Component, inject, OnInit, signal } from '@angular/core';
 import { FormField, form, pattern, required, submit } from '@angular/forms/signals';
 import { ActivatedRoute, RouterLink } from '@angular/router';
+import { MatButtonModule } from '@angular/material/button';
+import { MatFormFieldModule } from '@angular/material/form-field';
+import { MatInputModule } from '@angular/material/input';
 import { Store } from '@ngrx/store';
 import { AccountType, TEST_CREDENTIALS } from '../../core/account';
 import { AppActions } from '../../core/store/app.actions';
@@ -8,7 +11,7 @@ import { selectError, selectRegistration } from '../../core/store/app.selectors'
 
 @Component({
   selector: 'app-registration',
-  imports: [FormField, RouterLink],
+  imports: [FormField, RouterLink, MatButtonModule, MatFormFieldModule, MatInputModule],
   templateUrl: './registration.html',
   styleUrl: './registration.scss',
 })

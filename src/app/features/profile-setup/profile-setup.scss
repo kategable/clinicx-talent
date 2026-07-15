@@ -1,8 +1,8 @@
 :host {
   display: block;
   min-height: 100vh;
-  background: #f4f0e8;
-  color: #18312c;
+  background: var(--cx-background);
+  color: var(--cx-text);
 }
 header {
   height: 76px;
@@ -92,28 +92,8 @@ section {
 .form-card form {
   display: grid;
 }
-.form-card label {
-  font-size: 10px;
-  text-transform: uppercase;
-  letter-spacing: 1px;
-  margin: 18px 0 8px;
-}
-.form-card input,
-.form-card textarea {
-  border: 1px solid #c8c7bf;
-  background: white;
-  padding: 15px;
-  font: 16px inherit;
-  color: #18312c;
-  outline: none;
-}
-.form-card input {
-  height: 54px;
-}
-.form-card input:focus,
-.form-card textarea:focus {
-  border-color: #18312c;
-  box-shadow: 0 0 0 3px #18312c10;
+.form-card mat-form-field {
+  width: 100%;
 }
 .form-card button {
   height: 54px;

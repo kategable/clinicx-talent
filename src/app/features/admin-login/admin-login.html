@@ -6,27 +6,38 @@
     <p class="intro">Review new clinic and talent accounts.</p>
 
     <form (submit)="$event.preventDefault(); login()">
-      <label for="username">Username</label>
-      <input id="username" type="text" autocomplete="username" [formField]="loginForm.username" />
-      @if (loginForm.username().touched() && loginForm.username().invalid()) {
-        <small>{{ loginForm.username().errors()[0].message }}</small>
-      }
+      <mat-form-field appearance="outline">
+        <mat-label>Username</mat-label>
+        <input
+          matInput
+          id="username"
+          type="text"
+          autocomplete="username"
+          [formField]="loginForm.username"
+        />
+        @if (loginForm.username().touched() && loginForm.username().invalid()) {
+          <mat-error>{{ loginForm.username().errors()[0].message }}</mat-error>
+        }
+      </mat-form-field>
 
-      <label for="password">Password</label>
-      <input
-        id="password"
-        type="password"
-        autocomplete="current-password"
-        [formField]="loginForm.password"
-      />
-      @if (loginForm.password().touched() && loginForm.password().invalid()) {
-        <small>{{ loginForm.password().errors()[0].message }}</small>
-      }
+      <mat-form-field appearance="outline">
+        <mat-label>Password</mat-label>
+        <input
+          matInput
+          id="password"
+          type="password"
+          autocomplete="current-password"
+          [formField]="loginForm.password"
+        />
+        @if (loginForm.password().touched() && loginForm.password().invalid()) {
+          <mat-error>{{ loginForm.password().errors()[0].message }}</mat-error>
+        }
+      </mat-form-field>
 
       @if (errorMessage()) {
         <p class="error" role="alert">{{ errorMessage() }}</p>
       }
-      <button type="submit">Sign in</button>
+      <button mat-flat-button type="submit">Sign in</button>
     </form>
 
     <div class="demo">

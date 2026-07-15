@@ -1,13 +1,16 @@
 import { Component, inject, signal } from '@angular/core';
 import { FormField, form, required, submit } from '@angular/forms/signals';
 import { RouterLink } from '@angular/router';
+import { MatButtonModule } from '@angular/material/button';
+import { MatFormFieldModule } from '@angular/material/form-field';
+import { MatInputModule } from '@angular/material/input';
 import { Store } from '@ngrx/store';
 import { AppActions } from '../../core/store/app.actions';
 import { selectCurrentAccount } from '../../core/store/app.selectors';
 
 @Component({
   selector: 'app-profile-setup',
-  imports: [FormField, RouterLink],
+  imports: [FormField, RouterLink, MatButtonModule, MatFormFieldModule, MatInputModule],
   templateUrl: './profile-setup.html',
   styleUrl: './profile-setup.scss',
 })

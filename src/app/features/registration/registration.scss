@@ -1,8 +1,8 @@
 :host {
   display: block;
   min-height: 100vh;
-  color: #18312c;
-  background: #f4f0e8;
+  color: var(--cx-text);
+  background: var(--cx-background);
 }
 .auth-page {
   min-height: 100vh;
@@ -208,24 +208,8 @@
 form {
   display: grid;
 }
-label {
-  font-size: 11px;
-  text-transform: uppercase;
-  letter-spacing: 1px;
-  margin-bottom: 9px;
-}
-input {
-  height: 58px;
-  border: 1px solid #c9c8c0;
-  background: white;
-  padding: 0 16px;
-  font: 18px inherit;
-  color: #18312c;
-  outline: none;
-}
-input:focus {
-  border-color: #18312c;
-  box-shadow: 0 0 0 3px #18312c12;
+mat-form-field {
+  width: 100%;
 }
 .code-input {
   font-size: 25px;

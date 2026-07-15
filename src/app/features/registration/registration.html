@@ -51,14 +51,14 @@
           <p>Choose the profile you want to create first.</p>
         </div>
         <div class="type-options">
-          <button type="button" (click)="chooseType('clinic')">
+          <button mat-stroked-button type="button" (click)="chooseType('clinic')">
             <span class="type-icon">CX</span>
             <div>
               <strong>I represent a clinic</strong><small>Hire and vet exceptional talent</small>
             </div>
             <b>→</b>
           </button>
-          <button type="button" (click)="chooseType('talent')">
+          <button mat-stroked-button type="button" (click)="chooseType('talent')">
             <span class="type-icon">ME</span>
             <div>
               <strong>I’m joining as talent</strong
@@ -95,26 +95,32 @@
           }
         </div>
         <form (submit)="sendCode(); $event.preventDefault()">
-          <label for="phone">Mobile number</label>
-          <input
-            id="phone"
-            type="tel"
-            autocomplete="tel"
-            inputmode="tel"
-            placeholder="(312) 555-0101"
-            [formField]="phoneForm.phone"
-            (input)="maskPhone($event)"
-          />
-          @if (phoneForm.phone().touched() && phoneForm.phone().errors().length) {
-            <p class="field-error">{{ phoneForm.phone().errors()[0].message }}</p>
-          }
+          <mat-form-field appearance="outline">
+            <mat-label>Mobile number</mat-label>
+            <input
+              matInput
+              id="phone"
+              type="tel"
+              autocomplete="tel"
+              inputmode="tel"
+              placeholder="(312) 555-0101"
+              [formField]="phoneForm.phone"
+              (input)="maskPhone($event)"
+            />
+            <mat-hint>10-digit US mobile number</mat-hint>
+            @if (phoneForm.phone().touched() && phoneForm.phone().errors().length) {
+              <mat-error>{{ phoneForm.phone().errors()[0].message }}</mat-error>
+            }
+          </mat-form-field>
           @if (errorMessage()) {
             <p class="field-error" role="alert">{{ errorMessage() }}</p>
           }
-          <button class="continue" type="submit">Send verification code <span>→</span></button>
+          <button mat-flat-button class="continue" type="submit">
+            Send verification code <span>→</span>
+          </button>
         </form>
         @if (!isSignIn) {
-          <button class="back-link" type="button" (click)="changeType()">
+          <button mat-button class="back-link" type="button" (click)="changeType()">
             ← Change account type
           </button>
         } @else {
@@ -134,24 +140,30 @@
           </p>
         </div>
         <form (submit)="verifyCode(); $event.preventDefault()">
-          <label for="code">Verification code</label>
-          <input
-            id="code"
-            class="code-input"
-            inputmode="numeric"
-            autocomplete="one-time-code"
-            placeholder="000000"
-            [formField]="codeForm.code"
-          />
-          @if (codeForm.code().touched() && codeForm.code().errors().length) {
-            <p class="field-error">{{ codeForm.code().errors()[0].message }}</p>
-          }
+          <mat-form-field appearance="outline">
+            <mat-label>Verification code</mat-label>
+            <input
+              matInput
+              id="code"
+              class="code-input"
+              inputmode="numeric"
+              autocomplete="one-time-code"
+              placeholder="000000"
+              [formField]="codeForm.code"
+            />
+            <mat-hint>Enter the 6-digit code</mat-hint>
+            @if (codeForm.code().touched() && codeForm.code().errors().length) {
+              <mat-error>{{ codeForm.code().errors()[0].message }}</mat-error>
+            }
+          </mat-form-field>
           @if (errorMessage()) {
             <p class="field-error" role="alert">{{ errorMessage() }}</p>
           }
-          <button class="continue" type="submit">Verify and continue <span>→</span></button>
+          <button mat-flat-button class="continue" type="submit">
+            Verify and continue <span>→</span>
+          </button>
         </form>
-        <button class="back-link" type="button" (click)="changePhone()">
+        <button mat-button class="back-link" type="button" (click)="changePhone()">
           ← Use a different number
         </button>
       }

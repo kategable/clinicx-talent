@@ -37,7 +37,9 @@
             <span>This local MVP action won’t send a message yet.</span>
           </div>
         } @else {
-          <button type="button" (click)="requestReminder()">I’m waiting — let ClinicX know</button>
+          <button mat-flat-button type="button" (click)="requestReminder()">
+            I’m waiting — let ClinicX know
+          </button>
           <small>You can send this reminder once during this browser session.</small>
         }
       }

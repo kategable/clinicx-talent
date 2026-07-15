@@ -1,12 +1,13 @@
 import { Component, inject } from '@angular/core';
 import { RouterLink } from '@angular/router';
+import { MatButtonModule } from '@angular/material/button';
 import { Store } from '@ngrx/store';
 import { AppActions } from '../../core/store/app.actions';
 import { selectCurrentAccount, selectReviewReminderSent } from '../../core/store/app.selectors';
 
 @Component({
   selector: 'app-account-status',
-  imports: [RouterLink],
+  imports: [RouterLink, MatButtonModule],
   templateUrl: './account-status.html',
   styleUrl: './account-status.scss',
 })

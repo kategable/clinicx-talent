@@ -1,8 +1,8 @@
 :host {
   display: block;
   min-height: 100vh;
-  background: #f3f1e8;
-  color: #12332f;
+  background: var(--cx-background);
+  color: var(--cx-text);
 }
 main {
   min-height: 100vh;
@@ -22,7 +22,7 @@ main {
 section {
   width: min(100%, 30rem);
   margin: clamp(4rem, 12vh, 8rem) auto 0;
-  background: #fffdf7;
+  background: var(--cx-surface);
   padding: clamp(1.5rem, 4vw, 3rem);
   box-shadow: 0 1.5rem 4rem rgb(18 51 47 / 10%);
 }
@@ -47,19 +47,8 @@ form {
   display: grid;
   gap: 0.65rem;
 }
-label {
-  margin-top: 0.65rem;
-  font-weight: 700;
-}
-input {
-  border: 1px solid #b8c2be;
-  border-radius: 0.25rem;
-  padding: 0.9rem 1rem;
-  font: inherit;
-}
-input:focus {
-  outline: 3px solid rgb(189 98 73 / 25%);
-  border-color: #bd6249;
+mat-form-field {
+  width: 100%;
 }
 small,
 .error {

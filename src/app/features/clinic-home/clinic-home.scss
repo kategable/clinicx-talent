@@ -1,8 +1,8 @@
 :host {
   display: block;
   min-height: 100vh;
-  background: #f5f2ea;
-  color: #15332e;
+  background: var(--cx-background);
+  color: var(--cx-text);
 }
 main {
   min-height: 100vh;
@@ -131,8 +131,8 @@ form {
   justify-content: space-between;
   gap: 1rem;
   margin-bottom: 1rem;
-  border: 1px solid #ccd1ca;
-  background: rgb(255 253 248 / 94%);
+  border: 1px solid var(--cx-border);
+  background: color-mix(in srgb, var(--cx-surface) 94%, transparent);
   padding: 0.85rem 1rem;
   box-shadow: 0 0.8rem 2rem rgb(21 51 46 / 10%);
   backdrop-filter: blur(10px);
@@ -150,46 +150,8 @@ form {
   color: #72817d;
   font-size: 0.68rem;
 }
-label {
-  font-size: 0.78rem;
-  font-weight: 700;
-}
-label span {
-  color: #788682;
-  font-weight: 400;
-}
-.ai-hint {
-  opacity: 0;
-  transform: translateY(-0.2rem);
-  color: #72817d;
-  font-size: 0.68rem;
-  font-weight: 400;
-  transition:
-    opacity 150ms ease,
-    transform 150ms ease;
-}
-label:focus-within .ai-hint {
-  opacity: 1;
-  transform: translateY(0);
-}
-input,
-select,
-textarea {
-  box-sizing: border-box;
+mat-form-field {
   width: 100%;
-  border: 1px solid #bfc6bf;
-  background: #fffdf8;
-  padding: 0.9rem 1rem;
-  color: inherit;
-  font:
-    400 1rem Arial,
-    sans-serif;
-}
-input:focus,
-select:focus,
-textarea:focus {
-  outline: 3px solid rgb(185 100 77 / 20%);
-  border-color: #b9644d;
 }
 h3 {
   margin: 0 0 0.25rem;
@@ -199,7 +161,7 @@ h3 {
 }
 .section-break {
   margin-top: 1.75rem;
-  border-top: 1px solid #cfd3cc;
+  border-top: 1px solid var(--cx-border);
   padding-top: 2rem;
 }
 .two-column {

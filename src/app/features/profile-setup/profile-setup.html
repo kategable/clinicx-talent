@@ -32,27 +32,39 @@
             }}
           </h2>
           <form (submit)="saveProfile(); $event.preventDefault()">
-            <label for="name">{{
-              account.type === 'clinic' ? 'Clinic name' : 'Professional name'
-            }}</label
-            ><input id="name" [formField]="profileForm.name" />
-            @if (profileForm.name().touched() && profileForm.name().errors().length) {
-              <p class="error">{{ profileForm.name().errors()[0].message }}</p>
-            }
-            <label for="city">Primary city</label><input id="city" [formField]="profileForm.city" />
-            @if (profileForm.city().touched() && profileForm.city().errors().length) {
-              <p class="error">{{ profileForm.city().errors()[0].message }}</p>
-            }
-            <label for="headline">{{
-              account.type === 'clinic'
-                ? 'What makes your clinic special?'
-                : 'Professional headline'
-            }}</label
-            ><textarea id="headline" rows="4" [formField]="profileForm.headline"></textarea>
-            @if (profileForm.headline().touched() && profileForm.headline().errors().length) {
-              <p class="error">{{ profileForm.headline().errors()[0].message }}</p>
-            }
-            <button type="submit">Save and continue <span>→</span></button>
+            <mat-form-field appearance="outline">
+              <mat-label>{{
+                account.type === 'clinic' ? 'Clinic name' : 'Professional name'
+              }}</mat-label>
+              <input matInput id="name" [formField]="profileForm.name" />
+              @if (profileForm.name().touched() && profileForm.name().errors().length) {
+                <mat-error>{{ profileForm.name().errors()[0].message }}</mat-error>
+              }
+            </mat-form-field>
+            <mat-form-field appearance="outline">
+              <mat-label>Primary city</mat-label>
+              <input matInput id="city" [formField]="profileForm.city" />
+              @if (profileForm.city().touched() && profileForm.city().errors().length) {
+                <mat-error>{{ profileForm.city().errors()[0].message }}</mat-error>
+              }
+            </mat-form-field>
+            <mat-form-field appearance="outline">
+              <mat-label>{{
+                account.type === 'clinic'
+                  ? 'What makes your clinic special?'
+                  : 'Professional headline'
+              }}</mat-label>
+              <textarea
+                matInput
+                id="headline"
+                rows="4"
+                [formField]="profileForm.headline"
+              ></textarea>
+              @if (profileForm.headline().touched() && profileForm.headline().errors().length) {
+                <mat-error>{{ profileForm.headline().errors()[0].message }}</mat-error>
+              }
+            </mat-form-field>
+            <button mat-flat-button type="submit">Save and continue <span>→</span></button>
           </form>
         } @else {
           <div class="success">

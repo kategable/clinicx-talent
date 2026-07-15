@@ -23,6 +23,8 @@ The current Angular application demonstrates the clinic-owner experience:
 - Session-aware marketing navigation showing the active account name
 - Clinic workspace with locally persisted profile details
 - Talent workspace with locally persisted professional details
+- Angular Material form controls across registration, account, admin, clinic, and talent flows
+- Per-account light, dark, or automatic appearance preferences
 - Angular and service unit tests
 
 Talent showcase data is currently static. MVP account records persist in browser storage; real authentication, server persistence, file uploads, and payments have not been added yet.
@@ -53,6 +55,8 @@ When a session is active, the marketing header replaces “Sign in” with the a
 
 Talent accounts link to `/talent/home`. The talent workspace stores professional role, location, experience timeline, skills, certificates, availability, salary expectations, languages, portfolio, introduction, and photo/video/gallery file metadata through NgRx. Only the professional name is required during the MVP. Actual media bytes are not stored in browser state; the current file selectors retain names for flow testing until secure backend object-storage uploads are implemented.
 
+Clinic and talent workspaces include an **Appearance** control. `Light` and `Dark` keep the selected theme until the account changes it. `Auto` uses the light theme from 7:00 AM through 6:59 PM in the browser's local time and the dark theme at night. The preference is dispatched through NgRx and stored on the active local account. Native file selectors remain custom upload controls because Angular Material does not provide a file-input component.
+
 These credentials, sessions, limits, and admin controls are intentionally client-side for local testing. They provide no security against someone who can inspect or modify browser storage.
 
 Before production:
@@ -65,6 +69,7 @@ Before production:
 ## Technology
 
 - Angular 22.0.6
+- Angular Material and CDK 22.0.4 with Material 3 light and dark themes
 - TypeScript 6.0
 - Standalone components
 - NgRx Store, Effects, selectors, and Store DevTools for application state
@@ -100,6 +105,7 @@ Open [http://localhost:4200](http://localhost:4200).
 ```bash
 npm run build
 npm test
+npm run test:coverage
 ```
 
 The project uses strict TypeScript and Angular template checking.
