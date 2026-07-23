@@ -20,7 +20,7 @@ export interface AppState {
   reviewReminder: {
     pingedAccountIds: string[];
   };
-  themePreference: ThemePreference;
+  guestThemePreference: ThemePreference;
   error: string;
 }
 
@@ -31,6 +31,6 @@ export const initialAppState: AppState = {
   adminAuthenticated: false,
   verificationSecurity: { attemptedPhones: [], blocked: false },
   reviewReminder: { pingedAccountIds: [] },
-  themePreference: 'auto',
+  guestThemePreference: 'auto',
   error: '',
 };

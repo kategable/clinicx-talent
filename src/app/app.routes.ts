@@ -1,14 +1,16 @@
 import { Routes } from '@angular/router';
-import { adminGuard } from './core/admin.guard';
-import { approvedClinicGuard } from './core/approved-clinic.guard';
-import { clinicAccountGuard } from './core/clinic-account.guard';
-import { talentAccountGuard } from './core/talent-account.guard';
 
 export const routes: Routes = [
   {
     path: '',
     loadComponent: () => import('./features/home/home').then((m) => m.Home),
     title: 'ClinicX Talent | Curated Aesthetics Talent',
+  },
+  {
+    path: 'admins',
+    loadComponent: () => import('./features/home/home').then((m) => m.Home),
+    title: 'Admin access | ClinicX Talent',
+    data: { showAdminLink: true },
   },
   {
     path: 'register',
@@ -39,17 +41,8 @@ export const routes: Routes = [
     redirectTo: 'clinic/home',
   },
   {
-    path: 'clinic/home',
-    canActivate: [clinicAccountGuard],
-    loadComponent: () => import('./features/clinic-home/clinic-home').then((m) => m.ClinicHome),
-    title: 'Clinic home | ClinicX Talent',
-  },
-  {
-    path: 'clinic/talents',
-    canActivate: [approvedClinicGuard],
-    loadComponent: () =>
-      import('./features/clinic-talents/clinic-talents').then((m) => m.ClinicTalents),
-    title: 'Talent search | ClinicX Talent',
+    path: 'clinic',
+    loadChildren: () => import('./features/clinic.routes').then((m) => m.CLINIC_ROUTES),
   },
   {
     path: 'talent',
@@ -57,10 +50,8 @@ export const routes: Routes = [
     redirectTo: 'talent/home',
   },
   {
-    path: 'talent/home',
-    canActivate: [talentAccountGuard],
-    loadComponent: () => import('./features/talent-home/talent-home').then((m) => m.TalentHome),
-    title: 'Talent profile | ClinicX Talent',
+    path: 'talent',
+    loadChildren: () => import('./features/talent.routes').then((m) => m.TALENT_ROUTES),
   },
   {
     path: 'admin',
@@ -68,16 +59,8 @@ export const routes: Routes = [
     redirectTo: 'admin/login',
   },
   {
-    path: 'admin/login',
-    loadComponent: () => import('./features/admin-login/admin-login').then((m) => m.AdminLogin),
-    title: 'Admin sign in | ClinicX Admin',
-  },
-  {
-    path: 'admin/accounts',
-    canActivate: [adminGuard],
-    loadComponent: () =>
-      import('./features/admin-accounts/admin-accounts').then((m) => m.AdminAccounts),
-    title: 'Account review | ClinicX Admin',
+    path: 'admin',
+    loadChildren: () => import('./features/admin.routes').then((m) => m.ADMIN_ROUTES),
   },
   {
     path: 'contact',

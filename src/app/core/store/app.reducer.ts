@@ -141,7 +141,7 @@ export const appReducer = createReducer(
   })),
   on(AppActions.setThemePreference, (state, { preference }) => ({
     ...state,
-    themePreference: preference,
+    guestThemePreference: state.activeAccountId ? state.guestThemePreference : preference,
     accounts: state.accounts.map((account) =>
       account.id === state.activeAccountId ? { ...account, themePreference: preference } : account,
     ),

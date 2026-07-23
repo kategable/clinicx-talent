@@ -1,0 +1,11 @@
+User-agent: *
+Allow: /
+Disallow: /account/
+Disallow: /admin/
+Disallow: /clinic/
+Disallow: /talent/
+Disallow: /onboarding
+Disallow: /register
+Disallow: /signin
+
+Sitemap: https://clinicxtalent.com/sitemap.xml

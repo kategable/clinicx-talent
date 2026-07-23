@@ -24,9 +24,9 @@
         <h1>Your account is approved.</h1>
         <p>Your ClinicX marketplace access is ready.</p>
         @if (current.type === 'clinic') {
-          <a class="primary" routerLink="/clinic/talents">Start talent search</a>
+          <a mat-flat-button class="primary" routerLink="/clinic/talents">Start talent search</a>
         } @else {
-          <a class="primary" routerLink="/talent/home">Open your profile</a>
+          <a mat-flat-button class="primary" routerLink="/talent/home">Open your profile</a>
         }
       }
 
@@ -47,7 +47,7 @@
   } @else {
     <section>
       <h1>Sign in to view your account status.</h1>
-      <a class="primary" routerLink="/signin">Sign in</a>
+      <a mat-flat-button class="primary" routerLink="/signin">Sign in</a>
     </section>
   }
 </main>

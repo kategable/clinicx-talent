@@ -6,17 +6,51 @@
     <p>Clinic workspace</p>
     <h1>Find your next exceptional hire.</h1>
     @if (account(); as current) {
-      <p>Welcome, {{ current.displayName }}. Your talent search will start here.</p>
+      <p>Welcome, {{ current.displayName }}. Review approved talent profiles below.</p>
     } @else {
       <p>Sign in with an approved clinic account to begin.</p>
     }
-    <div>
-      <strong>Talent search is coming next.</strong>
-      <span
-        >Filters, curated matches, talent profiles, and interview requests are not implemented
-        yet.</span
-      >
-    </div>
+    <p class="privacy-note">Profile photos are private and visible only to approved clinics.</p>
+    @if (talents().length) {
+      <div class="talent-grid">
+        @for (talent of talents(); track talent.id) {
+          <article class="talent-card">
+            @if (talent.talentDetails; as profile) {
+              <div class="profile-photo" [class.has-photo]="profile.photoName">
+                @if (profile.photoName) {
+                  <span class="portrait" aria-hidden="true"></span>
+                  <small>Photo added</small>
+                } @else {
+                  <strong>{{ initials(profile.professionalName || talent.displayName) }}</strong>
+                  <small>No photo yet</small>
+                }
+              </div>
+              <div class="talent-copy">
+                <span>ClinicX approved</span>
+                <h2>{{ profile.professionalName || talent.displayName }}</h2>
+                <p>{{ profile.role || 'Aesthetics professional' }} · {{ profile.location }}</p>
+                <ul>
+                  @if (profile.yearsExperience) {
+                    <li>{{ profile.yearsExperience }} experience</li>
+                  }
+                  @if (profile.availability) {
+                    <li>{{ profile.availability }}</li>
+                  }
+                  @if (profile.skills) {
+                    <li>{{ profile.skills }}</li>
+                  }
+                </ul>
+              </div>
+            }
+          </article>
+        }
+      </div>
+    } @else {
+      <div class="empty-state">
+        <strong>No approved talent profiles yet.</strong>
+        <span>Profiles will appear here after ClinicX completes review.</span>
+      </div>
+    }
     <a routerLink="/clinic">← Back to clinic home</a>
   </section>
 </main>

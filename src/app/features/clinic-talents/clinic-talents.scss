@@ -36,20 +36,109 @@ section > p {
   font-size: 1.15rem;
   line-height: 1.6;
 }
-section div {
+.privacy-note {
+  font-size: 0.8rem;
+}
+.empty-state {
   display: grid;
   gap: 0.5rem;
   margin: 3rem 0 2rem;
   border-top: 1px solid #526a64;
   padding-top: 2rem;
 }
-section div strong {
+.empty-state strong {
   font:
     500 1.7rem Georgia,
     serif;
 }
-section div span {
+.empty-state span {
   color: #aebdb8;
+}
+.talent-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 19rem), 1fr));
+  gap: 1rem;
+  margin: 3rem 0 2rem;
+}
+.talent-card {
+  display: grid;
+  grid-template-columns: 6rem 1fr;
+  gap: 1.25rem;
+  padding: 1.25rem;
+  color: #18312c;
+  background: #f7f3e9;
+}
+.profile-photo {
+  height: 7.25rem;
+  display: grid;
+  place-items: center;
+  align-content: center;
+  gap: 0.45rem;
+  position: relative;
+  overflow: hidden;
+  border-radius: 0.35rem;
+  color: #18312c;
+  background: #dce5df;
+}
+.profile-photo > strong {
+  font:
+    600 1.6rem Georgia,
+    serif;
+}
+.profile-photo small {
+  z-index: 1;
+  font-size: 0.62rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+.profile-photo.has-photo {
+  align-content: end;
+  padding-bottom: 0.55rem;
+  background: linear-gradient(145deg, #a8bbb4, #dce4df);
+}
+.portrait {
+  width: 2.8rem;
+  height: 2.8rem;
+  position: absolute;
+  top: 1rem;
+  border-radius: 50%;
+  background: #617d74;
+}
+.portrait::after {
+  content: '';
+  width: 6.5rem;
+  height: 4rem;
+  position: absolute;
+  top: 3rem;
+  left: -1.85rem;
+  border-radius: 50% 50% 0 0;
+  background: #617d74;
+}
+.talent-copy > span {
+  color: #9b4835;
+  font-size: 0.62rem;
+  font-weight: 800;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+.talent-copy h2 {
+  margin: 0.45rem 0 0.25rem;
+  font:
+    500 1.55rem/1 Georgia,
+    serif;
+}
+.talent-copy p {
+  margin: 0;
+  color: #536762;
+  font-size: 0.8rem;
+}
+.talent-copy ul {
+  margin: 0.8rem 0 0;
+  padding-left: 1rem;
+  color: #314944;
+  font-size: 0.75rem;
+  line-height: 1.5;
 }
 section > a {
   color: #f7f3e9;

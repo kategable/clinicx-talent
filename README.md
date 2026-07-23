@@ -55,7 +55,7 @@ When a session is active, the marketing header replaces “Sign in” with the a
 
 Talent accounts link to `/talent/home`. The talent workspace stores professional role, location, experience timeline, skills, certificates, availability, salary expectations, languages, portfolio, introduction, and photo/video/gallery file metadata through NgRx. Only the professional name is required during the MVP. Actual media bytes are not stored in browser state; the current file selectors retain names for flow testing until secure backend object-storage uploads are implemented.
 
-Clinic and talent workspaces include an **Appearance** control. `Light` and `Dark` keep the selected theme until the account changes it. `Auto` uses the light theme from 7:00 AM through 6:59 PM in the browser's local time and the dark theme at night. The preference is dispatched through NgRx and stored on the active local account. Native file selectors remain custom upload controls because Angular Material does not provide a file-input component.
+The landing page, clinic workspace, and talent workspace include an **Appearance** control. `Light` and `Dark` keep the selected theme until it is changed. `Auto` uses the light theme from 7:00 AM through 6:59 PM in the browser's local time and the dark theme at night. The preference is dispatched through NgRx and stored on the active local account when signed in. Signed-out preferences use `sessionStorage`, so they last only for the current browser session. Native file selectors remain custom upload controls because Angular Material does not provide a file-input component.
 
 These credentials, sessions, limits, and admin controls are intentionally client-side for local testing. They provide no security against someone who can inspect or modify browser storage.
 
@@ -107,6 +107,14 @@ npm run build
 npm test
 npm run test:coverage
 ```
+
+With the development server running on port 4200, generate a local Lighthouse report with:
+
+```bash
+npm run audit:lighthouse
+```
+
+The command uses the project-pinned Lighthouse CLI and writes `lighthouse-report.html` at the project root. The generated report is intentionally ignored by Git.
 
 The project uses strict TypeScript and Angular template checking.
 

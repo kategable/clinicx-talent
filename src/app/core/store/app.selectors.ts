@@ -29,5 +29,5 @@ export const selectReviewReminderSent = createSelector(
 export const selectThemePreference = createSelector(
   selectAppState,
   selectCurrentAccount,
-  (state, account) => account?.themePreference ?? state.themePreference,
+  (state, account) => (account ? (account.themePreference ?? 'auto') : state.guestThemePreference),
 );

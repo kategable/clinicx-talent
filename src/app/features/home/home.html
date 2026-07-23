@@ -4,10 +4,15 @@
     <a href="#for-clinics">For clinics</a>
     <a href="#for-talents">For talent</a>
     <a href="#how-it-works">How it works</a>
+    <app-theme-picker compact />
     @if (currentAccount(); as account) {
-      <a class="sign-in account-link" [routerLink]="accountLink()">{{ account.displayName }}</a>
+      <a mat-stroked-button class="header-action account-link" [routerLink]="accountLink()">
+        {{ account.displayName }}
+      </a>
+    } @else if (showAdminLink) {
+      <a mat-stroked-button class="header-action" routerLink="/admin">Admin sign in</a>
     } @else {
-      <a class="sign-in" routerLink="/signin">Sign in</a>
+      <a mat-stroked-button class="header-action" routerLink="/signin">Sign in</a>
     }
   </nav>
 </header>
@@ -99,8 +104,13 @@
       @for (talent of talents; track talent.name) {
         <article class="talent-card">
           <div class="talent-top">
-            <div class="avatar" [style.background]="talent.color" aria-hidden="true">
-              {{ initials(talent.name) }}
+            <div
+              class="avatar private-avatar"
+              [style.--avatar-tone]="talent.color"
+              aria-label="Talent photo hidden until clinic sign-in"
+            >
+              <span class="portrait-shape" aria-hidden="true"></span>
+              <span class="photo-lock" aria-hidden="true">Private</span>
             </div>
             <div class="match">
               <strong>{{ talent.match }}%</strong><span>match</span>

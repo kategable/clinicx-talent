@@ -149,23 +149,23 @@
   display: grid;
   gap: 12px;
 }
-.type-options button {
+.type-options .type-choice {
   width: 100%;
+  min-height: 88px;
+  height: auto;
   background: white;
-  border: 1px solid #d6d5cd;
-  padding: 20px;
+  padding: 0 20px;
+  color: #18312c;
+}
+.type-choice-content {
+  width: 100%;
   display: grid;
   grid-template-columns: 48px 1fr 20px;
   align-items: center;
   text-align: left;
   gap: 16px;
-  color: #18312c;
-  cursor: pointer;
 }
-.type-options button:hover,
-.type-options button:focus-visible {
-  border-color: #b7664f;
-  outline: 2px solid transparent;
+.type-options .type-choice:hover {
   box-shadow: 0 8px 30px #18312c10;
 }
 .type-icon {
@@ -179,21 +179,26 @@
     15px Georgia,
     serif;
 }
-.type-options strong,
-.type-options small {
-  display: block;
+.type-copy {
+  min-width: 0;
 }
-.type-options strong {
+.type-copy strong,
+.type-copy small {
+  display: block;
+  white-space: normal;
+}
+.type-copy strong {
   font:
     500 20px Georgia,
     serif;
 }
-.type-options small {
+.type-copy small {
   color: #6f7c79;
   margin-top: 5px;
 }
-.type-options b {
+.type-arrow {
   color: #b7664f;
+  font-size: 1rem;
 }
 .account-note {
   color: #798682;

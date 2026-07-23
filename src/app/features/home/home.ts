@@ -1,7 +1,9 @@
 import { ChangeDetectionStrategy, Component, inject } from '@angular/core';
-import { RouterLink } from '@angular/router';
+import { MatButtonModule } from '@angular/material/button';
+import { ActivatedRoute, RouterLink } from '@angular/router';
 import { Store } from '@ngrx/store';
 import { selectCurrentAccount } from '../../core/store/app.selectors';
+import { ThemePicker } from '../../shared/theme-picker/theme-picker';
 
 interface Talent {
   name: string;
@@ -15,14 +17,16 @@ interface Talent {
 
 @Component({
   selector: 'app-home',
-  imports: [RouterLink],
+  imports: [RouterLink, MatButtonModule, ThemePicker],
   templateUrl: './home.html',
   changeDetection: ChangeDetectionStrategy.Eager,
   styleUrl: './home.scss',
 })
 export class Home {
   private readonly store = inject(Store);
+  private readonly route = inject(ActivatedRoute);
   protected readonly currentAccount = this.store.selectSignal(selectCurrentAccount);
+  protected readonly showAdminLink = this.route.snapshot.data['showAdminLink'] === true;
 
   protected accountLink(): string {
     return this.currentAccount()?.type === 'clinic' ? '/clinic/home' : '/talent/home';

@@ -9,6 +9,7 @@ import { selectAppState, selectVerificationBlocked } from './app.selectors';
 
 export const APP_STORAGE_KEY = 'clinicx.state.v1';
 export const REVIEW_REMINDER_SESSION_KEY = 'clinicx.review-reminders';
+export const GUEST_THEME_SESSION_KEY = 'clinicx.guest-theme';
 
 @Injectable()
 export class AppEffects {
@@ -24,10 +25,31 @@ export class AppEffects {
           try {
             localStorage.setItem(
               APP_STORAGE_KEY,
-              JSON.stringify({ ...state, reviewReminder: { pingedAccountIds: [] } }),
+              JSON.stringify({
+                ...state,
+                reviewReminder: { pingedAccountIds: [] },
+                guestThemePreference: 'auto',
+              }),
             );
           } catch {
             // Browser storage is optional in the MVP.
+          }
+        }),
+      ),
+    { dispatch: false },
+  );
+
+  readonly persistGuestTheme$ = createEffect(
+    () =>
+      this.actions$.pipe(
+        ofType(AppActions.setThemePreference),
+        withLatestFrom(this.store.select(selectAppState)),
+        filter(([, state]) => !state.activeAccountId),
+        tap(([, state]) => {
+          try {
+            sessionStorage.setItem(GUEST_THEME_SESSION_KEY, state.guestThemePreference);
+          } catch {
+            // Session storage is optional in the MVP.
           }
         }),
       ),

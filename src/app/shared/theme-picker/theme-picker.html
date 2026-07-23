@@ -1,0 +1,47 @@
+@if (compact()) {
+  <div class="theme-control compact" [class.open]="expanded()">
+    <button
+      class="appearance-trigger"
+      type="button"
+      aria-label="Choose appearance"
+      [attr.aria-expanded]="expanded()"
+      (click)="toggleExpanded()"
+    >
+      <svg viewBox="0 0 24 24" aria-hidden="true">
+        <path d="M12 2.75v2.1M12 19.15v2.1M4.75 12h-2.1M21.35 12h-2.1" />
+        <path
+          d="m5.88 5.88-1.49-1.49M19.61 19.61l-1.49-1.49M18.12 5.88l1.49-1.49M4.39 19.61l1.49-1.49"
+        />
+        <circle cx="12" cy="12" r="4.15" />
+      </svg>
+    </button>
+    <div class="picker-panel">
+      <span>Appearance</span>
+      <mat-button-toggle-group
+        aria-label="Appearance"
+        hideSingleSelectionIndicator
+        [value]="preference()"
+        (change)="setPreference($event.value)"
+      >
+        <mat-button-toggle value="auto">Auto</mat-button-toggle>
+        <mat-button-toggle value="light">Light</mat-button-toggle>
+        <mat-button-toggle value="dark">Dark</mat-button-toggle>
+      </mat-button-toggle-group>
+    </div>
+  </div>
+} @else {
+  <div class="theme-control">
+    <span id="theme-label">Appearance</span>
+    <mat-button-toggle-group
+      aria-labelledby="theme-label"
+      hideSingleSelectionIndicator
+      [value]="preference()"
+      (change)="setPreference($event.value)"
+    >
+      <mat-button-toggle value="auto">Auto</mat-button-toggle>
+      <mat-button-toggle value="light">Light</mat-button-toggle>
+      <mat-button-toggle value="dark">Dark</mat-button-toggle>
+    </mat-button-toggle-group>
+    <small>Auto uses light from 7 AM–7 PM and dark at night.</small>
+  </div>
+}

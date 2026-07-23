@@ -3,6 +3,7 @@ import { appReducer } from './app.reducer';
 import { existingAccountDestination } from './app.navigation';
 import { resolveTheme } from '../theme-manager';
 import { initialAppState } from './app.state';
+import { selectThemePreference } from './app.selectors';
 
 describe('ClinicX NgRx state', () => {
   it('creates a verified clinic account under review', () => {
@@ -155,11 +156,38 @@ describe('ClinicX NgRx state', () => {
       AppActions.setThemePreference({ preference: 'dark' }),
     );
 
-    expect(state.themePreference).toBe('dark');
     expect(state.accounts.find((account) => account.id === 'clinic-demo')?.themePreference).toBe(
       'dark',
     );
+    const signedOutState = appReducer(state, AppActions.signOut());
+    expect(signedOutState.activeAccountId).toBeNull();
+    expect(selectThemePreference.projector(signedOutState, undefined)).toBe('auto');
     expect(resolveTheme('auto', 12)).toBe('light');
     expect(resolveTheme('auto', 22)).toBe('dark');
+    expect(resolveTheme('auto', 12, 'dark')).toBe('dark');
+    expect(resolveTheme('dark', 22, 'light')).toBe('light');
+  });
+
+  it('keeps a signed-out theme preference separate from account preferences', () => {
+    const guestState = appReducer(
+      initialAppState,
+      AppActions.setThemePreference({ preference: 'dark' }),
+    );
+    const signedInState = appReducer(
+      { ...guestState, activeAccountId: 'clinic-demo' },
+      AppActions.setThemePreference({ preference: 'light' }),
+    );
+
+    expect(guestState.guestThemePreference).toBe('dark');
+    expect(
+      selectThemePreference.projector(
+        { ...guestState, activeAccountId: 'talent-demo' },
+        guestState.accounts.find((account) => account.id === 'talent-demo'),
+      ),
+    ).toBe('auto');
+    expect(signedInState.guestThemePreference).toBe('dark');
+    expect(
+      signedInState.accounts.find((account) => account.id === 'clinic-demo')?.themePreference,
+    ).toBe('light');
   });
 });

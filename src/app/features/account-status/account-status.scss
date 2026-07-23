@@ -1,8 +1,11 @@
 :host {
   display: block;
   min-height: 100vh;
-  background: #f3f1e8;
-  color: #12332f;
+  background: var(--cx-background);
+  color: var(--cx-text);
+  transition:
+    background-color 180ms ease,
+    color 180ms ease;
 }
 main {
   min-height: 100vh;
@@ -17,7 +20,7 @@ header a {
 }
 header span,
 .eyebrow {
-  color: #bd6249;
+  color: var(--cx-accent);
 }
 section {
   width: min(100%, 48rem);
@@ -36,16 +39,20 @@ section {
   height: 3.5rem;
   margin: 2rem 0;
   border-radius: 50%;
-  background: #dfe9df;
+  border: 1px solid var(--cx-border);
+  background: var(--cx-surface);
+  color: var(--cx-text);
   font-weight: 800;
 }
 .status-mark.hold {
-  background: #f0ddcf;
-  color: #9b432f;
+  border-color: color-mix(in srgb, var(--cx-accent) 55%, var(--cx-border));
+  background: color-mix(in srgb, var(--cx-accent) 18%, var(--cx-surface));
+  color: var(--cx-accent);
 }
 .status-mark.approved {
-  background: #d9eadf;
-  color: #276247;
+  border-color: color-mix(in srgb, #48a879 55%, var(--cx-border));
+  background: color-mix(in srgb, #48a879 18%, var(--cx-surface));
+  color: color-mix(in srgb, #48a879 80%, var(--cx-text));
 }
 h1 {
   max-width: 42rem;
@@ -56,35 +63,30 @@ h1 {
 }
 section > p:not(.eyebrow) {
   max-width: 38rem;
-  color: #596d68;
+  color: var(--cx-muted);
   font-size: 1.15rem;
   line-height: 1.65;
 }
-button,
 .primary {
-  display: inline-block;
   margin-top: 2rem;
-  border: 0;
-  background: #12332f;
-  color: white;
-  padding: 1rem 1.35rem;
-  font: 700 1rem inherit;
-  text-decoration: none;
-  cursor: pointer;
+}
+button {
+  margin-top: 2rem;
 }
 small {
   display: block;
   margin-top: 0.75rem;
-  color: #6a7975;
+  color: var(--cx-muted);
 }
 .confirmed {
   display: grid;
   gap: 0.35rem;
   margin-top: 2rem;
-  border-left: 3px solid #bd6249;
+  border: 1px solid var(--cx-border);
+  border-left: 3px solid var(--cx-accent);
   padding: 1rem 1.25rem;
-  background: #fffdf7;
+  background: var(--cx-surface);
 }
 .confirmed span {
-  color: #687773;
+  color: var(--cx-muted);
 }

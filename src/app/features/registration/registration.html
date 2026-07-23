@@ -51,20 +51,34 @@
           <p>Choose the profile you want to create first.</p>
         </div>
         <div class="type-options">
-          <button mat-stroked-button type="button" (click)="chooseType('clinic')">
-            <span class="type-icon">CX</span>
-            <div>
-              <strong>I represent a clinic</strong><small>Hire and vet exceptional talent</small>
-            </div>
-            <b>→</b>
+          <button
+            mat-stroked-button
+            class="type-choice"
+            type="button"
+            (click)="chooseType('clinic')"
+          >
+            <span class="type-choice-content">
+              <span class="type-icon">CX</span>
+              <span class="type-copy">
+                <strong>I represent a clinic</strong><small>Hire and vet exceptional talent</small>
+              </span>
+              <span class="type-arrow" aria-hidden="true">→</span>
+            </span>
           </button>
-          <button mat-stroked-button type="button" (click)="chooseType('talent')">
-            <span class="type-icon">ME</span>
-            <div>
-              <strong>I’m joining as talent</strong
-              ><small>Build a profile and explore clinics</small>
-            </div>
-            <b>→</b>
+          <button
+            mat-stroked-button
+            class="type-choice"
+            type="button"
+            (click)="chooseType('talent')"
+          >
+            <span class="type-choice-content">
+              <span class="type-icon">ME</span>
+              <span class="type-copy">
+                <strong>I’m joining as talent</strong>
+                <small>Build a profile and explore clinics</small>
+              </span>
+              <span class="type-arrow" aria-hidden="true">→</span>
+            </span>
           </button>
         </div>
         <p class="account-note">Already have an account? <a routerLink="/signin">Sign in</a>.</p>
@@ -103,6 +117,7 @@
               type="tel"
               autocomplete="tel"
               inputmode="tel"
+              autofocus
               placeholder="(312) 555-0101"
               [formField]="phoneForm.phone"
               (input)="maskPhone($event)"

@@ -55,9 +55,11 @@ body {
   --cx-background: #f6f2e9;
   --cx-surface: #fffdf8;
   --cx-text: #18312c;
-  --cx-muted: #687773;
+  --cx-muted: #596a65;
   --cx-border: #cfd3cc;
-  --cx-accent: #b7664f;
+  --cx-accent: #9b4835;
+  --cx-on-accent: #ffffff;
+  --cx-success: #3f6c5f;
   margin: 0;
   background: var(--cx-background);
   color: var(--cx-text);
@@ -77,6 +79,8 @@ body.theme-dark {
   --cx-muted: #adbbb6;
   --cx-border: #40504b;
   --cx-accent: #df8d74;
+  --cx-on-accent: #18312c;
+  --cx-success: #8fb9ad;
 }
 button,
 a {

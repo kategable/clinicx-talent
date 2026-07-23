@@ -13,6 +13,7 @@
           id="username"
           type="text"
           autocomplete="username"
+          autofocus
           [formField]="loginForm.username"
         />
         @if (loginForm.username().touched() && loginForm.username().invalid()) {
