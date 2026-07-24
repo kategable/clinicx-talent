@@ -12,7 +12,7 @@ export const approvedClinicGuard: CanActivateFn = () => {
     map((account) => {
       if (account?.type === 'clinic' && account.status === 'approved') return true;
       return account
-        ? router.createUrlTree(['/account/status'])
+        ? router.createUrlTree(['/clinic/status'])
         : router.createUrlTree(['/signin']);
     }),
   );

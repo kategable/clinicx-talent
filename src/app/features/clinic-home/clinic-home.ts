@@ -1,26 +1,28 @@
 import { Component, inject, signal } from '@angular/core';
 import { FormField, form, maxLength, required, submit } from '@angular/forms/signals';
+import { FormsModule } from '@angular/forms';
 import { RouterLink } from '@angular/router';
 import { MatButtonModule } from '@angular/material/button';
 import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatInputModule } from '@angular/material/input';
 import { MatSelectModule } from '@angular/material/select';
+import { MatSlideToggleModule } from '@angular/material/slide-toggle';
 import { Store } from '@ngrx/store';
 import { ClinicDetails } from '../../core/account';
 import { AppActions } from '../../core/store/app.actions';
 import { selectCurrentAccount } from '../../core/store/app.selectors';
-import { ThemePicker } from '../../shared/theme-picker/theme-picker';
 
 @Component({
   selector: 'app-clinic-home',
   imports: [
     FormField,
+    FormsModule,
     RouterLink,
     MatButtonModule,
     MatFormFieldModule,
     MatInputModule,
     MatSelectModule,
-    ThemePicker,
+    MatSlideToggleModule,
   ],
   templateUrl: './clinic-home.html',
   styleUrl: './clinic-home.scss',
@@ -29,6 +31,11 @@ export class ClinicHome {
   private readonly store = inject(Store);
   protected readonly account = this.store.selectSignal(selectCurrentAccount);
   protected readonly saved = signal(false);
+  protected readonly contactSaved = signal(false);
+  protected readonly contactEmail = signal(this.account()?.email ?? '');
+  protected readonly contactDisplayPhone = signal(this.account()?.displayPhone ?? '');
+  protected readonly contactShareEmail = signal(this.account()?.shareEmail ?? false);
+  protected readonly contactSharePhone = signal(this.account()?.sharePhone ?? false);
   protected readonly model = signal<ClinicDetails>({
     clinicName: this.account()?.clinicDetails?.clinicName ?? this.account()?.displayName ?? '',
     location: this.account()?.clinicDetails?.location ?? '',
@@ -54,6 +61,18 @@ export class ClinicHome {
       this.store.dispatch(AppActions.saveClinicDetails({ details: this.model() }));
       this.saved.set(true);
     });
+  }
+
+  protected saveContact(): void {
+    this.store.dispatch(
+      AppActions.saveAccountContact({
+        email: this.contactEmail(),
+        displayPhone: this.contactDisplayPhone(),
+        shareEmail: this.contactShareEmail(),
+        sharePhone: this.contactSharePhone(),
+      }),
+    );
+    this.contactSaved.set(true);
   }
 
   protected signOut(): void {

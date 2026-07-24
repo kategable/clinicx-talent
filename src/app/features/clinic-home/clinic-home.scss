@@ -1,47 +1,9 @@
 :host {
   display: block;
-  min-height: 100vh;
-  background: var(--cx-background);
   color: var(--cx-text);
 }
-main {
-  min-height: 100vh;
-}
-header {
-  min-height: 76px;
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 1rem;
-  padding: 0 clamp(1.25rem, 6vw, 6rem);
-  border-bottom: 1px solid #d6d7cf;
-}
-.brand {
-  color: inherit;
-  font:
-    700 1.45rem Georgia,
-    serif;
-  text-decoration: none;
-}
-.brand span,
 .eyebrow {
   color: #b9644d;
-}
-nav {
-  display: flex;
-  align-items: center;
-  gap: 1.25rem;
-}
-nav a,
-nav button {
-  border: 0;
-  background: transparent;
-  color: inherit;
-  font:
-    600 0.82rem Arial,
-    sans-serif;
-  text-decoration: none;
-  cursor: pointer;
 }
 .welcome {
   display: grid;
@@ -124,7 +86,7 @@ form {
 }
 .form-actions {
   position: sticky;
-  top: 0.75rem;
+  top: calc(64px + 0.75rem);
   z-index: 5;
   display: flex;
   align-items: center;
@@ -200,10 +162,19 @@ h3 {
   .details {
     grid-template-columns: 1fr;
   }
+  .details-intro {
+    h2 {
+      font-size: 1.05rem;
+    }
+    p {
+      font-size: 0.8125rem;
+      max-width: 100%;
+    }
+  }
   .two-column {
     grid-template-columns: 1fr;
   }
   .form-actions {
-    top: 0.5rem;
+    top: calc(64px + 0.5rem);
   }
 }

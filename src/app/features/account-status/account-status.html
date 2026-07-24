@@ -1,10 +1,10 @@
-<main>
-  <header>
-    <a routerLink="/">Clinic<span>X</span> Talent</a>
-  </header>
+<main class="account-status">
   @if (account(); as current) {
     <section>
       <p class="eyebrow">Account status</p>
+      @if (current.founder) {
+        <app-founder-badge [memberNumber]="founderMemberNumber()" />
+      }
       @if (current.status === 'under-review') {
         <div class="status-mark">01</div>
         <h1>Your account is under review.</h1>

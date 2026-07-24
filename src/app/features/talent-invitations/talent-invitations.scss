@@ -1,0 +1,135 @@
+.page {
+  max-width: 580px;
+  margin: 0 auto;
+  padding: 2rem 1.5rem;
+}
+
+h1 {
+  font-size: 1.5rem;
+  font-weight: 700;
+  margin: 0 0 0.5rem;
+  letter-spacing: -0.02em;
+  color: var(--cx-text);
+}
+
+.subtitle {
+  font-size: 0.9375rem;
+  color: var(--cx-muted);
+  line-height: 1.55;
+  margin: 0 0 1.75rem;
+}
+
+.app-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.app-card {
+  background: var(--cx-surface);
+  border: 1px solid var(--cx-border);
+  border-radius: 12px;
+  padding: 1.25rem 1.5rem;
+}
+
+.app-card-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  margin-bottom: 0.5rem;
+}
+
+.source-badge {
+  font-size: 0.6875rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--cx-accent);
+  background: color-mix(in srgb, var(--cx-accent) 10%, transparent);
+  padding: 0.2em 0.6em;
+  border-radius: 999px;
+}
+
+.app-status {
+  font-size: 0.6875rem;
+  font-weight: 600;
+  color: var(--cx-muted);
+  background: color-mix(in srgb, var(--cx-muted) 12%, transparent);
+  padding: 0.2em 0.6em;
+  border-radius: 999px;
+}
+
+.app-card h3 {
+  font-size: 1rem;
+  font-weight: 600;
+  margin: 0 0 0.25rem;
+  color: var(--cx-text);
+}
+
+.clinic-name {
+  font-size: 0.9375rem;
+  font-weight: 500;
+  margin: 0;
+  color: var(--cx-accent);
+  text-decoration: none;
+
+  &:hover {
+    text-decoration: underline;
+  }
+}
+
+.clinic-location {
+  font-size: 0.8125rem;
+  color: var(--cx-muted);
+  margin: 0.15rem 0 0;
+}
+
+.accepted {
+  font-size: 0.75rem;
+  color: var(--cx-muted);
+  margin: 0.5rem 0 0.75rem;
+}
+
+.respond-btn {
+  margin-bottom: 0.5rem;
+}
+
+.responded {
+  font-size: 0.8125rem;
+  color: var(--cx-success);
+  margin: 0.5rem 0;
+  font-weight: 500;
+}
+
+.contact-row {
+  margin-top: 0.5rem;
+  padding-top: 0.5rem;
+  border-top: 1px solid var(--cx-border);
+}
+
+.contact-link {
+  font-size: 0.8125rem;
+  color: var(--cx-accent);
+  text-decoration: none;
+  font-weight: 500;
+
+  &:hover {
+    text-decoration: underline;
+  }
+}
+
+.empty {
+  text-align: center;
+  padding: 2rem 0;
+
+  p {
+    color: var(--cx-muted);
+    margin: 0 0 0.5rem;
+  }
+
+  .hint {
+    font-size: 0.875rem;
+  }
+}

@@ -1,0 +1,126 @@
+:host {
+  display: block;
+}
+
+.page {
+  max-width: 680px;
+  margin: 0 auto;
+  padding: 1.5rem 1.5rem 4rem;
+  color: var(--cx-text);
+}
+
+.page-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 2rem;
+}
+
+.back-link {
+  font-size: 0.875rem;
+  color: var(--cx-muted);
+  text-decoration: none;
+
+  &:hover {
+    color: var(--cx-text);
+  }
+}
+
+.heading-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+  margin-bottom: 2rem;
+}
+
+h1 {
+  font-size: 1.75rem;
+  font-weight: 700;
+  margin: 0;
+  letter-spacing: -0.02em;
+}
+
+.list {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.card {
+  background: var(--cx-surface);
+  border: 1px solid var(--cx-border);
+  border-radius: 12px;
+  padding: 1.25rem 1.5rem;
+}
+
+.card-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+
+  h2 {
+    font-size: 1.0625rem;
+    font-weight: 600;
+    margin: 0;
+  }
+}
+
+.status {
+  font-size: 0.75rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  padding: 0.15em 0.55em;
+  border-radius: 999px;
+
+  &.active {
+    background: color-mix(in srgb, var(--cx-success) 15%, transparent);
+    color: var(--cx-success);
+  }
+
+  &.paused {
+    background: color-mix(in srgb, var(--cx-muted) 15%, transparent);
+    color: var(--cx-muted);
+  }
+
+  &.closed {
+    background: color-mix(in srgb, var(--cx-accent) 15%, transparent);
+    color: var(--cx-accent);
+  }
+}
+
+.location {
+  font-size: 0.875rem;
+  color: var(--cx-muted);
+  margin: 0.25rem 0 0;
+}
+
+.created {
+  font-size: 0.8125rem;
+  color: var(--cx-muted);
+  margin: 0.5rem 0 0;
+}
+
+.card-actions {
+  display: flex;
+  gap: 0.5rem;
+  margin-top: 0.75rem;
+}
+
+.copy-btn {
+  font-size: 0.8125rem;
+}
+
+.empty {
+  text-align: center;
+  padding-top: 3rem;
+
+  p {
+    color: var(--cx-muted);
+    margin-bottom: 1.25rem;
+  }
+}

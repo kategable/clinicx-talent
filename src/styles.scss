@@ -38,6 +38,7 @@ $clinicx-dark-theme: mat.define-theme(
 html {
   @include mat.all-component-themes($clinicx-light-theme);
   @include mat.strong-focus-indicators-theme($clinicx-light-theme);
+  height: 100%;
 }
 
 html:has(body.theme-dark) {
@@ -52,6 +53,7 @@ html {
   scroll-behavior: smooth;
 }
 body {
+  height: 100%;
   --cx-background: #f6f2e9;
   --cx-surface: #fffdf8;
   --cx-text: #18312c;

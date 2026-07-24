@@ -1,0 +1,152 @@
+@if (!saved()) {
+  <main class="page">
+    <header class="page-header">
+      <a routerLink="/clinic/talents" class="back-link">← Back to talent search</a>
+      <app-theme-picker compact />
+    </header>
+
+    @if (account(); as clinic) {
+      <h1>Create hiring link</h1>
+      <p class="subtitle">
+        Share this opportunity with talented professionals. We'll generate a public
+        link you can send by text, email, or post anywhere.
+      </p>
+
+      <p class="clinic-name">
+        Posting as <strong>{{ clinic.displayName }}</strong>
+      </p>
+
+      <form class="form" (submit)="$event.preventDefault(); createOpportunity()">
+        <h3 class="eyebrow">Position details</h3>
+
+        <mat-form-field appearance="outline">
+          <mat-label>Position title</mat-label>
+          <input
+            matInput
+            [formField]="opportunityForm.position"
+            placeholder="RN Injector"
+            autocomplete="off"
+          />
+          @if (
+            opportunityForm.position().touched() &&
+            opportunityForm.position().invalid()
+          ) {
+            <mat-error>
+              {{ opportunityForm.position().errors()[0].message }}
+            </mat-error>
+          }
+        </mat-form-field>
+
+        <mat-form-field appearance="outline">
+          <mat-label>Location</mat-label>
+          <input
+            matInput
+            [formField]="opportunityForm.location"
+            placeholder="River North, Chicago, IL"
+            autocomplete="off"
+          />
+          @if (
+            opportunityForm.location().touched() &&
+            opportunityForm.location().invalid()
+          ) {
+            <mat-error>
+              {{ opportunityForm.location().errors()[0].message }}
+            </mat-error>
+          }
+        </mat-form-field>
+
+        <mat-form-field appearance="outline">
+          <mat-label>Pay range</mat-label>
+          <input
+            matInput
+            [formField]="opportunityForm.payRange"
+            placeholder="$85,000–$110,000"
+            autocomplete="off"
+          />
+        </mat-form-field>
+
+        <mat-form-field appearance="outline">
+          <mat-label>Urgency</mat-label>
+          <select matNativeControl [formField]="opportunityForm.urgency">
+            <option value="">Select an urgency</option>
+            <option value="Immediately">Immediately</option>
+            <option value="Within 30 days">Within 30 days</option>
+            <option value="Within 60 days">Within 60 days</option>
+            <option value="Exploring options">Exploring options</option>
+          </select>
+        </mat-form-field>
+
+        <h3 class="section-break">Hiring brief</h3>
+
+        <mat-form-field appearance="outline">
+          <mat-label>Must-have skills</mat-label>
+          <textarea
+            matInput
+            [formField]="opportunityForm.mustHaveSkills"
+            placeholder="Injectables, consultations, luxury client care"
+            rows="2"
+          ></textarea>
+        </mat-form-field>
+
+        <mat-form-field appearance="outline">
+          <mat-label>Benefits</mat-label>
+          <textarea
+            matInput
+            [formField]="opportunityForm.benefits"
+            placeholder="Health insurance, paid time off, treatment allowance"
+            rows="2"
+          ></textarea>
+        </mat-form-field>
+
+        <mat-form-field appearance="outline">
+          <mat-label>Describe your ideal hire</mat-label>
+          <textarea
+            matInput
+            [formField]="opportunityForm.idealHire"
+            placeholder="Warm, polished, clinically excellent, and comfortable building client relationships."
+            rows="3"
+          ></textarea>
+        </mat-form-field>
+
+        <div class="form-actions">
+          <button
+            mat-flat-button
+            type="submit"
+            class="primary-cta"
+            [disabled]="opportunityForm().invalid()"
+          >
+            Generate hiring link
+          </button>
+        </div>
+      </form>
+    }
+  </main>
+} @else {
+  <main class="success-page">
+    <div class="success-card">
+      <span class="check" aria-hidden="true">✓</span>
+      <h1>Your hiring link is ready</h1>
+      <p>Share it anywhere — text, email, Instagram, or QR code. When a talent opens this link, they'll see your opportunity and can apply directly.</p>
+
+      <div class="link-display">
+        <code class="generated-link">{{ shareLink() }}</code>
+        <button mat-flat-button class="copy-btn" (click)="copyLink()">
+          Copy link
+        </button>
+      </div>
+
+      <p class="copied-hint" role="status" aria-live="polite">
+        Copied to clipboard — now share it with top talent.
+      </p>
+
+      <nav class="success-nav">
+        <a mat-stroked-button routerLink="/clinic/opportunities/new">
+          Create another link
+        </a>
+        <a mat-stroked-button routerLink="/clinic/opportunities">
+          View all hiring links
+        </a>
+      </nav>
+    </div>
+  </main>
+}

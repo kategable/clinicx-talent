@@ -6,6 +6,7 @@ import {
   TalentDetails,
   ThemePreference,
 } from '../account';
+import { ApplicationStatus } from '../hiring';
 
 export const AppActions = createActionGroup({
   source: 'ClinicX App',
@@ -26,6 +27,41 @@ export const AppActions = createActionGroup({
     'Request Review Reminder': props<{ accountId: string }>(),
     'Admin Login': props<{ username: string; password: string }>(),
     'Admin Logout': emptyProps(),
+    'Reset Verification': emptyProps(),
+    'Load All Accounts': emptyProps(),
+    'Load All Hiring': emptyProps(),
+    'Load Hiring Data': props<{
+      opportunities: import('../hiring').HiringOpportunity[];
+      invites: import('../hiring').HiringInvite[];
+      applications: import('../hiring').TalentApplication[];
+    }>(),
+    'Load Accounts': props<{ accounts: Record<string, import('../account').AccountRecord> }>(),
     'Clear Error': emptyProps(),
+    'Create Opportunity': props<{
+      clinicName: string;
+      position: string;
+      location: string;
+      payRange: string;
+      mustHaveSkills: string;
+      benefits: string;
+      urgency: string;
+      idealHire: string;
+    }>(),
+    'Share Talent Passport': props<{ talentAccountId: string }>(),
+    'Accept Hiring Invite': props<{ token: string }>(),
+    'Accept Passport Invite': props<{ token: string }>(),
+    'Create Application From Invite': emptyProps(),
+    'Update Application Status': props<{
+      applicationId: string;
+      status: ApplicationStatus;
+    }>(),
+    'Save Account Contact': props<{
+      email: string;
+      displayPhone: string;
+      shareEmail: boolean;
+      sharePhone: boolean;
+    }>(),
+    'Add Talent To My Clinic': props<{ talentAccountId: string }>(),
+    'Clear Pending Invite': emptyProps(),
   },
 });

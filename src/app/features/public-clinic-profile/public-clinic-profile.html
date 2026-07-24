@@ -1,0 +1,88 @@
+<main class="page">
+  <a class="brand" routerLink="/">ClinicX</a>
+
+  @if (clinic(); as c) {
+    <section class="profile">
+      <header class="clinic-header">
+        <div class="name-row">
+          <h1>{{ c.displayName }}</h1>
+          @if (isFounder()) {
+            <app-founder-badge
+              [compact]="true"
+              [memberNumber]="founderMemberNumber()"
+            />
+          }
+        </div>
+        <span class="status-badge" [class.approved]="c.status === 'approved'">
+          {{ c.status === 'approved' ? 'ClinicX approved' : 'Under review' }}
+        </span>
+      </header>
+
+      @if (details(); as d) {
+        @if (d.location) {
+          <p class="location">{{ d.location }}</p>
+        }
+
+        <div class="details-grid">
+          @if (d.specialties) {
+            <div class="detail">
+              <span class="label">Specialties</span>
+              <span class="value">{{ d.specialties }}</span>
+            </div>
+          }
+          @if (d.website) {
+            <div class="detail">
+              <span class="label">Website</span>
+              <a [href]="d.website" target="_blank" rel="noopener" class="value link">
+                {{ d.website }}
+              </a>
+            </div>
+          }
+        </div>
+
+        @if (d.about) {
+          <div class="section">
+            <h2>About</h2>
+            <p class="about">{{ d.about }}</p>
+          </div>
+        }
+
+        @if (d.position) {
+          <div class="section">
+            <h2>Currently hiring</h2>
+            <p class="position-label">{{ d.position }}</p>
+            @if (d.payRange) {
+              <p class="detail-line"><span class="label">Pay range</span> {{ d.payRange }}</p>
+            }
+            @if (d.mustHaveSkills) {
+              <p class="detail-line"><span class="label">Must-have skills</span> {{ d.mustHaveSkills }}</p>
+            }
+            @if (d.benefits) {
+              <p class="detail-line"><span class="label">Benefits</span> {{ d.benefits }}</p>
+            }
+            @if (d.idealHire) {
+              <p class="detail-line"><span class="label">Ideal hire</span> {{ d.idealHire }}</p>
+            }
+          </div>
+        }
+      }
+
+      @if (c.shareEmail && c.email) {
+        <div class="contact-section">
+          <a [href]="'mailto:' + c.email" class="contact-link">Email {{ c.email }}</a>
+        </div>
+      }
+      @if (c.sharePhone && c.displayPhone) {
+        <div class="contact-section">
+          <a [href]="'tel:' + c.displayPhone" class="contact-link">Call {{ c.displayPhone }}</a>
+        </div>
+      }
+    </section>
+  } @else {
+    <section class="empty">
+      <h1>Clinic profile not found.</h1>
+      <p>The link you followed may not match any clinic on ClinicX.</p>
+      <a mat-stroked-button routerLink="/">Browse ClinicX Talent</a>
+    </section>
+  }
+</main>

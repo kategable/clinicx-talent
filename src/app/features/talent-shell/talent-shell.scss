@@ -1,0 +1,166 @@
+:host {
+  display: block;
+  height: 100vh;
+}
+
+.shell-container {
+  height: 100%;
+  background: var(--cx-background);
+}
+
+// -- Sidenav ----------------------------------------------------------------
+
+.sidenav {
+  width: 260px;
+  background: var(--cx-surface);
+  border-right: 1px solid var(--cx-border);
+  border-radius: 0;
+}
+
+.sidenav-header {
+  padding: 1.25rem 1rem 0.75rem;
+  border-bottom: 1px solid var(--cx-border);
+  margin-bottom: 0.5rem;
+}
+
+.brand {
+  color: var(--cx-text);
+  font:
+    700 1.35rem Georgia,
+    serif;
+  text-decoration: none;
+
+  span {
+    color: var(--cx-accent);
+  }
+}
+
+mat-nav-list {
+  padding-top: 0;
+
+  .active {
+    background: color-mix(in srgb, var(--cx-accent) 10%, transparent);
+    color: var(--cx-accent);
+    font-weight: 600;
+
+    mat-icon {
+      color: var(--cx-accent);
+    }
+  }
+}
+
+.sidenav-footer {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  padding: 1rem;
+  border-top: 1px solid var(--cx-border);
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  background: var(--cx-surface);
+}
+
+.talent-label {
+  font-size: 0.8125rem;
+  font-weight: 600;
+  color: var(--cx-text);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+// -- Toolbar ----------------------------------------------------------------
+
+.toolbar {
+  position: sticky;
+  top: 0;
+  z-index: 10;
+  background: var(--cx-surface);
+  color: var(--cx-text);
+  border-bottom: 1px solid var(--cx-border);
+  height: 64px;
+  padding: 0 1rem;
+}
+
+.menu-btn {
+  margin-right: 0.5rem;
+}
+
+.toolbar-title {
+  font-size: 0.9375rem;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  margin-right: 1.5rem;
+}
+
+.toolbar-nav {
+  display: flex;
+  gap: 0.25rem;
+
+  a {
+    font-size: 0.8125rem;
+    color: var(--cx-muted);
+    text-decoration: none;
+    padding: 0.35rem 0.65rem;
+    border-radius: 6px;
+    transition: background 0.15s, color 0.15s;
+
+    &:hover {
+      color: var(--cx-text);
+      background: color-mix(in srgb, var(--cx-text) 6%, transparent);
+    }
+
+    &.active {
+      color: var(--cx-accent);
+      background: color-mix(in srgb, var(--cx-accent) 10%, transparent);
+      font-weight: 600;
+    }
+  }
+}
+
+.toolbar-spacer {
+  flex: 1 1 auto;
+}
+
+.toolbar-founder {
+  margin-right: 0.25rem;
+}
+
+.toolbar-talent {
+  font-size: 0.8125rem;
+  color: var(--cx-muted);
+  margin-right: 0.75rem;
+  cursor: pointer;
+  max-width: 180px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+
+  &:hover {
+    color: var(--cx-text);
+  }
+}
+
+.sign-out-btn {
+  font-size: 0.8125rem;
+}
+
+// -- Responsive -------------------------------------------------------------
+
+@media (max-width: 959px) {
+  .toolbar-nav {
+    display: none;
+  }
+}
+
+@media (min-width: 960px) {
+  .menu-btn {
+    display: none;
+  }
+}
+
+mat-sidenav-content {
+  background: var(--cx-background);
+}

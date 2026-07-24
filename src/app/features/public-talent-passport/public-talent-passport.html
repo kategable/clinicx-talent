@@ -1,0 +1,137 @@
+<main class="page">
+  <a class="brand" routerLink="/">ClinicX</a>
+
+  @if (talent(); as t) {
+    <section class="passport">
+      <header class="talent-header">
+        <div class="name-row">
+          <h1>{{ t.displayName }}</h1>
+          @if (isFounder()) {
+            <app-founder-badge
+              [compact]="true"
+              [memberNumber]="founderMemberNumber()"
+            />
+          }
+        </div>
+        @if (profile(); as p) {
+          <p class="role">{{ p.role }}</p>
+          <p class="location">{{ p.location }}</p>
+        }
+      </header>
+
+      @if (profile(); as p) {
+        <div class="details">
+          @if (p.yearsExperience) {
+            <div class="detail">
+              <span class="label">Experience</span>
+              <span class="value">{{ p.yearsExperience }}</span>
+            </div>
+          }
+          @if (p.skills) {
+            <div class="detail">
+              <span class="label">Skills</span>
+              <span class="value">{{ p.skills }}</span>
+            </div>
+          }
+          @if (p.availability) {
+            <div class="detail">
+              <span class="label">Availability</span>
+              <span class="value">{{ p.availability }}</span>
+            </div>
+          }
+          @if (p.salaryExpectation) {
+            <div class="detail">
+              <span class="label">Salary expectation</span>
+              <span class="value">{{ p.salaryExpectation }}</span>
+            </div>
+          }
+          @if (p.languages) {
+            <div class="detail">
+              <span class="label">Languages</span>
+              <span class="value">{{ p.languages }}</span>
+            </div>
+          }
+        </div>
+
+        @if (p.experienceTimeline) {
+          <div class="section">
+            <h2>Experience timeline</h2>
+            <p class="timeline">{{ p.experienceTimeline }}</p>
+          </div>
+        }
+
+        @if (p.introduction) {
+          <div class="section">
+            <h2>About</h2>
+            <p class="intro">{{ p.introduction }}</p>
+          </div>
+        }
+      }
+
+      @if (t.shareEmail && t.email) {
+        <a [href]="'mailto:' + t.email" class="contact-link">Email {{ t.email }}</a>
+      }
+      @if (t.sharePhone && t.displayPhone) {
+        <a [href]="'tel:' + t.displayPhone" class="contact-link">Call {{ t.displayPhone }}</a>
+      }
+
+      @if (isLoggedIn()) {
+        @if (isClinic()) {
+          @if (alreadyAdded()) {
+            <div class="actions">
+              <p class="already-added" role="status">
+                This talent is already in your list.
+                <a routerLink="/clinic/talents">View talent search</a>
+              </p>
+            </div>
+          } @else {
+            <div class="actions">
+              <button
+                mat-flat-button
+                class="primary-cta"
+                (click)="addTalent()"
+              >
+                Add this talent to my clinic
+              </button>
+            </div>
+          }
+        } @else {
+          <div class="actions">
+            <p class="logged-in-note">
+              You're signed in as a talent.
+              <a routerLink="/talent/home">Go to your profile</a>
+            </p>
+          </div>
+        }
+      } @else {
+        <div class="cta-banner">
+          <p class="cta-heading">Interested in this talent?</p>
+          <p>Create a free clinic account to connect with {{ t.displayName }} and browse vetted aesthetic professionals.</p>
+          <div class="actions">
+            <a
+              mat-flat-button
+              class="primary-cta"
+              [routerLink]="['/register']"
+              [queryParams]="{ type: 'clinic', invite: inviteToken }"
+            >
+              Create a clinic account
+            </a>
+            <a
+              mat-stroked-button
+              [routerLink]="['/signin']"
+              [queryParams]="{ invite: inviteToken }"
+            >
+              Already have an account? Sign in
+            </a>
+          </div>
+        </div>
+      }
+    </section>
+  } @else {
+    <section class="empty">
+      <h1>This talent profile is no longer available.</h1>
+      <p>The link you followed may have expired.</p>
+      <a mat-stroked-button routerLink="/">Browse ClinicX Talent</a>
+    </section>
+  }
+</main>

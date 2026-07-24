@@ -1,0 +1,3 @@
+- [Hiring Link Feature](memory/hiring-link-feature.md) — Complete spec for Clinic Hiring Link & Talent Passport growth loop
+- [Angular v22 Conventions](memory/angular-v22-conventions.md) — Coding conventions for this project
+- [Implementation Plan](.claude/plans/wiggly-stargazing-bunny.md) — Detailed build plan for hiring links, talent passport, business logic library, and Founder 1000 Club

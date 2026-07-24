@@ -1,97 +1,112 @@
 # ClinicX Talent
 
-ClinicX Talent is a curated hiring marketplace for med spas. The MVP is designed to validate one business question: can ClinicX consistently introduce clinics to qualified, pre-vetted talent and get paid for successful matches?
+ClinicX Talent is a curated hiring marketplace for clinics. The MVP is designed to validate one business question: can ClinicX consistently introduce clinics to qualified, pre-vetted talent and get paid for successful matches?
 
 ## MVP today
 
-The current Angular application demonstrates the clinic-owner experience:
+The current Angular application is a full hiring marketplace prototype:
 
-- Premium, responsive landing page
-- Curated talent shortlist
-- Match scores, skills, and vetting highlights
-- Working interview-request interaction
-- Responsive hiring workflow section
-- Phone-only registration with local SMS-code verification
-- Clinic and talent account-type selection
-- Profile onboarding with an under-review state
-- Admin account review with approve and on-hold actions
-- NgRx application state with browser-session restoration
-- Guarded admin access with a development-only login
-- Simulated verification-abuse limits and usage-review contact path
-- Status-aware sign-in routing for accounts under review, on hold, or approved
-- Once-per-session “I’m waiting” review reminder simulation
-- Session-aware marketing navigation showing the active account name
-- Clinic workspace with locally persisted profile details
-- Talent workspace with locally persisted professional details
-- Angular Material form controls across registration, account, admin, clinic, and talent flows
+- Premium, responsive landing page with talent showcase
+- Phone-only registration and sign-in with local SMS-code verification (no real SMS)
+- **Growth loop**: Clinic Hiring Links and Talent Passport — two shareable products that bring both sides into the platform
+- **Founder 1000 Club** — early members get a founder badge, voice in features, and life-long free accounts
+- **Clinic dashboard** with Material sidenav: Home (profile), Talent search, Create hiring link, Appearance, Account status
+- **Talent dashboard** with Material sidenav: Home (profile), Talent Passport, My invitations, Appearance, Account status
+- **Hiring links**: approved clinics create public job postings at `/join/:clinicSlug/:positionSlug` with invite tokens
+- **Talent Passport**: talent shares a public profile at `/talent/:talentSlug`; clinics can add them directly
+- **Public clinic profiles** at `/c/:clinicSlug`
+- **Invitation flow**: tokens survive registration → sign-in → application created → clinic sees “Invited by you” badge
+- **Talent invitations page**: see connected clinics, respond “I’m interested”, view contact info when shared
+- **Email and contact phone** fields on both account types, with per-field share toggles (default off)
+- **Per-phone verification security**: 3 attempts per phone before lockout; >5 distinct phones flags the system for admin review
+- **Admin dashboard** with working sidebar tabs: Account review, Talent, Clinics, Jobs, Placements
+- **Admin Jobs tab**: view all hiring opportunities, link status (active/expired), applicants with source attribution
+- **Sortable admin tables**: account review sortable by status, type
+- **Data source abstraction**: `AccountDataSource` / `HiringDataSource` are abstract classes; MVP uses localStorage-backed implementations, ready to swap for HTTP when the backend arrives
+- NgRx application state with browser-session restoration (accounts indexed by ID for O(1) lookup)
+- Account records, hiring data, and review status persisted in `localStorage` (MVP database)
 - Per-account light, dark, or automatic appearance preferences
-- Angular and service unit tests
+- Angular Material form controls, Signal Forms, and native control flow throughout
+- Responsive — mobile hamburger menus on all dashboards
+- 13 Vitest unit tests (Angular and reducer specs)
+- Playwright E2E test plan documented (deferred)
 
-Talent showcase data is currently static. MVP account records persist in browser storage; real authentication, server persistence, file uploads, and payments have not been added yet.
+All data is client-side for MVP testing. No real backend yet.
 
 ## MVP account access
 
-Registration is available at `/register`. No SMS is sent in the local MVP. Use one paired phone number and verification code:
+Registration is available at `/register`. No SMS is sent. Use one of these test phone numbers and verification codes:
 
-| Phone            | Code     |
-| ---------------- | -------- |
-| `(312) 555-0101` | `246810` |
-| `(312) 555-0102` | `135790` |
-| `(312) 555-0199` | `112233` |
+| Phone            | Code     | Account |
+| ---------------- | -------- | ------- |
+| `(312) 555-0101` | `246810` | Radiance Med Clinic (approved clinic) |
+| `(312) 555-0102` | `135790` | Sophia Chen, RN (approved talent) |
+| `(312) 555-0199` | `112233` | No seed — creates new account on registration |
+| `(773) 555-0142` | `445566` | Lumen Aesthetics (under-review clinic) |
+| `(847) 555-0168` | `778899` | Alex Morgan, RN (on-hold talent) |
+| `(312) 555-0200` | `998877` | Lux Aesthetics Lounge (approved clinic) |
 
-New accounts default to **under review** and can begin building a profile at `/onboarding`. Account data and the active account ID are persisted under the versioned `clinicx.state.v1` browser-storage key, so local sessions survive a refresh or browser restart during MVP testing.
+New accounts default to **under review**. Sign-in routes to the appropriate dashboard: approved clinics → `/clinic/talents`, approved talent → `/talent/home`, under-review/on-hold accounts → `/clinic/status` or `/talent/status`.
 
-The temporary admin login is available at `/admin/login`:
+The temporary admin login is at `/admin/login`:
 
 | Username | Password |
 | -------- | -------- |
 | `admin`  | `admin`  |
 
-Successful admin authentication unlocks the guarded `/admin/accounts` route. Admin session state is also local-only for MVP testing.
+Admin unlocks the full admin dashboard with tabbed navigation at `/admin/accounts`.
 
-Existing accounts are routed according to review status after sign-in. Accounts under review or on hold see `/account/status`. The “I’m waiting” acknowledgement can be used once per account during a browser session and is stored in `sessionStorage`; it does not contact ClinicX yet. Approved clinic accounts can enter the guarded `/clinic/talents` placeholder, where talent search will be implemented later.
+All credentials, sessions, and admin controls are client-side for MVP testing.
 
-When a session is active, the marketing header replaces “Sign in” with the account display name. Clinic accounts link to `/clinic/home`, where owners can maintain clinic location, website, specialties, and introductory information. Those changes dispatch NgRx actions and persist with the rest of the local MVP account state. Talent search remains available only to approved clinics.
+## Architecture
 
-Talent accounts link to `/talent/home`. The talent workspace stores professional role, location, experience timeline, skills, certificates, availability, salary expectations, languages, portfolio, introduction, and photo/video/gallery file metadata through NgRx. Only the professional name is required during the MVP. Actual media bytes are not stored in browser state; the current file selectors retain names for flow testing until secure backend object-storage uploads are implemented.
+### Data layer
+- **Abstract data sources**: `AccountDataSource` and `HiringDataSource` are abstract classes. `LocalAccountDataSource` and `LocalHiringDataSource` implement them using seeds + localStorage. Swap to HTTP implementations when the backend arrives — no component code changes.
+- **NgRx effects** are the sole integration point between the store and data sources. Components dispatch actions; effects call services; reducers update state.
+- **Accounts indexed by ID** (`Record<string, AccountRecord>`) for O(1) lookup.
+- **Per-phone verification**: each phone gets 3 code attempts before lockout; >5 distinct phones flags for admin review without blocking the system.
 
-The landing page, clinic workspace, and talent workspace include an **Appearance** control. `Light` and `Dark` keep the selected theme until it is changed. `Auto` uses the light theme from 7:00 AM through 6:59 PM in the browser's local time and the dark theme at night. The preference is dispatched through NgRx and stored on the active local account when signed in. Signed-out preferences use `sessionStorage`, so they last only for the current browser session. Native file selectors remain custom upload controls because Angular Material does not provide a file-input component.
+### Key routes
+| Route | Access |
+|-------|--------|
+| `/` | Public landing page |
+| `/register`, `/signin` | Registration and sign-in |
+| `/clinic/**` | Clinic dashboard shell (sidenav + tabs) |
+| `/talent/**` | Talent dashboard shell (sidenav + tabs) |
+| `/admin/**` | Admin dashboard shell (guarded, tabbed) |
+| `/join/:clinicSlug/:positionSlug` | Public hiring page |
+| `/talent/:talentSlug` | Public talent passport |
+| `/c/:clinicSlug` | Public clinic profile |
+| `/founders` | Founder 1000 Club page |
 
-These credentials, sessions, limits, and admin controls are intentionally client-side for local testing. They provide no security against someone who can inspect or modify browser storage.
-
-Before production:
-
-- ASP.NET Core must verify SMS challenges and enforce attempt limits by phone, IP address, time window, and appropriate device/risk signals.
-- A fourth distinct phone-number attempt in the configured window should create an audit event and send the user to the usage-review flow. Shared clinic, office, mobile, and public IP addresses require time-based limits and a manual release path rather than permanent blocking.
-- The backend must issue a rotating refresh token in a `Secure`, `HttpOnly`, `SameSite` cookie. Angular should restore the current account through a session endpoint and must not store production access or refresh credentials in `localStorage`.
-- Admin routes and review APIs must require a server-validated admin role. The hard-coded credential, client route guard, and local review changes must be removed and replaced with audited authorization.
+### State management
+- Single `app` NgRx feature store with `createActionGroup`, `createReducer`, `createEffect`, `createFeatureSelector`/`createSelector`
+- All mutations through dispatched actions; all reads through selectors
+- localStorage persists accounts + hiring data; sessionStorage handles ephemeral state (review reminders, guest theme)
+- Only seed accounts (5) and the signed-in account are loaded into the store at init — admin page loads the full dataset via effects
 
 ## Technology
 
 - Angular 22.0.6
 - Angular Material and CDK 22.0.4 with Material 3 light and dark themes
 - TypeScript 6.0
-- Standalone components
+- Standalone components (default, no `standalone: true` needed)
+- `OnPush` change detection (default in v22, no explicit annotation needed)
 - NgRx Store, Effects, selectors, and Store DevTools for application state
-- Angular Signals Forms and component-local presentation state
-- Native Angular template control flow
+- Angular Signal Forms for all forms
+- Native Angular template control flow (`@if`, `@for`, `@switch`)
+- `inject()` instead of constructor injection
 - SCSS component styling
-- Vitest testing
+- Vitest testing (13 tests)
+- Playwright E2E test plan (deferred)
 
 The intended backend is ASP.NET Core with PostgreSQL. Resume and video assets will eventually use object storage such as Amazon S3.
 
 ## Local setup
 
-Angular 22 requires one of these Node.js versions:
-
-- Node 22.22.3 or newer on the Node 22 line
-- Node 24.15.0 or newer on the Node 24 line
-- Node 26 or newer
-
 Node 24.15.0 is pinned in `.nvmrc`. With `nvm` installed:
 
 ```bash
-cd /Users/katemac/Documents/Codex/2026-07-14/can/clinicx-talent
 nvm install
 nvm use
 npm install
@@ -106,43 +121,7 @@ Open [http://localhost:4200](http://localhost:4200).
 npm run build
 npm test
 npm run test:coverage
+npm run audit:lighthouse   # requires dev server on :4200
 ```
 
-With the development server running on port 4200, generate a local Lighthouse report with:
-
-```bash
-npm run audit:lighthouse
-```
-
-The command uses the project-pinned Lighthouse CLI and writes `lighthouse-report.html` at the project root. The generated report is intentionally ignored by Git.
-
-The project uses strict TypeScript and Angular template checking.
-
-NgRx 21.1.1 is temporarily installed with a peer override because it is the newest published NgRx release and currently declares Angular 21 compatibility while this project uses Angular 22. Upgrade to the matching NgRx 22 release when it becomes available.
-
-## Next milestone
-
-Build one thin, API-backed workflow from beginning to end:
-
-1. A talent submits a basic profile and résumé.
-2. An administrator reviews and approves or rejects the talent.
-3. An approved talent appears in an employer shortlist.
-4. The employer requests an interview.
-5. The administrator tracks the request and placement outcome.
-
-Matching should remain manual during this phase. The goal is to validate demand for curated talent before automating recommendations.
-
-## Not in the MVP
-
-- AI matching
-- Direct messaging or chat
-- Social feeds
-- Payroll
-- Scheduling
-- Mobile applications
-- Automated video processing
-- Continuing education
-
-## AI development guidance
-
-`AGENTS.md` contains the official Angular 22 coding guidance generated by the Angular CLI. The official Angular `angular-developer` agent skill is also installed for version-aligned guidance on Signals, Signal Forms, routing, accessibility, testing, and CLI tooling.
+NgRx 21.1.1 is installed with a peer override pending the NgRx 22 release.

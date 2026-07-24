@@ -1,15 +1,17 @@
-<main>
-  <header>
-    <a routerLink="/">Clinic<span>X</span> Talent</a>
-  </header>
+<main class="clinic-talents">
   <section>
-    <p>Clinic workspace</p>
-    <h1>Find your next exceptional hire.</h1>
-    @if (account(); as current) {
-      <p>Welcome, {{ current.displayName }}. Review approved talent profiles below.</p>
-    } @else {
-      <p>Sign in with an approved clinic account to begin.</p>
-    }
+    <div class="section-header">
+      <div>
+        <p>Clinic workspace</p>
+        <h1>Find your next exceptional hire.</h1>
+        @if (account(); as current) {
+          <p>Welcome, {{ current.displayName }}.</p>
+        } @else {
+          <p>Sign in with an approved clinic account to begin.</p>
+        }
+      </div>
+      <a mat-flat-button routerLink="/clinic/opportunities/new">Create hiring link</a>
+    </div>
     <p class="privacy-note">Profile photos are private and visible only to approved clinics.</p>
     @if (talents().length) {
       <div class="talent-grid">
@@ -26,8 +28,24 @@
                 }
               </div>
               <div class="talent-copy">
-                <span>ClinicX approved</span>
-                <h2>{{ profile.professionalName || talent.displayName }}</h2>
+                <div class="badge-row">
+                  @if (talent.status === 'approved') {
+                    <span class="approved-badge">ClinicX approved</span>
+                  }
+                  @if (sourceLabel(talent.id); as source) {
+                    <span class="source-badge">{{ source }}</span>
+                  }
+                  @if (talent.founder) {
+                    <app-founder-badge
+                      [compact]="true"
+                      [memberNumber]="founderNumber(talent.id)"
+                    />
+                  }
+                </div>
+                <a
+                  class="talent-name"
+                  [routerLink]="['/talent', talentSlug(profile.professionalName || talent.displayName)]"
+                >{{ profile.professionalName || talent.displayName }}</a>
                 <p>{{ profile.role || 'Aesthetics professional' }} · {{ profile.location }}</p>
                 <ul>
                   @if (profile.yearsExperience) {
@@ -40,6 +58,19 @@
                     <li>{{ profile.skills }}</li>
                   }
                 </ul>
+                @if (statusLabel(talent.id); as status) {
+                  <span class="app-status">{{ status }}</span>
+                }
+                @if (talent.sharePhone && talent.displayPhone) {
+                  <a [href]="'tel:' + talent.displayPhone" class="phone-link">
+                    Call {{ talent.displayPhone }}
+                  </a>
+                }
+                @if (talent.shareEmail && talent.email) {
+                  <a [href]="'mailto:' + talent.email" class="email-link">
+                    {{ talent.email }}
+                  </a>
+                }
               </div>
             }
           </article>
@@ -47,8 +78,8 @@
       </div>
     } @else {
       <div class="empty-state">
-        <strong>No approved talent profiles yet.</strong>
-        <span>Profiles will appear here after ClinicX completes review.</span>
+        <strong>No talent profiles yet.</strong>
+        <span>Approved profiles and invited talent will appear here.</span>
       </div>
     }
     <a routerLink="/clinic">← Back to clinic home</a>

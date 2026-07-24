@@ -1,0 +1,70 @@
+<div class="page">
+  <h1>My invitations</h1>
+  <p class="subtitle">
+    Each invitation you accept creates a connection with a clinic. They can see
+    your profile and track your application status.
+  </p>
+
+  @if (applicationCards().length) {
+    <div class="app-list">
+      @for (card of applicationCards(); track card.application.id) {
+        <div class="app-card">
+          <div class="app-card-header">
+            <span class="source-badge">{{ card.sourceLabel }}</span>
+            <span class="app-status">{{ card.statusLabel }}</span>
+          </div>
+          <h3>{{ card.positionTitle }}</h3>
+          @if (card.clinic; as clinic) {
+            <a
+              class="clinic-name"
+              [routerLink]="['/c', clinicSlug(clinic.displayName)]"
+            >{{ clinic.displayName }}</a>
+            @if (clinic.clinicDetails?.location) {
+              <p class="clinic-location">{{ clinic.clinicDetails.location }}</p>
+            }
+          }
+          <p class="accepted">
+            Accepted {{ card.application.acceptedAt }}
+          </p>
+          @if (card.canRespond) {
+            <button
+              mat-stroked-button
+              class="respond-btn"
+              (click)="respondInterested(card.application.id)"
+            >
+              I'm interested — let the clinic know
+            </button>
+          } @else {
+            <p class="responded" role="status">
+              You've let this clinic know you're interested.
+            </p>
+          }
+          @if (card.clinic; as clinic) {
+            @if (clinic.sharePhone || clinic.shareEmail) {
+              <div class="contact-row">
+                @if (clinic.sharePhone && clinic.displayPhone) {
+                  <a [href]="'tel:' + clinic.displayPhone" class="contact-link">
+                    Call {{ clinic.displayPhone }}
+                  </a>
+                }
+                @if (clinic.shareEmail && clinic.email) {
+                  <a [href]="'mailto:' + clinic.email" class="contact-link">
+                    {{ clinic.email }}
+                  </a>
+                }
+              </div>
+            }
+          }
+        </div>
+      }
+    </div>
+  } @else {
+    <div class="empty">
+      <p>No invitations yet.</p>
+      <p class="hint">
+        When a clinic invites you through a hiring link or finds your Talent
+        Passport, your connections will appear here.
+      </p>
+    </div>
+  }
+</div>

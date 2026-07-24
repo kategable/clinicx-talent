@@ -11,13 +11,13 @@ describe('ClinicX NgRx state', () => {
       initialAppState,
       AppActions.resetRegistration({ accountType: 'clinic', signIn: false }),
     );
-    state = appReducer(state, AppActions.requestSMSCode({ phone: '3125550101' }));
-    state = appReducer(state, AppActions.verifyRegistrationCode({ code: '246810' }));
+    state = appReducer(state, AppActions.requestSMSCode({ phone: '3125550199' }));
+    state = appReducer(state, AppActions.verifyRegistrationCode({ code: '112233' }));
 
-    expect(state.accounts[0].status).toBe('under-review');
-    expect(state.accounts[0].type).toBe('clinic');
-    expect(state.accounts[0].phone).toBe('(312) 555-0101');
-    expect(state.activeAccountId).toBe(state.accounts[0].id);
+    const newAccount = state.accounts[state.activeAccountId!];
+    expect(newAccount.status).toBe('under-review');
+    expect(newAccount.type).toBe('clinic');
+    expect(newAccount.phone).toBe('(312) 555-0199');
     expect(state.registration.accountCreated).toBe(true);
   });
 
@@ -31,7 +31,7 @@ describe('ClinicX NgRx state', () => {
 
     expect(state.registration.accountCreated).toBe(false);
     expect(state.activeAccountId).toBe('clinic-demo');
-    expect(existingAccountDestination(state)).toBe('/account/status');
+    expect(existingAccountDestination(state)).toBe('/clinic/status');
   });
 
   it('signs into an existing account without creating another account', () => {
@@ -40,16 +40,16 @@ describe('ClinicX NgRx state', () => {
     state = appReducer(state, AppActions.verifySignInCode({ code: '445566' }));
 
     expect(state.activeAccountId).toBe('clinic-demo');
-    expect(state.accounts).toHaveLength(2);
+    expect(Object.keys(state.accounts)).toHaveLength(5); // 5 seeded accounts
   });
 
   it('does not create an account from sign in', () => {
     let state = appReducer(initialAppState, AppActions.resetRegistration({ signIn: true }));
-    state = appReducer(state, AppActions.requestSMSCode({ phone: '3125550101' }));
-    state = appReducer(state, AppActions.verifySignInCode({ code: '246810' }));
+    state = appReducer(state, AppActions.requestSMSCode({ phone: '3125550199' }));
+    state = appReducer(state, AppActions.verifySignInCode({ code: '112233' }));
 
     expect(state.activeAccountId).toBeNull();
-    expect(state.accounts).toHaveLength(2);
+    expect(Object.keys(state.accounts)).toHaveLength(5); // 5 seeded accounts
   });
 
   it('allows only the hard-coded MVP admin credential', () => {
@@ -66,14 +66,21 @@ describe('ClinicX NgRx state', () => {
     expect(accepted.adminAuthenticated).toBe(true);
   });
 
-  it('blocks verification after more than three distinct phone numbers', () => {
+  it('flags the system after more than 5 distinct phones and locks a phone after 3 attempts', () => {
     let state = initialAppState;
-    for (const phone of ['3125550101', '3125550102', '3125550199', '7735550142']) {
+    const phones = ['3125550001', '3125550002', '3125550003', '3125550004', '3125550005', '3125550006'];
+    for (const phone of phones) {
       state = appReducer(state, AppActions.requestSMSCode({ phone }));
     }
 
-    expect(state.verificationSecurity.blocked).toBe(true);
-    expect(state.error).toContain('paused');
+    expect(state.verificationSecurity.flagged).toBe(true);
+    expect(Object.keys(state.verificationSecurity.phoneAttempts)).toHaveLength(6);
+
+    state = appReducer(state, AppActions.requestSMSCode({ phone: '3125550001' }));
+    state = appReducer(state, AppActions.requestSMSCode({ phone: '3125550001' }));
+    state = appReducer(state, AppActions.requestSMSCode({ phone: '3125550001' }));
+    expect(state.verificationSecurity.lockedPhones).toContain('3125550001');
+    expect(state.error).toContain('temporarily locked');
   });
 
   it('updates admin review decisions through an action', () => {
@@ -81,7 +88,7 @@ describe('ClinicX NgRx state', () => {
       initialAppState,
       AppActions.setReviewStatus({ id: 'clinic-demo', status: 'approved' }),
     );
-    expect(state.accounts.find((account) => account.id === 'clinic-demo')?.status).toBe('approved');
+    expect(state.accounts['clinic-demo']?.status).toBe('approved');
   });
 
   it('records a review reminder only once for the active browser session', () => {
@@ -116,9 +123,7 @@ describe('ClinicX NgRx state', () => {
       }),
     );
 
-    expect(
-      state.accounts.find((account) => account.id === 'clinic-demo')?.clinicDetails?.city,
-    ).toBe('Chicago');
+    expect(state.accounts['clinic-demo']?.clinicDetails?.city).toBe('Chicago');
   });
 
   it('saves talent details against the logged-in talent account', () => {
@@ -145,9 +150,7 @@ describe('ClinicX NgRx state', () => {
       }),
     );
 
-    expect(
-      state.accounts.find((account) => account.id === 'talent-demo')?.talentDetails?.role,
-    ).toBe('RN Injector');
+    expect(state.accounts['talent-demo']?.talentDetails?.role).toBe('RN Injector');
   });
 
   it('stores an account theme preference and resolves automatic day and night themes', () => {
@@ -156,9 +159,7 @@ describe('ClinicX NgRx state', () => {
       AppActions.setThemePreference({ preference: 'dark' }),
     );
 
-    expect(state.accounts.find((account) => account.id === 'clinic-demo')?.themePreference).toBe(
-      'dark',
-    );
+    expect(state.accounts['clinic-demo']?.themePreference).toBe('dark');
     const signedOutState = appReducer(state, AppActions.signOut());
     expect(signedOutState.activeAccountId).toBeNull();
     expect(selectThemePreference.projector(signedOutState, undefined)).toBe('auto');
@@ -182,12 +183,10 @@ describe('ClinicX NgRx state', () => {
     expect(
       selectThemePreference.projector(
         { ...guestState, activeAccountId: 'talent-demo' },
-        guestState.accounts.find((account) => account.id === 'talent-demo'),
+        guestState.accounts['talent-demo'],
       ),
     ).toBe('auto');
     expect(signedInState.guestThemePreference).toBe('dark');
-    expect(
-      signedInState.accounts.find((account) => account.id === 'clinic-demo')?.themePreference,
-    ).toBe('light');
+    expect(signedInState.accounts['clinic-demo']?.themePreference).toBe('light');
   });
 });

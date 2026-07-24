@@ -1,0 +1,51 @@
+<main>
+  <aside [class.open]="navOpen()">
+    <a class="brand" routerLink="/" (click)="closeNav()">Clinic<span>X</span></a>
+    <nav>
+      <a routerLink="/admin/accounts" routerLinkActive="active" (click)="closeNav()">
+        Account review
+        @if (pendingCount()) {
+          <b>{{ pendingCount() }}</b>
+        }
+      </a>
+      <a routerLink="/admin/talent" routerLinkActive="active" (click)="closeNav()">Talent</a>
+      <a routerLink="/admin/clinics" routerLinkActive="active" (click)="closeNav()">Clinics</a>
+      <a routerLink="/admin/jobs" routerLinkActive="active" (click)="closeNav()">Jobs</a>
+      <a routerLink="/admin/placements" routerLinkActive="active" (click)="closeNav()">Placements</a>
+    </nav>
+    <a class="site-link" routerLink="/" (click)="closeNav()">View website →</a>
+  </aside>
+
+  @if (navOpen()) {
+    <div class="overlay" (click)="closeNav()" aria-hidden="true"></div>
+  }
+
+  <section>
+    <header>
+      <div class="header-left">
+        <button
+          mat-icon-button
+          class="menu-btn"
+          aria-label="Toggle navigation"
+          (click)="toggleNav()"
+        >
+          <mat-icon>menu</mat-icon>
+        </button>
+        <div>
+          <p>ClinicX admin</p>
+          <h1>Account review</h1>
+        </div>
+      </div>
+      <button
+        mat-icon-button
+        class="admin-user"
+        type="button"
+        (click)="signOut()"
+        aria-label="Sign out of admin"
+      >
+        KG
+      </button>
+    </header>
+    <router-outlet />
+  </section>
+</main>

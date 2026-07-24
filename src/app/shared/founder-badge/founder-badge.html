@@ -1,0 +1,21 @@
+@if (compact()) {
+  <a
+    class="badge compact"
+    routerLink="/founders"
+    matTooltip="Founder 1000 Club member"
+    aria-label="Founder 1000 Club member"
+  >
+    <span class="icon" aria-hidden="true">★</span>
+    @if (memberNumber()) {
+      <span class="number">#{{ memberNumber() }}</span>
+    }
+  </a>
+} @else {
+  <a class="badge full" routerLink="/founders">
+    <span class="icon" aria-hidden="true">★</span>
+    <span class="label">Founder 1000</span>
+    @if (memberNumber()) {
+      <span class="number">#{{ memberNumber() }}</span>
+    }
+  </a>
+}

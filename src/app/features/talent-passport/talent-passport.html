@@ -1,0 +1,24 @@
+<div class="page">
+  <h1>Talent Passport</h1>
+  <p class="subtitle">
+    Your Talent Passport is a public profile page that clinics can visit to learn
+    about you. Share it anywhere — text, email, Instagram, or QR code. Only your
+    professional name, role, skills, and introduction are visible. Private details
+    stay private.
+  </p>
+
+  @if (!passportCreated()) {
+    <button mat-flat-button (click)="sharePassport()">
+      Generate your Talent Passport link
+    </button>
+  } @else {
+    <div class="link-box">
+      <code>{{ passportLink() }}</code>
+      <button mat-stroked-button (click)="copyPassportLink()">Copy link</button>
+    </div>
+    <p class="share-hint">
+      Share this link with clinics. When they visit, they'll see your professional
+      profile and can add you to their talent list.
+    </p>
+  }
+</div>

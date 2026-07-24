@@ -23,16 +23,22 @@
       <div class="eyebrow">The talent standard for aesthetics</div>
       <h1>Exceptional clinics deserve exceptional people.</h1>
       <p>
-        ClinicX connects med spas with thoughtfully vetted professionals—so every introduction is
+        ClinicX connects clinics with thoughtfully vetted professionals—so every introduction is
         worth your time.
       </p>
       <div class="hero-actions">
-        <a class="button button-primary" routerLink="/register" [queryParams]="{ type: 'clinic' }"
-          >Register your clinic <span aria-hidden="true">→</span></a
-        >
-        <a class="button button-secondary" routerLink="/register" [queryParams]="{ type: 'talent' }"
-          >Create a talent profile</a
-        >
+        @if (currentAccount(); as account) {
+          <a class="button button-primary" [routerLink]="accountLink()"
+            >Go to your {{ account.type === 'clinic' ? 'dashboard' : 'profile' }} <span aria-hidden="true">→</span></a
+          >
+        } @else {
+          <a class="button button-primary" routerLink="/register" [queryParams]="{ type: 'clinic' }"
+            >Register your clinic <span aria-hidden="true">→</span></a
+          >
+          <a class="button button-secondary" routerLink="/register" [queryParams]="{ type: 'talent' }"
+            >Create a talent profile</a
+          >
+        }
       </div>
       <p class="hero-note">No job-board noise. Just curated introductions.</p>
     </div>
@@ -57,20 +63,54 @@
 
   <section class="story" id="for-clinics">
     <div class="story-copy">
-      <div class="eyebrow">For clinic owners</div>
-      <h2>Stop interviewing people you would never hire.</h2>
-      <p>
-        Tell us what excellence looks like inside your clinic. We review the market, vet the people,
-        and present a shortlist shaped around your role and culture.
-      </p>
-      <ul class="check-list">
-        <li>Post your first role in minutes</li>
-        <li>Review richer, human profiles</li>
-        <li>Request interviews with confidence</li>
-      </ul>
-      <a class="button button-dark" routerLink="/register" [queryParams]="{ type: 'clinic' }"
-        >Register your clinic <span aria-hidden="true">→</span></a
-      >
+      @if (currentAccount(); as account) {
+        @if (account.type === 'clinic') {
+          <div class="eyebrow">Your clinic workspace</div>
+          <h2>Keep your profile current. Find your next hire.</h2>
+          <p>
+            Your clinic profile helps us understand your culture and match you with the right
+            talent. Post roles, browse vetted professionals, and track applicants.
+          </p>
+          <ul class="check-list">
+            <li>Create hiring links in minutes</li>
+            <li>Review richer, human profiles</li>
+            <li>Track applicants from invite to interview</li>
+          </ul>
+          <a class="button button-dark" routerLink="/clinic/home">
+            Go to your dashboard <span aria-hidden="true">→</span>
+          </a>
+        } @else {
+          <div class="eyebrow">For clinic owners</div>
+          <h2>Discover clinics looking for someone like you.</h2>
+          <p>
+            Browse clinics that match your skills and values. When you're ready, share your
+            Talent Passport and let them come to you.
+          </p>
+          <ul class="check-list">
+            <li>See what clinics are hiring</li>
+            <li>Connect through your Talent Passport</li>
+            <li>Track your invitations</li>
+          </ul>
+          <a class="button button-dark" routerLink="/talent/invitations">
+            View your invitations <span aria-hidden="true">→</span>
+          </a>
+        }
+      } @else {
+        <div class="eyebrow">For clinic owners</div>
+        <h2>Stop interviewing people you would never hire.</h2>
+        <p>
+          Tell us what excellence looks like inside your clinic. We review the market, vet the people,
+          and present a shortlist shaped around your role and culture.
+        </p>
+        <ul class="check-list">
+          <li>Post your first role in minutes</li>
+          <li>Review richer, human profiles</li>
+          <li>Request interviews with confidence</li>
+        </ul>
+        <a class="button button-dark" routerLink="/register" [queryParams]="{ type: 'clinic' }"
+          >Register your clinic <span aria-hidden="true">→</span></a
+        >
+      }
     </div>
     <div class="owner-panel">
       <p class="panel-label">Your hiring brief</p>
@@ -131,7 +171,13 @@
               <span>{{ skill }}</span>
             }
           </div>
-          <a class="talent-action" routerLink="/signin">Sign in to view profile</a>
+          @if (currentAccount(); as account) {
+            <a class="talent-action" [routerLink]="account.type === 'clinic' ? '/clinic/talents' : '/talent/passport'">
+              {{ account.type === 'clinic' ? 'Browse vetted talent' : 'Share your profile' }}
+            </a>
+          } @else {
+            <a class="talent-action" routerLink="/signin">Sign in to view profile</a>
+          }
         </article>
       }
     </div>
@@ -149,32 +195,90 @@
       </p>
     </div>
     <div class="talent-benefits">
-      <div class="eyebrow">For talent</div>
-      <h2>Make your next move with intention.</h2>
-      <div class="benefit">
-        <span>01</span>
-        <div>
-          <strong>Tell your whole story</strong>
-          <p>Showcase your experience, skills, portfolio, and a short introduction.</p>
+      @if (currentAccount(); as account) {
+        @if (account.type === 'talent') {
+          <div class="eyebrow">Your talent profile</div>
+          <h2>Make your next move with intention.</h2>
+          <div class="benefit">
+            <span>01</span>
+            <div>
+              <strong>Keep your profile fresh</strong>
+              <p>Update your experience, skills, and introduction so clinics see your best self.</p>
+            </div>
+          </div>
+          <div class="benefit">
+            <span>02</span>
+            <div>
+              <strong>Share your Talent Passport</strong>
+              <p>Send your professional profile to clinics you're interested in.</p>
+            </div>
+          </div>
+          <div class="benefit">
+            <span>03</span>
+            <div>
+              <strong>Track your invitations</strong>
+              <p>See which clinics have invited you and respond when you're interested.</p>
+            </div>
+          </div>
+          <a class="button button-dark" routerLink="/talent/home">
+            Go to your profile <span aria-hidden="true">→</span>
+          </a>
+        } @else {
+          <div class="eyebrow">For talent</div>
+          <h2>The professionals behind the results.</h2>
+          <div class="benefit">
+            <span>01</span>
+            <div>
+              <strong>Richer profiles</strong>
+              <p>See experience, skills, introductions — not just bullet points.</p>
+            </div>
+          </div>
+          <div class="benefit">
+            <span>02</span>
+            <div>
+              <strong>Pre-vetted talent</strong>
+              <p>Every profile is reviewed before it reaches your shortlist.</p>
+            </div>
+          </div>
+          <div class="benefit">
+            <span>03</span>
+            <div>
+              <strong>Invite with confidence</strong>
+              <p>Send hiring links and track applicants through the process.</p>
+            </div>
+          </div>
+          <a class="button button-dark" routerLink="/clinic/talents">
+            Browse talent <span aria-hidden="true">→</span>
+          </a>
+        }
+      } @else {
+        <div class="eyebrow">For talent</div>
+        <h2>Make your next move with intention.</h2>
+        <div class="benefit">
+          <span>01</span>
+          <div>
+            <strong>Tell your whole story</strong>
+            <p>Showcase your experience, skills, portfolio, and a short introduction.</p>
+          </div>
         </div>
-      </div>
-      <div class="benefit">
-        <span>02</span>
-        <div>
-          <strong>Be discovered thoughtfully</strong>
-          <p>Get considered for clinics aligned with your goals and working style.</p>
+        <div class="benefit">
+          <span>02</span>
+          <div>
+            <strong>Be discovered thoughtfully</strong>
+            <p>Get considered for clinics aligned with your goals and working style.</p>
+          </div>
         </div>
-      </div>
-      <div class="benefit">
-        <span>03</span>
-        <div>
-          <strong>Stay in control</strong>
-          <p>Explore opportunities without becoming another résumé in a crowded inbox.</p>
+        <div class="benefit">
+          <span>03</span>
+          <div>
+            <strong>Stay in control</strong>
+            <p>Explore opportunities without becoming another résumé in a crowded inbox.</p>
+          </div>
         </div>
-      </div>
-      <a class="button button-dark" routerLink="/register" [queryParams]="{ type: 'talent' }"
-        >Create your profile <span aria-hidden="true">→</span></a
-      >
+        <a class="button button-dark" routerLink="/register" [queryParams]="{ type: 'talent' }"
+          >Create your profile <span aria-hidden="true">→</span></a
+        >
+      }
     </div>
   </section>
 
@@ -211,6 +315,7 @@
     </ol>
   </section>
 
+  @if (!currentAccount()) {
   <section class="account-gateway" id="account">
     <div class="gateway-heading">
       <div class="eyebrow">Your next introduction starts here</div>
@@ -239,13 +344,16 @@
       </a>
     </div>
   </section>
+  }
 </main>
 
 <footer>
   <a class="brand footer-brand" href="#top">Clinic<span>X</span> Talent</a>
   <p>Curated talent for exceptional clinics.</p>
   <div>
-    <a href="#for-clinics">For clinics</a><a href="#for-talents">For talent</a
-    ><a routerLink="/signin">Sign in</a>
+    <a href="#for-clinics">For clinics</a><a href="#for-talents">For talent</a>
+    @if (!currentAccount()) {
+      <a routerLink="/signin">Sign in</a>
+    }
   </div>
 </footer>

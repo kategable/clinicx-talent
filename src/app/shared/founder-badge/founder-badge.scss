@@ -1,0 +1,49 @@
+:host {
+  display: inline-flex;
+  vertical-align: middle;
+}
+
+.badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+  text-decoration: none;
+  border-radius: 999px;
+  padding: 0.15em 0.55em;
+  font-size: 0.75rem;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  line-height: 1.4;
+  background: var(--cx-accent);
+  color: #fff;
+  transition: opacity 0.15s;
+
+  &:hover,
+  &:focus-visible {
+    opacity: 0.88;
+  }
+}
+
+.compact {
+  padding: 0.15em 0.45em;
+
+  .number {
+    font-size: 0.6875rem;
+    opacity: 0.85;
+  }
+}
+
+.full {
+  .label {
+    text-transform: uppercase;
+  }
+
+  .number {
+    opacity: 0.8;
+  }
+}
+
+.icon {
+  font-size: 0.75em;
+  line-height: 1;
+}

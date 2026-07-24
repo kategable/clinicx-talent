@@ -1,53 +1,64 @@
 :host {
   display: block;
   min-height: 100vh;
-  background: #f3f1e8;
-  color: #12332f;
+  background: var(--cx-background);
 }
-main {
-  padding: 2rem clamp(1.25rem, 6vw, 6rem);
+
+.page {
+  max-width: 580px;
+  margin: 0 auto;
+  padding: 3rem 1.5rem 4rem;
+  color: var(--cx-text);
 }
+
 .brand {
-  color: inherit;
-  font:
-    700 1.5rem Georgia,
-    serif;
-  text-decoration: none;
-}
-.brand span,
-section > p:first-child {
-  color: #bd6249;
-}
-section {
-  width: min(100%, 43rem);
-  margin: clamp(5rem, 15vh, 10rem) auto;
-}
-h1 {
-  margin: 0.5rem 0 1.5rem;
-  font:
-    500 clamp(3rem, 9vw, 6rem)/0.92 Georgia,
-    serif;
-}
-section > p {
-  max-width: 38rem;
-  font-size: 1.1rem;
-  line-height: 1.65;
-}
-.button {
   display: inline-block;
-  margin: 1rem 1rem 2rem 0;
-  background: #12332f;
-  color: white;
-  padding: 1rem 1.4rem;
+  font-weight: 700;
+  font-size: 1rem;
+  color: var(--cx-text);
   text-decoration: none;
+  margin-bottom: 3rem;
 }
-section > a:not(.button) {
-  color: inherit;
-}
-small {
+
+.eyebrow {
   display: block;
-  border-top: 1px solid #ccd2ca;
-  padding-top: 1.5rem;
-  color: #687773;
+  font-size: 0.75rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--cx-accent);
+  margin-bottom: 0.75rem;
+}
+
+h1 {
+  font-size: 2rem;
+  font-weight: 700;
+  line-height: 1.2;
+  margin: 0 0 1rem;
+  letter-spacing: -0.02em;
+}
+
+.explanation {
+  font-size: 1rem;
+  color: var(--cx-muted);
+  line-height: 1.6;
+  margin: 0 0 2rem;
+}
+
+.actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+  margin-bottom: 2rem;
+}
+
+.note {
+  font-size: 0.8125rem;
+  color: var(--cx-muted);
   line-height: 1.5;
+  padding: 1rem;
+  background: var(--cx-surface);
+  border: 1px solid var(--cx-border);
+  border-radius: 8px;
+  margin: 0;
 }

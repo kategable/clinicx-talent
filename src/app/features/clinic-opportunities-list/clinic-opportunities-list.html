@@ -1,0 +1,49 @@
+<main class="page">
+  <header class="page-header">
+    <a routerLink="/clinic/talents" class="back-link">← Back to talent search</a>
+    <app-theme-picker compact />
+  </header>
+
+  <div class="heading-row">
+    <h1>My hiring links</h1>
+    <a mat-flat-button routerLink="/clinic/opportunities/new">Create new link</a>
+  </div>
+
+  @if (opportunities().length) {
+    <div class="list">
+      @for (opp of opportunities(); track opp.id) {
+        <div class="card">
+          <div class="card-header">
+            <h2>{{ opp.title }}</h2>
+            <span
+              class="status"
+              [class.active]="opp.status === 'active'"
+              [class.paused]="opp.status === 'paused'"
+              [class.closed]="opp.status === 'closed'"
+            >
+              {{ opp.status === 'active' ? 'Live' : opp.status === 'paused' ? 'Paused' : 'Closed' }}
+            </span>
+          </div>
+          <p class="location">{{ opp.location }}</p>
+          <p class="created">Created {{ opp.createdAt }}</p>
+          <div class="card-actions">
+            <button
+              mat-stroked-button
+              (click)="copyLink(opp.slug, opp.positionSlug)"
+              class="copy-btn"
+            >
+              Copy link
+            </button>
+          </div>
+        </div>
+      }
+    </div>
+  } @else {
+    <div class="empty">
+      <p>No hiring links yet.</p>
+      <a mat-stroked-button routerLink="/clinic/opportunities/new">
+        Create your first hiring link
+      </a>
+    </div>
+  }
+</main>

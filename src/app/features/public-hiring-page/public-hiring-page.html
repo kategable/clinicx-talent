@@ -1,0 +1,76 @@
+<main class="page">
+  <a class="brand" routerLink="/">ClinicX</a>
+
+  @if (opportunity(); as opp) {
+    <section class="opportunity">
+      @if (clinic(); as clinic) {
+        <div class="clinic-header">
+          <span class="clinic-name">{{ clinic.displayName }}</span>
+          @if (clinic.founder) {
+            <app-founder-badge
+              [compact]="true"
+              [memberNumber]="founderMemberNumber()"
+            />
+          }
+        </div>
+      }
+
+      <h1>{{ opp.title }}</h1>
+      <p class="location">{{ opp.location }}</p>
+
+      <div class="details">
+        @if (opp.payRange) {
+          <div class="detail">
+            <span class="label">Pay range</span>
+            <span class="value">{{ opp.payRange }}</span>
+          </div>
+        }
+        @if (opp.urgency) {
+          <div class="detail">
+            <span class="label">Urgency</span>
+            <span class="value">{{ opp.urgency }}</span>
+          </div>
+        }
+        @if (opp.benefits) {
+          <div class="detail">
+            <span class="label">Benefits</span>
+            <span class="value">{{ opp.benefits }}</span>
+          </div>
+        }
+        @if (opp.mustHaveSkills) {
+          <div class="detail">
+            <span class="label">Must-have skills</span>
+            <span class="value">{{ opp.mustHaveSkills }}</span>
+          </div>
+        }
+      </div>
+
+      @if (opp.idealHire) {
+        <p class="ideal-hire">{{ opp.idealHire }}</p>
+      }
+
+      <div class="actions">
+        <button
+          mat-flat-button
+          class="primary-cta"
+          (click)="acceptInvite()"
+        >
+          Accept invitation and create profile
+        </button>
+        <a
+          mat-stroked-button
+          [routerLink]="['/signin']"
+          [queryParams]="{ invite: inviteToken }"
+        >
+          Already have an account? Sign in
+        </a>
+      </div>
+    </section>
+  } @else {
+    <section class="empty">
+      <h1>This opportunity is no longer available.</h1>
+      <p>The hiring link you followed may have expired or been closed.</p>
+      <a mat-stroked-button routerLink="/">Browse ClinicX Talent</a>
+    </section>
+  }
+</main>

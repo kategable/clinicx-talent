@@ -1,0 +1,67 @@
+<main class="page">
+  <a class="brand" routerLink="/">ClinicX</a>
+
+  <section class="hero">
+    <span class="eyebrow">Founder 1000 Club</span>
+    <h1>The first 1,000 members of&nbsp;ClinicX are founders.</h1>
+    <p class="subtitle">
+      Early members shape the platform. Founders get a permanent voice in what we
+      build next, priority access to new features, and unlimited life-long free
+      accounts.
+    </p>
+  </section>
+
+  <section class="benefits">
+    <div class="benefit-card">
+      <h2>Shape the roadmap</h2>
+      <p>
+        Vote on features, suggest improvements, and help decide what ClinicX
+        builds next. Your voice directly influences the product.
+      </p>
+    </div>
+    <div class="benefit-card">
+      <h2>Priority bug reporting</h2>
+      <p>
+        Founders get a dedicated feedback channel. Issues you report go to the
+        top of the queue.
+      </p>
+    </div>
+    <div class="benefit-card">
+      <h2>Free for life</h2>
+      <p>
+        Your account stays free forever. No subscription fees, no per-hire
+        charges. Even after we introduce paid plans, founders are grandfathered
+        in.
+      </p>
+    </div>
+  </section>
+
+  <section class="status">
+    <div class="counter">
+      <span class="count">{{ founderCount() }}</span>
+      <span class="label">founders and counting</span>
+      <span class="remaining">{{ remaining() }} spots remain</span>
+    </div>
+
+    @if (currentAccount(); as account) {
+      @if (account.founder) {
+        <div class="personal founder">
+          <span class="star" aria-hidden="true">★</span>
+          <span>You're a ClinicX founder. Thank you for being here early.</span>
+        </div>
+      } @else {
+        <div class="personal">
+          <span>You're member #{{ founderCount() }}. Welcome to ClinicX.</span>
+        </div>
+      }
+    } @else {
+      <a mat-flat-button routerLink="/register" class="cta">
+        Create your account &mdash; claim your founder spot
+      </a>
+    }
+  </section>
+
+  <footer class="footer">
+    <a routerLink="/">Return home</a>
+  </footer>
+</main>

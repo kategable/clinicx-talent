@@ -1,23 +1,12 @@
 :host {
   display: block;
-  min-height: 100vh;
-  background: #12332f;
-  color: #f7f3e9;
+  color: var(--cx-text);
 }
 main {
-  min-height: 100vh;
   padding: 2rem clamp(1.25rem, 6vw, 6rem);
 }
-header a {
-  color: inherit;
-  font:
-    700 1.5rem Georgia,
-    serif;
-  text-decoration: none;
-}
-header span,
 section > p:first-child {
-  color: #dc846b;
+  color: var(--cx-muted);
 }
 section {
   width: min(100%, 65rem);
@@ -32,18 +21,19 @@ h1 {
 }
 section > p {
   max-width: 42rem;
-  color: #c2cfca;
+  color: var(--cx-muted);
   font-size: 1.15rem;
   line-height: 1.6;
 }
 .privacy-note {
   font-size: 0.8rem;
+  color: var(--cx-muted);
 }
 .empty-state {
   display: grid;
   gap: 0.5rem;
   margin: 3rem 0 2rem;
-  border-top: 1px solid #526a64;
+  border-top: 1px solid var(--cx-border);
   padding-top: 2rem;
 }
 .empty-state strong {
@@ -52,7 +42,7 @@ section > p {
     serif;
 }
 .empty-state span {
-  color: #aebdb8;
+  color: var(--cx-muted);
 }
 .talent-grid {
   display: grid;
@@ -115,6 +105,18 @@ section > p {
   border-radius: 50% 50% 0 0;
   background: #617d74;
 }
+.section-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  flex-wrap: wrap;
+  gap: 1rem;
+
+  a {
+    flex: 0 0 auto;
+  }
+}
+
 .talent-copy > span {
   color: #9b4835;
   font-size: 0.62rem;
@@ -122,11 +124,79 @@ section > p {
   letter-spacing: 0.1em;
   text-transform: uppercase;
 }
+
+.badge-row {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 0.35rem;
+  margin-bottom: 0.25rem;
+}
+
+.approved-badge {
+  color: #3f6c5f;
+  font-size: 0.62rem;
+  font-weight: 800;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+
+.source-badge {
+  font-size: 0.62rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: #9b4835;
+  background: #fcece7;
+  padding: 0.15em 0.5em;
+  border-radius: 999px;
+}
+
+.app-status {
+  display: inline-block;
+  margin-top: 0.5rem;
+  font-size: 0.6875rem;
+  font-weight: 600;
+  color: #536762;
+  background: #e8eeea;
+  padding: 0.2em 0.6em;
+  border-radius: 999px;
+}
+
+.phone-link,
+.email-link {
+  display: block;
+  margin-top: 0.35rem;
+  font-size: 0.75rem;
+  color: #536762;
+  text-decoration: none;
+  font-weight: 500;
+
+  &:hover {
+    color: #18312c;
+    text-decoration: underline;
+  }
+}
 .talent-copy h2 {
   margin: 0.45rem 0 0.25rem;
   font:
     500 1.55rem/1 Georgia,
     serif;
+}
+
+.talent-name {
+  display: block;
+  margin: 0.45rem 0 0.25rem;
+  font:
+    500 1.55rem/1 Georgia,
+    serif;
+  color: #18312c;
+  text-decoration: none;
+
+  &:hover {
+    text-decoration: underline;
+    color: #9b4835;
+  }
 }
 .talent-copy p {
   margin: 0;
@@ -141,5 +211,5 @@ section > p {
   line-height: 1.5;
 }
 section > a {
-  color: #f7f3e9;
+  color: var(--cx-muted);
 }

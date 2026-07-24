@@ -1,0 +1,140 @@
+:host {
+  display: block;
+}
+
+.page {
+  max-width: 720px;
+  margin: 0 auto;
+  padding: 3rem 1.5rem 4rem;
+  color: var(--cx-text);
+}
+
+.brand {
+  display: inline-block;
+  font-weight: 700;
+  font-size: 0.9375rem;
+  color: var(--cx-text);
+  text-decoration: none;
+  margin-bottom: 2.5rem;
+}
+
+.hero {
+  margin-bottom: 3rem;
+
+  .eyebrow {
+    display: block;
+    font-size: 0.75rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: var(--cx-accent);
+    margin-bottom: 0.75rem;
+  }
+
+  h1 {
+    font-size: 2rem;
+    font-weight: 700;
+    line-height: 1.2;
+    margin: 0 0 1rem;
+    letter-spacing: -0.02em;
+  }
+
+  .subtitle {
+    font-size: 1.0625rem;
+    line-height: 1.6;
+    color: var(--cx-muted);
+    max-width: 560px;
+  }
+}
+
+.benefits {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 1.5rem;
+  margin-bottom: 3rem;
+}
+
+.benefit-card {
+  background: var(--cx-surface);
+  border: 1px solid var(--cx-border);
+  border-radius: 12px;
+  padding: 1.5rem;
+
+  h2 {
+    font-size: 1rem;
+    font-weight: 600;
+    margin: 0 0 0.5rem;
+  }
+
+  p {
+    font-size: 0.875rem;
+    line-height: 1.55;
+    color: var(--cx-muted);
+    margin: 0;
+  }
+}
+
+.status {
+  text-align: center;
+  padding-top: 1rem;
+}
+
+.counter {
+  margin-bottom: 1.5rem;
+
+  .count {
+    display: block;
+    font-size: 3rem;
+    font-weight: 700;
+    letter-spacing: -0.03em;
+    line-height: 1;
+  }
+
+  .label {
+    display: block;
+    font-size: 0.875rem;
+    color: var(--cx-muted);
+    margin-top: 0.25rem;
+  }
+
+  .remaining {
+    display: block;
+    font-size: 0.8125rem;
+    color: var(--cx-accent);
+    font-weight: 600;
+    margin-top: 0.5rem;
+  }
+}
+
+.personal {
+  font-size: 0.9375rem;
+  color: var(--cx-muted);
+  padding: 0.75rem 1.25rem;
+  border-radius: 8px;
+  background: var(--cx-surface);
+  border: 1px solid var(--cx-border);
+  display: inline-block;
+
+  &.founder {
+    color: var(--cx-accent);
+    border-color: var(--cx-accent);
+  }
+
+  .star {
+    margin-right: 0.35rem;
+  }
+}
+
+.cta {
+  margin-top: 0.5rem;
+}
+
+.footer {
+  text-align: center;
+  margin-top: 3rem;
+
+  a {
+    color: var(--cx-muted);
+    font-size: 0.875rem;
+  }
+}

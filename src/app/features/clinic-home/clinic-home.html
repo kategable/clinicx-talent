@@ -1,12 +1,4 @@
-<main>
-  <header>
-    <a class="brand" routerLink="/">Clinic<span>X</span> Talent</a>
-    <nav>
-      <a routerLink="/clinic/talents">Talent search</a>
-      <button mat-button type="button" (click)="signOut()" routerLink="/">Sign out</button>
-    </nav>
-  </header>
-
+<main class="clinic-home">
   @if (account(); as clinic) {
     <section class="welcome">
       <div>
@@ -19,8 +11,9 @@
         <strong>{{ clinic.status === 'under-review' ? 'Under review' : clinic.status }}</strong>
         @if (clinic.status === 'approved') {
           <a routerLink="/clinic/talents">Start talent search →</a>
+          <a routerLink="/clinic/opportunities/new">Create hiring link →</a>
         } @else {
-          <a routerLink="/account/status">View review status →</a>
+          <a routerLink="/clinic/status">View review status →</a>
           <small>Talent search opens after approval.</small>
         }
       </aside>
@@ -34,7 +27,6 @@
           These details give ClinicX more context when reviewing your account and preparing future
           talent matches.
         </p>
-        <app-theme-picker />
       </div>
       <form (submit)="$event.preventDefault(); saveDetails()">
         <div class="form-actions">
@@ -158,6 +150,60 @@
           ></textarea>
           <mat-hint>AI assist coming later · Tab will accept a suggestion</mat-hint>
         </mat-form-field>
+        <h3 class="section-break">Contact & sharing</h3>
+
+        <mat-form-field appearance="outline">
+          <mat-label>Email</mat-label>
+          <input
+            matInput
+            type="email"
+            autocomplete="email"
+            placeholder="clinic@example.com"
+            [ngModel]="contactEmail()"
+            (ngModelChange)="contactEmail.set($event)"
+            [ngModelOptions]="{standalone: true}"
+          />
+        </mat-form-field>
+
+        <mat-form-field appearance="outline">
+          <mat-label>Contact phone</mat-label>
+          <input
+            matInput
+            type="tel"
+            autocomplete="tel"
+            placeholder="(312) 555-0001"
+            [ngModel]="contactDisplayPhone()"
+            (ngModelChange)="contactDisplayPhone.set($event)"
+            [ngModelOptions]="{standalone: true}"
+          />
+          <mat-hint>This phone is shown when sharing is enabled. Not your login number.</mat-hint>
+        </mat-form-field>
+
+        <mat-slide-toggle
+          [ngModel]="contactShareEmail()"
+          (ngModelChange)="contactShareEmail.set($event)"
+          [ngModelOptions]="{standalone: true}"
+        >
+          Share my email with talent
+        </mat-slide-toggle>
+
+        <mat-slide-toggle
+          [ngModel]="contactSharePhone()"
+          (ngModelChange)="contactSharePhone.set($event)"
+          [ngModelOptions]="{standalone: true}"
+        >
+          Share my phone number with talent
+        </mat-slide-toggle>
+
+        <div class="form-actions contact-actions">
+          <button mat-flat-button type="button" (click)="saveContact()">
+            Save contact & sharing
+          </button>
+          @if (contactSaved()) {
+            <span class="saved" role="status">Saved</span>
+          }
+        </div>
+
         @if (detailsForm().touched() && detailsForm().invalid()) {
           <p class="error" role="alert">Add a clinic name and correct any invalid details.</p>
         }

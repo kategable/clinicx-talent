@@ -1,0 +1,113 @@
+<mat-sidenav-container class="shell-container">
+  <mat-sidenav
+    #sidenav
+    class="sidenav"
+    [mode]="sidenavMode()"
+    [opened]="opened()"
+    (closed)="opened.set(false)"
+  >
+    <div class="sidenav-header">
+      <a routerLink="/" class="brand" (click)="close()">Clinic<span>X</span> Talent</a>
+    </div>
+
+    <mat-nav-list>
+      <a
+        mat-list-item
+        routerLink="/talent/home"
+        routerLinkActive="active"
+        (click)="close()"
+      >
+        <mat-icon matListItemIcon>home</mat-icon>
+        <span matListItemTitle>Home</span>
+      </a>
+
+      <a
+        mat-list-item
+        routerLink="/talent/passport"
+        routerLinkActive="active"
+        (click)="close()"
+      >
+        <mat-icon matListItemIcon>badge</mat-icon>
+        <span matListItemTitle>Talent Passport</span>
+      </a>
+
+      <a
+        mat-list-item
+        routerLink="/talent/invitations"
+        routerLinkActive="active"
+        (click)="close()"
+      >
+        <mat-icon matListItemIcon>mail</mat-icon>
+        <span matListItemTitle>My invitations</span>
+      </a>
+
+      <a
+        mat-list-item
+        routerLink="/talent/appearance"
+        routerLinkActive="active"
+        (click)="close()"
+      >
+        <mat-icon matListItemIcon>palette</mat-icon>
+        <span matListItemTitle>Appearance</span>
+      </a>
+
+      <a
+        mat-list-item
+        routerLink="/talent/status"
+        routerLinkActive="active"
+        (click)="close()"
+      >
+        <mat-icon matListItemIcon>verified</mat-icon>
+        <span matListItemTitle>Account status</span>
+      </a>
+    </mat-nav-list>
+
+    @if (account(); as talent) {
+      <div class="sidenav-footer">
+        <span class="talent-label">{{ talent.displayName }}</span>
+      </div>
+    }
+  </mat-sidenav>
+
+  <mat-sidenav-content>
+    <mat-toolbar class="toolbar" color="primary">
+      <button
+        mat-icon-button
+        class="menu-btn"
+        aria-label="Toggle navigation"
+        (click)="toggle()"
+      >
+        <mat-icon>menu</mat-icon>
+      </button>
+
+      <span class="toolbar-title">Talent</span>
+
+      <nav class="toolbar-nav">
+        <a routerLink="/talent/home" routerLinkActive="active">Home</a>
+        <a routerLink="/talent/passport" routerLinkActive="active">Passport</a>
+        <a routerLink="/talent/invitations" routerLinkActive="active">Invitations</a>
+        <a routerLink="/talent/appearance" routerLinkActive="active">Appearance</a>
+      </nav>
+
+      <span class="toolbar-spacer"></span>
+
+      @if (account(); as talent) {
+        @if (talent.founder) {
+          <app-founder-badge
+            class="toolbar-founder"
+            [compact]="true"
+            [memberNumber]="founderMemberNumber()"
+          />
+        }
+        <span class="toolbar-talent" [routerLink]="'/talent/home'" tabindex="0" role="link">
+          {{ talent.displayName }}
+        </span>
+        <button mat-button class="sign-out-btn" (click)="signOut()" routerLink="/">
+          Sign out
+        </button>
+      }
+    </mat-toolbar>
+
+    <router-outlet />
+  </mat-sidenav-content>
+</mat-sidenav-container>

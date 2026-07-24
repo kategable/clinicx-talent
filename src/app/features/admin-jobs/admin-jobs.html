@@ -1,0 +1,76 @@
+<div class="summary">
+  <div>
+    <span>Active opportunities</span>
+    <strong>{{ rows().length }}</strong>
+  </div>
+  <div>
+    <span>Broken links</span>
+    <strong>{{ brokenCount() }}</strong>
+  </div>
+</div>
+
+@if (rows().length) {
+  <div class="job-list">
+    @for (row of rows(); track row.opportunity.id) {
+      <article>
+        <div class="job-header">
+          <div>
+            <strong>{{ row.opportunity.title }}</strong>
+            <span class="meta">
+              {{ row.opportunity.location }} · {{ row.opportunity.urgency }}
+            </span>
+          </div>
+          <span
+            class="link-status"
+            [class.active]="row.linkValid === true"
+            [class.expired]="row.linkValid === false"
+            [class.none]="row.linkValid === null"
+          >
+            @if (row.linkValid === true) { Active }
+            @else if (row.linkValid === false) { Expired }
+            @else { No link }
+          </span>
+        </div>
+
+        @if (row.clinic; as clinic) {
+          <p class="clinic-info">
+            Posted by
+            <a [routerLink]="['/c', row.opportunity.slug]">{{ clinic.displayName }}</a>
+          </p>
+        }
+
+        @if (row.publicLink) {
+          <div class="public-link">
+            <code>{{ row.publicLink }}</code>
+            <button class="copy-btn" (click)="copyLink(row.publicLink!)">
+              Copy
+            </button>
+          </div>
+        }
+
+        @if (row.talentApps.length) {
+          <div class="applicants">
+            <span class="section-label">Applicants</span>
+            @for (app of row.talentApps; track app.id) {
+              <div class="applicant-row">
+                <a [routerLink]="['/talent', talentSlug(talentName(app.talentAccountId))]">
+                  {{ talentName(app.talentAccountId) }}
+                </a>
+                <span class="app-status">{{ statusLabel(app.status) }}</span>
+                <span class="app-source">{{ app.source === 'clinic-hiring-link' ? 'via link' : app.source === 'talent-passport' ? 'via passport' : 'match' }}</span>
+                <span class="app-date">{{ app.acceptedAt }}</span>
+              </div>
+            }
+          </div>
+        } @else {
+          <p class="no-applicants">No applicants yet</p>
+        }
+      </article>
+    }
+  </div>
+} @else {
+  <div class="empty">
+    <h2>No hiring activity yet</h2>
+    <p>Opportunities and applications will appear here as clinics create hiring links and talent accepts them.</p>
+  </div>
+}

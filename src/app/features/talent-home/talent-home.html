@@ -1,12 +1,4 @@
-<main>
-  <header>
-    <a class="brand" routerLink="/">Clinic<span>X</span> Talent</a>
-    <nav>
-      <a routerLink="/account/status">Account status</a>
-      <button mat-button type="button" (click)="signOut()" routerLink="/">Sign out</button>
-    </nav>
-  </header>
-
+<main class="talent-home">
   @if (account(); as talent) {
     <section class="welcome">
       <div>
@@ -16,12 +8,11 @@
           Build a richer profile so ClinicX can understand your clinical experience, strengths,
           availability, and goals.
         </p>
-        <app-theme-picker />
       </div>
       <aside [class.approved]="talent.status === 'approved'">
         <span>Account status</span>
         <strong>{{ talent.status === 'under-review' ? 'Under review' : talent.status }}</strong>
-        <a routerLink="/account/status">View review status →</a>
+        <a routerLink="/talent/status">View review status →</a>
       </aside>
     </section>
 
@@ -210,6 +201,60 @@
             model().galleryNames.length ? model().galleryNames.join(', ') : 'Choose gallery images'
           }}</b>
         </label>
+
+        <h3 class="section-break">Contact & sharing</h3>
+
+        <mat-form-field appearance="outline">
+          <mat-label>Email</mat-label>
+          <input
+            matInput
+            type="email"
+            autocomplete="email"
+            placeholder="you@example.com"
+            [ngModel]="contactEmail()"
+            (ngModelChange)="contactEmail.set($event)"
+            [ngModelOptions]="{standalone: true}"
+          />
+        </mat-form-field>
+
+        <mat-form-field appearance="outline">
+          <mat-label>Contact phone</mat-label>
+          <input
+            matInput
+            type="tel"
+            autocomplete="tel"
+            placeholder="(312) 555-0001"
+            [ngModel]="contactDisplayPhone()"
+            (ngModelChange)="contactDisplayPhone.set($event)"
+            [ngModelOptions]="{standalone: true}"
+          />
+          <mat-hint>This phone is shown when sharing is enabled. Not your login number.</mat-hint>
+        </mat-form-field>
+
+        <mat-slide-toggle
+          [ngModel]="contactShareEmail()"
+          (ngModelChange)="contactShareEmail.set($event)"
+          [ngModelOptions]="{standalone: true}"
+        >
+          Share my email with clinics
+        </mat-slide-toggle>
+
+        <mat-slide-toggle
+          [ngModel]="contactSharePhone()"
+          (ngModelChange)="contactSharePhone.set($event)"
+          [ngModelOptions]="{standalone: true}"
+        >
+          Share my phone number with clinics
+        </mat-slide-toggle>
+
+        <div class="form-actions contact-actions">
+          <button mat-flat-button type="button" (click)="saveContact()">
+            Save contact & sharing
+          </button>
+          @if (contactSaved()) {
+            <span class="saved" role="status">Saved</span>
+          }
+        </div>
       </form>
     </section>
   }

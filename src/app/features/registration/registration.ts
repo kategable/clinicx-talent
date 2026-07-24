@@ -37,6 +37,16 @@ export class Registration implements OnInit {
   });
 
   ngOnInit(): void {
+    const inviteToken = this.route.snapshot.queryParamMap.get('invite');
+    // Belt-and-suspenders: if an invite token is in the URL, persist it to
+    // state so the effect can create the application after verification.
+    if (inviteToken) {
+      if (this.initialType() === 'clinic') {
+        this.store.dispatch(AppActions.acceptPassportInvite({ token: inviteToken }));
+      } else {
+        this.store.dispatch(AppActions.acceptHiringInvite({ token: inviteToken }));
+      }
+    }
     this.store.dispatch(
       AppActions.resetRegistration({ accountType: this.initialType(), signIn: this.isSignIn }),
     );

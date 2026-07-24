@@ -67,5 +67,34 @@ export const routes: Routes = [
     loadComponent: () => import('./features/contact/contact').then((m) => m.Contact),
     title: 'Contact ClinicX Talent',
   },
+  {
+    path: 'join/:clinicSlug/:positionSlug',
+    loadComponent: () =>
+      import('./features/public-hiring-page/public-hiring-page').then(
+        (m) => m.PublicHiringPage,
+      ),
+    title: 'Job opportunity | ClinicX Talent',
+  },
+  {
+    path: 'talent/:talentSlug',
+    loadComponent: () =>
+      import('./features/public-talent-passport/public-talent-passport').then(
+        (m) => m.PublicTalentPassport,
+      ),
+    title: 'Talent profile | ClinicX Talent',
+  },
+  {
+    path: 'founders',
+    loadComponent: () => import('./features/founders/founders').then((m) => m.Founders),
+    title: 'Founder 1000 Club | ClinicX Talent',
+  },
+  {
+    path: 'c/:clinicSlug',
+    loadComponent: () =>
+      import('./features/public-clinic-profile/public-clinic-profile').then(
+        (m) => m.PublicClinicProfile,
+      ),
+    title: 'Clinic profile | ClinicX Talent',
+  },
   { path: '**', redirectTo: '' },
 ];

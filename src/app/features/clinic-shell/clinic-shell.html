@@ -1,0 +1,121 @@
+<mat-sidenav-container class="shell-container">
+  <mat-sidenav
+    #sidenav
+    class="sidenav"
+    [mode]="sidenavMode()"
+    [opened]="opened()"
+    (closed)="opened.set(false)"
+  >
+    <div class="sidenav-header">
+      <a routerLink="/" class="brand" (click)="close()">Clinic<span>X</span> Talent</a>
+    </div>
+
+    <mat-nav-list>
+      <a
+        mat-list-item
+        routerLink="/clinic/home"
+        routerLinkActive="active"
+        (click)="close()"
+      >
+        <mat-icon matListItemIcon>home</mat-icon>
+        <span matListItemTitle>Home</span>
+      </a>
+
+      <a
+        mat-list-item
+        routerLink="/clinic/talents"
+        routerLinkActive="active"
+        (click)="close()"
+      >
+        <mat-icon matListItemIcon>search</mat-icon>
+        <span matListItemTitle>Talent search</span>
+        @if (pendingCount(); as count) {
+          <span class="nav-badge" matListItemMeta>{{ count }}</span>
+        }
+      </a>
+
+      <a
+        mat-list-item
+        routerLink="/clinic/opportunities/new"
+        routerLinkActive="active"
+        (click)="close()"
+      >
+        <mat-icon matListItemIcon>add_link</mat-icon>
+        <span matListItemTitle>Create hiring link</span>
+      </a>
+
+      <a
+        mat-list-item
+        routerLink="/clinic/appearance"
+        routerLinkActive="active"
+        (click)="close()"
+      >
+        <mat-icon matListItemIcon>palette</mat-icon>
+        <span matListItemTitle>Appearance</span>
+      </a>
+
+      <a
+        mat-list-item
+        routerLink="/clinic/status"
+        routerLinkActive="active"
+        (click)="close()"
+      >
+        <mat-icon matListItemIcon>verified</mat-icon>
+        <span matListItemTitle>Account status</span>
+      </a>
+    </mat-nav-list>
+
+    @if (account(); as clinic) {
+      <div class="sidenav-footer">
+        <span class="clinic-label">{{ clinic.displayName }}</span>
+      </div>
+    }
+  </mat-sidenav>
+
+  <mat-sidenav-content>
+    <mat-toolbar class="toolbar" color="primary">
+      <button
+        mat-icon-button
+        class="menu-btn"
+        aria-label="Toggle navigation"
+        (click)="toggle()"
+      >
+        <mat-icon>menu</mat-icon>
+      </button>
+
+      <span class="toolbar-title">Clinic</span>
+
+      <nav class="toolbar-nav">
+        <a routerLink="/clinic/home" routerLinkActive="active">Home</a>
+        <a routerLink="/clinic/talents" routerLinkActive="active">
+          Talents
+          @if (pendingCount(); as count) {
+            <span class="toolbar-badge">{{ count }}</span>
+          }
+        </a>
+        <a routerLink="/clinic/opportunities/new" routerLinkActive="active">Hiring link</a>
+        <a routerLink="/clinic/appearance" routerLinkActive="active">Appearance</a>
+      </nav>
+
+      <span class="toolbar-spacer"></span>
+
+      @if (account(); as clinic) {
+        @if (clinic.founder) {
+          <app-founder-badge
+            class="toolbar-founder"
+            [compact]="true"
+            [memberNumber]="founderMemberNumber()"
+          />
+        }
+        <span class="toolbar-clinic" [routerLink]="'/clinic/home'" tabindex="0" role="link">
+          {{ clinic.displayName }}
+        </span>
+        <button mat-button class="sign-out-btn" (click)="signOut()" routerLink="/">
+          Sign out
+        </button>
+      }
+    </mat-toolbar>
+
+    <router-outlet />
+  </mat-sidenav-content>
+</mat-sidenav-container>
