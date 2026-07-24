@@ -43,9 +43,28 @@ export class LocalHiringDataSource implements HiringDataSource {
           };
         };
         if (state.hiring) {
-          if (state.hiring.opportunities) opps = state.hiring.opportunities;
-          if (state.hiring.invites) invites = state.hiring.invites;
-          if (state.hiring.applications) apps = state.hiring.applications;
+          // Merge by ID: seeds provide the baseline, localStorage overlays
+          if (state.hiring.opportunities) {
+            const seedMap = new Map(opps.map((o) => [o.id, o]));
+            for (const o of state.hiring.opportunities) {
+              seedMap.set(o.id, { ...seedMap.get(o.id), ...o });
+            }
+            opps = [...seedMap.values()];
+          }
+          if (state.hiring.invites) {
+            const seedMap = new Map(invites.map((i) => [i.id, i]));
+            for (const i of state.hiring.invites) {
+              seedMap.set(i.id, { ...seedMap.get(i.id), ...i });
+            }
+            invites = [...seedMap.values()];
+          }
+          if (state.hiring.applications) {
+            const seedMap = new Map(apps.map((a) => [a.id, a]));
+            for (const a of state.hiring.applications) {
+              seedMap.set(a.id, { ...seedMap.get(a.id), ...a });
+            }
+            apps = [...seedMap.values()];
+          }
         }
       }
     } catch {

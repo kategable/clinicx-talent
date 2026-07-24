@@ -231,10 +231,6 @@ export class AppEffects {
         withLatestFrom(this.store.select(selectHiring)),
         filter(([, hiring]) => hiring.pendingInvite !== null),
         tap(([, hiring]) => {
-          void this.router.navigate([], {
-            queryParams: { type: 'talent', invite: hiring.pendingInvite!.token },
-            queryParamsHandling: 'merge',
-          });
           void this.router.navigateByUrl(
             `/register?type=talent&invite=${hiring.pendingInvite!.token}`,
           );

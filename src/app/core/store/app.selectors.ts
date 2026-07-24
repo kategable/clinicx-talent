@@ -82,16 +82,19 @@ export const selectOpportunityBySlug = (
 
 export const selectPassportByTalentSlug = (talentSlug: string) =>
   createSelector(selectPassportShares, selectAccounts, (passports, accounts) => {
-    const passport = passports.find((p) => p.active);
-    if (!passport) return undefined;
-    const account = accounts[passport.talentAccountId];
-    if (!account) return undefined;
-    const expectedSlug = account.displayName
-      .toLowerCase()
-      .replace(/[^a-z0-9]+/g, '-')
-      .replace(/^-+|-+$/g, '');
-    if (expectedSlug !== talentSlug) return undefined;
-    return { passport, account };
+    for (const passport of passports) {
+      if (!passport.active) continue;
+      const account = accounts[passport.talentAccountId];
+      if (!account) continue;
+      const expectedSlug = account.displayName
+        .toLowerCase()
+        .replace(/[^a-z0-9]+/g, '-')
+        .replace(/^-+|-+$/g, '');
+      if (expectedSlug === talentSlug) {
+        return { passport, account };
+      }
+    }
+    return undefined;
   });
 
 export const selectApplicationsForMyClinic = createSelector(

@@ -38,6 +38,7 @@ export class LocalAccountDataSource implements AccountDataSource {
         };
         if (state.accounts && Array.isArray(state.accounts)) {
           for (const a of state.accounts) {
+            if (!a?.id) continue;
             record[a.id] = { ...record[a.id], ...a };
           }
         }

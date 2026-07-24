@@ -1,5 +1,5 @@
 import { ActionReducer, INIT, UPDATE } from '@ngrx/store';
-import { AccountRecord, toAccountsRecord } from '../account';
+import { AccountRecord } from '../account';
 import { canBecomeFounder } from '../founder';
 import { AppState, initialAppState } from './app.state';
 import {
@@ -73,10 +73,11 @@ export function hydrationMetaReducer(
           );
           // Ensure new fields exist on legacy accounts
           const migratedAccounts: Record<string, AccountRecord> = {};
-          for (const [id, account] of Object.entries(normalized)) {
-            migratedAccounts[id] = {
+          for (const account of Object.values(normalized)) {
+            const fixedId = account.id === 'candidate-demo' ? 'talent-demo' : account.id;
+            migratedAccounts[fixedId] = {
               ...account,
-              id: account.id === 'candidate-demo' ? 'talent-demo' : account.id,
+              id: fixedId,
               type: (account.type as string) === 'candidate' ? 'talent' : account.type,
               displayPhone: account.displayPhone ?? '',
               email: account.email ?? '',

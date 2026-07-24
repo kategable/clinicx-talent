@@ -144,7 +144,7 @@ export const appReducer = createReducer(
     };
     return {
       ...state,
-      accounts: { [account.id]: account, ...state.accounts },
+      accounts: { ...state.accounts, [account.id]: account },
       activeAccountId: account.id,
       registration: { ...state.registration, accountCreated: true },
       error: '',
@@ -274,6 +274,7 @@ export const appReducer = createReducer(
       state,
       { clinicName, position, location, payRange, mustHaveSkills, benefits, urgency, idealHire },
     ) => {
+      if (!state.activeAccountId) return state;
       const slug = generateSlug(clinicName);
       const positionSlug = generateSlug(position);
       const opportunityId = `opportunity-${Date.now()}`;
@@ -282,7 +283,7 @@ export const appReducer = createReducer(
 
       const opportunity: typeof state.hiring.opportunities[number] = {
         id: opportunityId,
-        clinicAccountId: state.activeAccountId!,
+        clinicAccountId: state.activeAccountId,
         slug,
         positionSlug,
         title: position,
