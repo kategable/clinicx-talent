@@ -8,9 +8,17 @@ The current application is entirely client-side: domain logic lives in NgRx redu
 - Clean Architecture (Presentation / Application / Domain / Infrastructure layers)
 - ASP.NET Core 9 with minimal API controllers
 - Entity Framework Core with PostgreSQL (via Npgsql)
-- JWT bearer tokens for authentication
-- Twilio Verify API for phone verification (with local SMS mock during development)
+- **Google OAuth as primary auth** (industry standard, free, higher conversion)
+- **Azure Communication Services SMS as secondary** (phone verification for registration, fallback login)
 - Azure (production) / Docker Compose (development)
+
+**Why Google OAuth first, phone OTP second:**
+1. **Cost**: Google OAuth is completely free. Phone OTP at scale is expensive -- Twilio Verify charges ~$0.058 per SMS in the US ($0.05 platform fee + $0.0083 SMS). For 1,000 users verifying 2x/month, that is ~$116/month. For 10,000 users, ~$1,160/month. Azure Communication Services SMS is much cheaper (~$0.01 per segment, no platform fee), but still not free at scale.
+2. **Conversion**: Social login achieves 78-85% completion rates vs SMS OTP's 78-80%, with an 18-26% signup completion lift over SMS-only flows. Users onboard faster when they can use Google.
+3. **Security**: NIST SP 800-63B explicitly deprecates SMS as a primary authenticator due to SIM swap attacks ($48M in losses tracked by FBI IC3 in 2023). Google OAuth with PKCE is inherently more secure.
+4. **Industry standard for 2026**: Best practice is a layered approach -- platform passkeys/social login as primary, email magic link as secondary, phone OTP as last resort only.
+
+**Phone is still essential for the business model:** Clinics need to contact talent. Phone verification during registration is required, but it is a one-time cost per user, not a per-login cost. This keeps SMS costs low.
 
 **Database choice: PostgreSQL over SQL Server:**
 - Native JSONB columns for `CertificateNames` and `GalleryNames` arrays, avoiding string serialization and enabling real JSON queries at the database level if needed later
@@ -20,7 +28,8 @@ The current application is entirely client-side: domain logic lives in NgRx redu
 
 **Development approach: local-first, free until production:**
 - Development uses Docker Compose to run PostgreSQL locally + the API + the Angular app
-- SMS verification uses a local mock (logs code to console / writes to file) during dev, Twilio in production
+- SMS verification uses a local mock (logs code to console / writes to file) during dev, Azure Communication Services in production
+- Google OAuth works locally with a test OAuth client ID
 - No Azure deployment until Phase 9 when the system is proven and ready
 - Free managed Postgres (Neon, Supabase) can substitute for the Docker Postgres if a shared dev DB is needed
 - Azure Free Trial covers production deployment costs for the first 12 months
@@ -32,12 +41,12 @@ The current application is entirely client-side: domain logic lives in NgRx redu
 - Rollback = swap back to the previous slot
 
 **Environments:**
-| Environment | Postgres Host | API Host | Purpose |
-|------------|--------------|----------|---------|
-| Local dev | Docker Compose (localhost:5432) | localhost:5000 | Daily development |
-| Dev | Neon/Supabase free tier | Optional cloud host | Shared integration testing |
-| UAT (blue) | Azure PostgreSQL Flexible Server | Azure App Service slot | Pre-production validation |
-| Production (green) | Azure PostgreSQL Flexible Server | Azure App Service slot | Live traffic |
+| Environment | Postgres Host | API Host | Auth Mode | Purpose |
+|------------|--------------|----------|-----------|---------|
+| Local dev | Docker Compose (localhost:5432) | localhost:5000 | Google OAuth (test client) + SMS mock | Daily development |
+| Dev | Neon/Supabase free tier | Optional cloud host | Same as local | Shared integration testing |
+| UAT (blue) | Azure PostgreSQL Flexible Server | Azure App Service slot | Google OAuth (prod client) + ACS SMS | Pre-production validation |
+| Production (green) | Azure PostgreSQL Flexible Server | Azure App Service slot | Google OAuth (prod client) + ACS SMS | Live traffic |
 
 ---
 
@@ -62,9 +71,9 @@ ClinicX/
         RequestLoggingMiddleware.cs
       Program.cs
       appsettings.json
-      appsettings.Development.json  # Local PostgreSQL connection
-      appsettings.Uat.json         # UAT PostgreSQL connection
-      appsettings.Production.json  # Production PostgreSQL connection
+      appsettings.Development.json  # Local PostgreSQL, SMS mock, Google test client
+      appsettings.Uat.json         # UAT PostgreSQL, Azure SMS, Google prod client
+      appsettings.Production.json  # Production PostgreSQL, Azure SMS, Google prod client
 
     ClinicX.Application/
       Common/
@@ -72,25 +81,69 @@ ClinicX/
           ICurrentUserService.cs
           IJwtService.cs
           ISmsService.cs
+          IGoogleAuthService.cs     # Wraps Google token validation
           IFileStorageService.cs
       Auth/
         Commands/
+          SendVerificationCodeCommand.cs
+          VerifyCodeCommand.cs
+          GoogleLoginCommand.cs      # Handles Google ID token exchange
+          LinkPhoneCommand.cs        # Links phone to existing Google account
+          AdminLoginCommand.cs
         Dtos/
+          AuthResultDto.cs
+          TokenResponseDto.cs
+          GoogleLoginRequestDto.cs
         Services/
+          JwtService.cs
+          SmsService.cs              # Azure Communication Services impl
+          SmsServiceMock.cs          # Local dev mock (logs to console)
+          GoogleAuthService.cs       # Validates Google ID tokens
+          AdminService.cs
       Accounts/
         Commands/
+          CreateAccountCommand.cs
+          UpdateProfileCommand.cs
+          UpdateContactCommand.cs
+          UpdateThemeCommand.cs
         Queries/
+          GetAccountQuery.cs
+          GetMyAccountQuery.cs
+          ListAccountsQuery.cs
         Dtos/
+          AccountDto.cs
+          ClinicDetailsDto.cs
+          TalentDetailsDto.cs
       Hiring/
         Commands/
+          CreateOpportunityCommand.cs
+          UpdateOpportunityCommand.cs
+          CreateInviteCommand.cs
+          CreatePassportShareCommand.cs
+          CreateApplicationCommand.cs
+          UpdateApplicationStatusCommand.cs
+          AddTalentToClinicCommand.cs
         Queries/
+          GetOpportunitiesQuery.cs
+          GetInviteByTokenQuery.cs
+          GetPassportByTokenQuery.cs
+          GetApplicationsQuery.cs
         Dtos/
+          OpportunityDto.cs
+          InviteDto.cs
+          PassportShareDto.cs
+          ApplicationDto.cs
       Founder/
         Queries/
+          GetFounderStatusQuery.cs
         Dtos/
+          FounderStatusDto.cs
       Admin/
         Commands/
+          SetReviewStatusCommand.cs
+          ResetVerificationCommand.cs
         Queries/
+          GetVerificationSecurityQuery.cs
 
     ClinicX.Domain/
       Entities/
@@ -105,6 +158,7 @@ ClinicX/
         VerificationSecurityRecord.cs
         AdminUser.cs
         RefreshToken.cs
+        ExternalLogin.cs              # NEW: links Google sub to Account
       Enums/
         AccountType.cs
         ReviewStatus.cs
@@ -112,6 +166,7 @@ ClinicX/
         ApplicationSource.cs
         ApplicationStatus.cs
         ThemePreference.cs
+        ExternalLoginProvider.cs      # NEW: "Google", "Apple", etc.
       ValueObjects/
         PhoneNumber.cs
       Exceptions/
@@ -128,26 +183,17 @@ ClinicX/
         Seed/
           SeedData.cs               # Test/dev seed data (runs via config switch)
       Services/
-        SmsService.cs               # Twilio implementation
+        SmsService.cs               # Azure Communication Services implementation
         SmsServiceMock.cs           # Local dev mock (logs to console)
         JwtService.cs
+        GoogleAuthService.cs        # Validates Google ID tokens
         FileStorageService.cs
         CurrentUserService.cs
 
   tests/
     ClinicX.UnitTests/
-      Auth/
-      Accounts/
-      Hiring/
-      Founder/
     ClinicX.IntegrationTests/
-      DatabaseFixture.cs            # Spin up test Postgres via Testcontainers
-      AuthTests/
-      AccountsTests/
-      HiringTests/
     ClinicX.Api.Tests/
-      AuthControllerTests.cs
-      AccountsControllerTests.cs
 ```
 
 ---
@@ -173,7 +219,7 @@ ClinicX/
 CREATE TABLE Accounts (
     Id              UUID            PRIMARY KEY DEFAULT gen_random_uuid(),
     Type            VARCHAR(20)     NOT NULL,       -- 'clinic' | 'talent'
-    Phone           VARCHAR(20)     NOT NULL,       -- normalized (digits only)
+    Phone           VARCHAR(20)     NOT NULL DEFAULT '',  -- empty until phone verified
     DisplayPhone    VARCHAR(20)     NOT NULL DEFAULT '',
     Email           VARCHAR(320)    NOT NULL DEFAULT '',
     ShareEmail      BOOLEAN         NOT NULL DEFAULT FALSE,
@@ -190,7 +236,26 @@ CREATE TABLE Accounts (
 CREATE UNIQUE INDEX IX_Accounts_Phone ON Accounts(Phone);
 ```
 
-### 3.2 Account Details (1:1 with Accounts)
+### 3.2 External Logins (NEW -- links OAuth providers to accounts)
+
+```sql
+CREATE TABLE ExternalLogins (
+    Id              UUID            PRIMARY KEY DEFAULT gen_random_uuid(),
+    AccountId       UUID            NOT NULL REFERENCES Accounts(Id),
+    Provider        VARCHAR(50)     NOT NULL,       -- 'Google'
+    ProviderSubject VARCHAR(500)    NOT NULL,       -- Google's unique user ID (sub claim)
+    Email           VARCHAR(320)    NOT NULL DEFAULT '',
+    CreatedAtUtc    TIMESTAMPTZ     NOT NULL DEFAULT NOW()
+);
+
+CREATE UNIQUE INDEX IX_ExternalLogins_Provider_Subject 
+    ON ExternalLogins(Provider, ProviderSubject);
+CREATE INDEX IX_ExternalLogins_AccountId ON ExternalLogins(AccountId);
+```
+
+This enables multiple OAuth providers per account (e.g., Google + Apple) and prevents the same Google account from being linked to multiple ClinicX accounts.
+
+### 3.3 Account Details (1:1 with Accounts)
 
 ```sql
 CREATE TABLE ClinicDetails (
@@ -230,7 +295,7 @@ CREATE TABLE TalentDetails (
 );
 ```
 
-### 3.3 Hiring Opportunities
+### 3.4 Hiring Opportunities
 
 ```sql
 CREATE TABLE HiringOpportunities (
@@ -254,7 +319,7 @@ CREATE INDEX IX_HiringOpportunities_ClinicAccountId ON HiringOpportunities(Clini
 CREATE INDEX IX_HiringOpportunities_Slug ON HiringOpportunities(Slug, PositionSlug);
 ```
 
-### 3.4 Hiring Invites
+### 3.5 Hiring Invites
 
 ```sql
 CREATE TABLE HiringInvites (
@@ -270,7 +335,7 @@ CREATE UNIQUE INDEX IX_HiringInvites_Token ON HiringInvites(Token);
 CREATE INDEX IX_HiringInvites_OpportunityId ON HiringInvites(OpportunityId);
 ```
 
-### 3.5 Talent Passport Shares
+### 3.6 Talent Passport Shares
 
 ```sql
 CREATE TABLE TalentPassportShares (
@@ -285,7 +350,7 @@ CREATE UNIQUE INDEX IX_TalentPassportShares_Token ON TalentPassportShares(Token)
 CREATE INDEX IX_TalentPassportShares_TalentAccountId ON TalentPassportShares(TalentAccountId);
 ```
 
-### 3.6 Talent Applications
+### 3.7 Talent Applications
 
 ```sql
 CREATE TABLE TalentApplications (
@@ -312,7 +377,7 @@ CREATE UNIQUE INDEX IX_TalentApplications_UniqueNoOpp
     WHERE OpportunityId IS NULL;
 ```
 
-### 3.7 Phone Verification
+### 3.8 Phone Verification
 
 ```sql
 CREATE TABLE PhoneVerifications (
@@ -328,7 +393,7 @@ CREATE TABLE PhoneVerifications (
 CREATE INDEX IX_PhoneVerifications_Phone ON PhoneVerifications(Phone);
 ```
 
-### 3.8 Verification Security (rate limiting)
+### 3.9 Verification Security (rate limiting)
 
 ```sql
 CREATE TABLE VerificationSecurityRecords (
@@ -344,7 +409,7 @@ CREATE TABLE VerificationSecurityRecords (
 CREATE UNIQUE INDEX IX_VerificationSecurityRecords_Phone ON VerificationSecurityRecords(Phone);
 ```
 
-### 3.9 Admin Users
+### 3.10 Admin Users
 
 ```sql
 CREATE TABLE AdminUsers (
@@ -357,7 +422,7 @@ CREATE TABLE AdminUsers (
 CREATE UNIQUE INDEX IX_AdminUsers_Username ON AdminUsers(Username);
 ```
 
-### 3.10 Refresh Tokens
+### 3.11 Refresh Tokens
 
 ```sql
 CREATE TABLE RefreshTokens (
@@ -373,7 +438,7 @@ CREATE INDEX IX_RefreshTokens_AccountId ON RefreshTokens(AccountId);
 CREATE UNIQUE INDEX IX_RefreshTokens_Token ON RefreshTokens(Token);
 ```
 
-### 3.11 Bulletproof Database -- Movable Data
+### 3.12 Bulletproof Database -- Movable Data
 
 The database is designed so data can be moved between environments safely. Key principles:
 
@@ -388,25 +453,18 @@ The database is designed so data can be moved between environments safely. Key p
    ```json
    {
      "SeedData": {
-       "Profile": "Development" // or "Test" or "Production"
+       "Profile": "Development"
      }
    }
    ```
 
-3. **Database snapshots for testing.** A CLI dotnet tool (or a simple script in `scripts/`) can dump and restore a full database snapshot:
+3. **Database snapshots for testing.** A CLI tool (or shell script in `scripts/`) can dump and restore a full database snapshot using `pg_dump` / `pg_restore`:
    ```bash
-   # Save state before a risky migration test
    ./scripts/db-snapshot.sh save pre-migration-test
-   
-   # Run migration
    dotnet ef database update
-   
-   # Test...
-   
-   # Restore clean state
+   # test...
    ./scripts/db-snapshot.sh restore pre-migration-test
    ```
-   This uses `pg_dump` / `pg_restore` under the hood.
 
 4. **Testcontainers for integration tests.** Unit tests against a real PostgreSQL spun up in Docker:
    ```csharp
@@ -418,41 +476,93 @@ The database is designed so data can be moved between environments safely. Key p
                .Build();
        
        public string ConnectionString => _container.GetConnectionString();
-       
        public async Task InitializeAsync() => await _container.StartAsync();
        public async Task DisposeAsync() => await _container.DisposeAsync();
    }
    ```
-   Each test run starts fresh, no shared state, no cleanup needed.
 
 ---
 
-## 4. API Design
+## 4. Authentication Architecture -- Google OAuth + Phone Fallback
 
-### 4.1 Base URL
+### 4.1 Recommended Auth Flow (Primary: Google OAuth)
 
-```
-Dev:   http://localhost:5000/api/v1/
-Prod:  https://api.clinicx-talent.com/api/v1/
-UAT:   https://uat-api.clinicx-talent.com/api/v1/
-```
-
-### 4.2 Authentication Endpoints
+This is the key change from the original plan. Instead of relying on phone OTP for every login, Google OAuth handles 90%+ of authentications. Phone verification is used only for:
+- **One-time phone ownership verification** during registration (required to verify the phone number that clinics/talent use to contact each other)
+- **Fallback login** if Google OAuth is unavailable
+- **Account recovery**
 
 ```
+FLOW 1: New user registration via Google
+
+1. User clicks "Sign in with Google"
+2. Frontend redirects to Google OAuth (or uses Google One Tap)
+3. Google returns ID token to frontend
+4. Frontend POSTs ID token to POST /api/v1/auth/google
+5. Backend:
+   a. Validates Google ID token (checks iss, aud, exp, signature)
+   b. Checks if ExternalLogins already exists for this Google sub
+   c. If new: creates Account with email from Google profile, sets status=under-review
+   d. If existing: signs in (returns JWT)
+   e. Returns { token, refreshToken, account, phoneRequired: true/false }
+6. If phoneRequired=true, frontend shows phone verification step:
+   a. User enters phone number
+   b. POST /api/v1/auth/send-code (sends SMS via Azure Communication Services)
+   c. User enters code
+   d. POST /api/v1/auth/verify-code (links phone to account)
+   e. Account now has phone verified, can proceed to profile setup
+7. If phoneRequired=false (existing user already verified phone), proceed to dashboard
+
+FLOW 2: Returning user via Google
+
+1. User clicks "Sign in with Google"
+2. Google returns ID token
+3. POST /api/v1/auth/google -> backend finds existing ExternalLogin + Account
+4. Returns JWT immediately, no phone step needed
+5. User goes straight to dashboard
+
+FLOW 3: Phone-only login (fallback for users without Google)
+
+1. User enters phone number
+2. POST /api/v1/auth/send-code (sends SMS)
+3. User enters code
+4. POST /api/v1/auth/verify-code
+5. Backend looks up account by phone
+6. If found: returns JWT (sign in)
+7. If not found: returns isNewAccount=true, frontend prompts for account type + profile
+
+FLOW 4: Phone verification after Google registration (one-time)
+
+1. User already authenticated via Google, but phone not yet verified
+2. User enters phone number
+3. POST /api/v1/auth/send-code
+4. POST /api/v1/auth/verify-code (links phone to existing account)
+5. Account now has phone on file for clinic/talent communication
+```
+
+### 4.2 Auth Endpoints
+
+```
+POST /api/v1/auth/google
+  Request:  { idToken: string }
+  Response: { token: string, refreshToken: string, account: AccountDto,
+              isNewAccount: boolean, phoneRequired: boolean }
+  Notes:    Validates Google ID token. Creates account if new (using email/name from Google).
+            Returns phoneRequired=true if the account needs phone verification.
+            This is the PRIMARY auth endpoint.
+
 POST /api/v1/auth/send-code
   Request:  { phone: string }
   Response: { success: boolean, message: string }
-  Notes:    Normalizes phone, sends code via Twilio (or mock). Returns 429 if rate-limited.
+  Notes:    Normalizes phone, sends SMS via Azure Communication Services (or mock in dev).
+            Returns 429 if rate-limited. Used for phone verification + fallback login.
 
 POST /api/v1/auth/verify-code
   Request:  { phone: string, code: string }
   Response: { token: string, refreshToken: string, account: AccountDto | null,
               isNewAccount: boolean }
-
-POST /api/v1/auth/sign-in
-  Request:  { phone: string, code: string }
-  Response: { token: string, refreshToken: string, account: AccountDto }
+  Notes:    Verifies phone code. If account exists, signs in. If not, returns isNewAccount.
+            If user is already authenticated (has JWT from Google), links phone to account.
 
 POST /api/v1/auth/refresh
   Request:  { refreshToken: string }
@@ -465,19 +575,108 @@ POST /api/v1/auth/admin/login
 POST /api/v1/auth/admin/logout
 ```
 
-### 4.3 Account Endpoints
+### 4.3 SMS Cost Analysis
+
+| Provider | Cost per SMS (US) | Platform Fee | Total per Verification | Monthly Cost (1K users, 2x) | Monthly Cost (10K users, 2x) |
+|----------|------------------|-------------|----------------------|---------------------------|----------------------------|
+| Twilio Verify | $0.0083 | $0.05 | ~$0.0583 | ~$116.60 | ~$1,166 |
+| **Azure Communication Services** | **$0.0075 + $0.0025 surcharge** | **None** | **~$0.01** | **~$20.00** | **~$200** |
+| Twilio SMS (no Verify) | $0.0079 | None | ~$0.0079 | ~$15.80 | ~$158 |
+
+**With Google OAuth as primary:** SMS is only used for:
+- One-time phone verification during registration (1 SMS per new user)
+- Fallback login for users without Google (maybe 5-10% of users, 2 SMS/month each)
+
+**Estimated SMS costs with Google OAuth + Azure Communication Services:**
+- 10,000 users registering: one-time cost of ~$100 (10,000 x $0.01)
+- 500 users using phone fallback (5%): ~$10/month (500 x 2 x $0.01)
+- **Total: ~$110 first month, ~$10/month ongoing**
+
+Compare to phone-only with Twilio Verify: ~$1,166/month for 10K users x 2 logins.
+
+### 4.4 Google OAuth Integration in ASP.NET Core (for reference)
+
+```csharp
+// NuGet: Microsoft.AspNetCore.Authentication.Google
+
+builder.Services
+    .AddAuthentication(options =>
+    {
+        options.DefaultScheme = JwtBearerDefaults.AuthenticationScheme;
+    })
+    .AddJwtBearer(options => { /* existing JWT config */ })
+    .AddGoogle(options =>
+    {
+        options.ClientId = builder.Configuration["Google:ClientId"];
+        options.ClientSecret = builder.Configuration["Google:ClientSecret"];
+    });
+
+// Backend validates Google ID tokens issued by the frontend's Google sign-in
+// using Google.Apis.Auth:
+public class GoogleAuthService : IGoogleAuthService
+{
+    public async Task<GoogleJsonWebSignature.Payload> ValidateIdTokenAsync(string idToken)
+    {
+        var settings = new GoogleJsonWebSignature.ValidationSettings
+        {
+            Audience = new[] { _config["Google:ClientId"] }
+        };
+        return await GoogleJsonWebSignature.ValidateAsync(idToken, settings);
+    }
+}
+```
+
+### 4.5 SMS Implementation: Azure Communication Services (not Twilio)
+
+```csharp
+public class SmsService : ISmsService
+{
+    private readonly SmsClient _client;
+    
+    public SmsService(string connectionString)
+    {
+        _client = new SmsClient(connectionString);
+    }
+    
+    public async Task SendVerificationCodeAsync(string phone, string code)
+    {
+        await _client.SendAsync(
+            from: "+15551234567",  // Azure ACS toll-free number
+            to: phone,
+            message: $"Your ClinicX verification code is: {code}",
+            options: new SmsSendOptions { EnableDeliveryReport = false }
+        );
+    }
+}
+```
+
+---
+
+## 5. Backend API Design
+
+### 5.1 Base URL
+
+```
+Dev:   http://localhost:5000/api/v1/
+Prod:  https://api.clinicx-talent.com/api/v1/
+UAT:   https://uat-api.clinicx-talent.com/api/v1/
+```
+
+### 5.2 Account Endpoints
 
 ```
 GET    /api/v1/accounts/me               -> AccountDto
 PUT    /api/v1/accounts/me               -> AccountDto (displayName, email, etc.)
 PUT    /api/v1/accounts/me/profile       -> AccountDto (ClinicDetails / TalentDetails)
 PUT    /api/v1/accounts/me/theme         -> AccountDto (themePreference)
+POST   /api/v1/accounts/me/phone         -> sends SMS code to link phone
+PUT    /api/v1/accounts/me/phone         -> verifies code, links phone to account
 GET    /api/v1/accounts?type=&page=      -> paginated list (admin)
 GET    /api/v1/accounts/{id}             -> AccountDto (admin or own)
 PUT    /api/v1/accounts/{id}/status      -> AccountDto (admin only)
 ```
 
-### 4.4 Hiring Endpoints
+### 5.3 Hiring Endpoints
 
 ```
 GET    /api/v1/hiring/opportunities              -> OpportunityDto[]
@@ -492,7 +691,7 @@ POST   /api/v1/hiring/applications               -> ApplicationDto
 PUT    /api/v1/hiring/applications/{id}/status   -> ApplicationDto
 ```
 
-### 4.5 Public Endpoints (no auth)
+### 5.4 Public Endpoints (no auth)
 
 ```
 GET    /api/v1/public/hiring/{clinicSlug}/{positionSlug}?invite={token}
@@ -501,7 +700,7 @@ GET    /api/v1/public/clinic/{clinicSlug}
 GET    /api/v1/public/invite/{token}
 ```
 
-### 4.6 Admin Endpoints
+### 5.5 Admin Endpoints
 
 ```
 GET    /api/v1/admin/accounts/verification-security
@@ -509,7 +708,7 @@ POST   /api/v1/admin/accounts/verification-security/reset
 GET    /api/v1/admin/stats
 ```
 
-### 4.7 Response Envelope
+### 5.6 Response Envelope
 
 ```json
 {
@@ -532,65 +731,13 @@ Error response:
 }
 ```
 
-Error codes: `PHONE_LOCKED`, `INVALID_CODE`, `RATE_LIMITED`, `DUPLICATE_APPLICATION`, `INVALID_STATUS_TRANSITION`, `INVITE_EXPIRED`, `NOT_FOUND`, `UNAUTHORIZED`, `FORBIDDEN`, `VALIDATION_ERROR`.
+Error codes: `PHONE_LOCKED`, `INVALID_CODE`, `RATE_LIMITED`, `DUPLICATE_APPLICATION`, `INVALID_STATUS_TRANSITION`, `INVITE_EXPIRED`, `NOT_FOUND`, `UNAUTHORIZED`, `FORBIDDEN`, `VALIDATION_ERROR`, `GOOGLE_TOKEN_INVALID`.
 
 ---
 
-## 5. Auth and Security
+## 6. Auth and Security
 
-### 5.1 Phone Verification Flow
-
-```
-1. User enters phone number
-2. Frontend POSTs to /api/v1/auth/send-code
-3. Backend:
-   a. Normalizes phone
-   b. Checks VerificationSecurityRecords for lockout
-   c. Generates 6-digit code
-   d. Stores bcrypt hash in PhoneVerifications
-   e. Sends code via Twilio (production) or logs to console (dev mock)
-   f. Increments attempt counter in VerificationSecurityRecords
-   g. If >3 attempts, locks phone for 15 minutes
-   h. If >5 distinct phones in last hour, sets flagged=true
-4. Frontend shows code input
-5. User enters code
-6. Frontend POSTs to /api/v1/auth/verify-code
-7. Backend:
-   a. Finds PhoneVerification by phone
-   b. Checks expiration (< 5 minutes)
-   c. Verifies code hash
-   d. On success: issues JWT + refresh token
-   e. On failure: increments attempt count
-```
-
-### 5.2 SMS Mock for Local Development
-
-Instead of calling Twilio, the mock SMS service logs the verification code:
-
-```csharp
-public class SmsServiceMock : ISmsService
-{
-    public Task SendVerificationCodeAsync(string phone, string code)
-    {
-        Console.WriteLine($"[SMS MOCK] Code for {phone}: {code}");
-        // Also write to a file the Angular dev server can poll
-        File.AppendAllText("sms-codes.log", $"{phone}:{code}{Environment.NewLine}");
-        return Task.CompletedTask;
-    }
-}
-```
-
-The DI registration switches based on environment:
-```csharp
-if (builder.Environment.IsDevelopment())
-    builder.Services.AddScoped<ISmsService, SmsServiceMock>();
-else
-    builder.Services.AddScoped<ISmsService, SmsService>();
-```
-
-In development, the Angular app can display the code from the mock log on screen (useful for manual testing). In UAT/production, the real Twilio API is used.
-
-### 5.3 JWT Claims
+### 6.1 JWT Claims
 
 ```json
 {
@@ -598,6 +745,8 @@ In development, the Angular app can display the code from the mock log on screen
   "type": "clinic",
   "status": "approved",
   "role": "user",
+  "phone": "3125550101",
+  "phoneVerified": true,
   "iat": 1721836800,
   "exp": 1721923200,
   "iss": "clinicx-talent-api",
@@ -608,9 +757,10 @@ In development, the Angular app can display the code from the mock log on screen
 - Access token TTL: 15 minutes
 - Refresh token TTL: 7 days
 - Admin tokens include `"role": "admin"`
+- `phoneVerified` claim lets the frontend know if phone step is still needed
 - Signing key in Azure Key Vault (production) / appsettings.Development.json (local dev)
 
-### 5.4 Authorization Policies
+### 6.2 Authorization Policies
 
 ```csharp
 builder.Services.AddAuthorization(options =>
@@ -624,10 +774,12 @@ builder.Services.AddAuthorization(options =>
     options.AddPolicy("ApprovedClinic", policy =>
         policy.RequireClaim("type", "clinic")
               .RequireClaim("status", "approved"));
+    options.AddPolicy("PhoneVerified", policy =>
+        policy.RequireClaim("phoneVerified", "True"));  // NEW
 });
 ```
 
-### 5.5 Rate Limiting
+### 6.3 Rate Limiting
 
 - 3 failed verification attempts per phone -> 15-minute lockout
 - 5 distinct phones in 60 minutes -> admin flag
@@ -636,21 +788,24 @@ builder.Services.AddAuthorization(options =>
 
 ---
 
-## 6. Azure Services (Production / UAT)
+## 7. Azure Services (Production / UAT)
 
-### 6.1 Resource Table
+### 7.1 Resource Table
 
 | Resource | SKU / Tier | Purpose |
 |----------|-----------|---------|
 | App Service | B1 (Linux) -- 2 slots (green + blue) | Host ASP.NET Core API |
 | PostgreSQL Flexible Server | Burstable B1ms (1 vCore, 2 GB) | Primary data store |
-| Key Vault | Standard | JWT signing key, Twilio creds, connection strings |
+| Key Vault | Standard | JWT signing key, Google client secret, ACS connection string |
 | Storage Account | Standard LRS (Blob) | Certificates, photos, videos |
+| Communication Services | Pay-as-you-go | SMS sending (~$0.01 per message, no monthly fee) |
 | App Insights | Per-GB | Logging, exceptions, perf monitoring |
 
-All resources fit within the Azure Free Trial (12 months) except PostgreSQL Flexible Server which has a free tier of its own (Burstable B1ms, 32 GB storage, 12 months).
+All resources fit within Azure Free Trial (12 months) except PostgreSQL which has its own 12-month free tier.
 
-### 6.2 Green/Blue Deployment Architecture
+**SMS cost with Azure Communication Services:** $0.01 per SMS segment in the US. Since SMS is only used for one-time phone verification and fallback login (not every login), monthly costs are expected to be under $10-20 even at significant scale.
+
+### 7.2 Green/Blue Deployment Architecture
 
 ```
 [Azure Front Door / DNS]
@@ -662,45 +817,27 @@ All resources fit within the Azure Free Trial (12 months) except PostgreSQL Flex
   (production)   (staging)
        |              |
        +---- DB ------+
-       (single PostgreSQL instance, same schema)
+       (single PostgreSQL instance)
 ```
 
 **Deployment flow:**
-1. Deploy new build to the inactive slot (e.g., blue while green serves traffic)
+1. Deploy new build to the inactive slot
 2. Run smoke tests against the inactive slot
-3. Run EF Core migrations (additive only -- no column drops or destructive changes)
+3. Run EF Core migrations (additive only)
 4. Swap the slots: blue becomes production, green becomes staging
 5. Monitor the new production slot
-6. If rollback needed: swap back (immediate, no schema issues because migrations were additive)
+6. If rollback needed: swap back
 
-The single PostgreSQL instance is shared. Both slots connect to the same database. This is safe because:
-- Migrations are always additive (new columns nullable or defaulted)
-- Old code ignores new columns it doesn't know about
-- New code handles null/empty states for old data
-- Breaking schema changes are two-phase: (1) add column + write dual code, (2) next deploy removes old column
-
-### 6.3 Environment Configuration
+### 7.3 Environment Configuration
 
 ```
 appsettings.json                  # Shared defaults
-appsettings.Development.json      # Local Docker PostgreSQL
-appsettings.Uat.json              # UAT Azure PostgreSQL
-appsettings.Production.json       # Production Azure PostgreSQL + Key Vault refs
+appsettings.Development.json      # Local Docker PostgreSQL, SMS mock, Google test client
+appsettings.Uat.json              # UAT Azure PostgreSQL, ACS SMS, Google prod client
+appsettings.Production.json       # Production Azure PostgreSQL, ACS SMS, Google prod client + Key Vault refs
 ```
 
-Environment variable `ASPNETCORE_ENVIRONMENT` controls which config is loaded:
-```bash
-# Local
-ASPNETCORE_ENVIRONMENT=Development
-
-# UAT slot
-ASPNETCORE_ENVIRONMENT=Uat
-
-# Production slot
-ASPNETCORE_ENVIRONMENT=Production
-```
-
-### 6.4 Deployment Pipeline
+### 7.4 Deployment Pipeline
 
 ```
 GitHub main branch
@@ -708,7 +845,7 @@ GitHub main branch
      1. dotnet restore, build, test
      2. dotnet publish
      3. Deploy to Azure App Service (inactive slot)
-     4. Run smoke tests
+     4. Run smoke tests against inactive slot
      5. Run EF Core migrations (idempotent, additive)
      6. Swap slots (green <-> blue)
      7. Run post-deploy validation
@@ -716,9 +853,9 @@ GitHub main branch
 
 ---
 
-## 7. Migration Strategy
+## 8. Migration Strategy
 
-### 7.1 Key Insight: Abstract Data Sources
+### 8.1 Key Insight: Abstract Data Sources
 
 The frontend already uses abstract data sources:
 
@@ -742,7 +879,7 @@ Migration swaps the provider in `app.config.ts`:
 
 **No component code changes required.**
 
-### 7.2 Dual-Run Strategy
+### 8.2 Dual-Run Strategy
 
 During phases 2-6, both systems coexist:
 
@@ -754,15 +891,16 @@ During phases 2-6, both systems coexist:
 // src/environments/environment.ts
 export const environment = {
   apiUrl: 'http://localhost:5000/api/v1',
-  useBackend: false,  // flip to true when API is ready
+  googleClientId: 'xxx.apps.googleusercontent.com',  // Google OAuth client ID
+  useBackend: false,
 };
 ```
 
-### 7.3 Seed Data Strategy
+### 8.3 Seed Data Strategy
 
 Existing `SEEDED_ACCOUNTS`, `SEEDED_OPPORTUNITIES`, etc. from the frontend become EF Core seed data, loaded only in development environment. On the frontend, the hydration meta-reducer no longer carries seeds -- the API is the single source of truth.
 
-### 7.4 Local Development Setup
+### 8.4 Local Development Setup
 
 ```yaml
 # docker-compose.yml
@@ -786,6 +924,8 @@ services:
     environment:
       ASPNETCORE_ENVIRONMENT: Development
       ConnectionStrings__ClinicXDb: "Host=postgres;Database=clinicx;Username=clinicx;Password=clinicx_dev"
+      Google__ClientId: "${GOOGLE_CLIENT_ID}"       # from .env file
+      Google__ClientSecret: "${GOOGLE_CLIENT_SECRET}" # from .env file
     depends_on:
       - postgres
 
@@ -793,36 +933,26 @@ volumes:
   pgdata:
 ```
 
-Start everything with `docker compose up`. The Angular app runs locally via `ng serve` on :4200, proxying API calls to localhost:5000. This keeps the frontend hot-reload cycle fast while the backend runs in Docker.
-
-For those who prefer running Postgres natively without Docker:
-```bash
-# macOS
-brew install postgresql@16
-brew services start postgresql@16
-createdb clinicx
-```
-
 ---
 
-## 8. Frontend Changes
+## 9. Frontend Changes
 
-### 8.1 New Files
+### 9.1 New Files
 
 ```
 src/app/core/
   http-account.data.source.ts    # HTTP impl of AccountDataSource
   http-hiring.data.source.ts     # HTTP impl of HiringDataSource
-  auth.service.ts                # Token management, login/logout, refresh
+  auth.service.ts                # Token management, Google OAuth, SMS fallback
   jwt.interceptor.ts             # Attach JWT to all outgoing requests
   error.interceptor.ts           # Handle 401/403/429 globally
   api-error.ts                   # Error types matching backend envelope
 
 src/environments/
-  environment.ts                 # apiUrl, useBackend flag
+  environment.ts                 # apiUrl, googleClientId, useBackend flag
 ```
 
-### 8.2 Auth Service
+### 9.2 Auth Service (with Google OAuth)
 
 ```typescript
 @Injectable({ providedIn: 'root' })
@@ -830,20 +960,65 @@ export class AuthService {
   private readonly tokenKey = 'clinicx.jwt';
   private readonly refreshKey = 'clinicx.refresh';
 
+  // Google OAuth
+  signInWithGoogle(): Promise<AuthResult> { ... }   // uses @angular/fire or Google Identity Services
+  exchangeGoogleToken(idToken: string): Observable<AuthResult> { ... }  // POST /api/v1/auth/google
+
+  // SMS fallback
+  sendCode(phone: string): Observable<boolean> { ... }
+  verifyCode(phone: string, code: string): Observable<AuthResult> { ... }
+
+  // Token management
   getToken(): string | null { ... }
   setToken(token: string): void { ... }
   clearTokens(): void { ... }
   isAuthenticated(): boolean { ... }
-
-  sendCode(phone: string): Observable<boolean> { ... }
-  verifyCode(phone: string, code: string): Observable<AuthResult> { ... }
   refreshToken(): Observable<TokenPair> { ... }
+
+  // Admin
   adminLogin(username: string, password: string): Observable<AdminLoginResult> { ... }
   adminLogout(): void { ... }
 }
 ```
 
-### 8.3 JWT Interceptor
+### 9.3 Google Sign-In Integration (Frontend)
+
+The frontend uses Google Identity Services (GIS) or the `@angular/fire` library:
+
+```typescript
+// registration.ts (or a dedicated auth component)
+import { CredentialResponse } from 'google-one-tap';
+
+protected async handleGoogleSignIn(): Promise<void> {
+  // Use Google Identity Services One Tap or button
+  const google = window.google?.accounts?.id;
+  if (!google) {
+    // Fallback to SMS if Google script not loaded
+    this.useSmsFallback();
+    return;
+  }
+  
+  google.initialize({
+    client_id: environment.googleClientId,
+    callback: async (response: CredentialResponse) => {
+      const result = await this.authService
+        .exchangeGoogleToken(response.credential).toPromise();
+      
+      if (result.phoneRequired) {
+        // Navigate to phone verification step
+        this.router.navigate(['/register', 'phone']);
+      } else {
+        // Go to dashboard
+        this.router.navigate(['/']);
+      }
+    },
+  });
+  
+  google.prompt(); // Show One Tap UI
+}
+```
+
+### 9.4 JWT Interceptor
 
 ```typescript
 @Injectable()
@@ -858,15 +1033,16 @@ export class JwtInterceptor implements HttpInterceptor {
 }
 ```
 
-### 8.4 Reducer Changes
+### 9.5 Reducer Changes
 
 - Remove `credentialMatches()` function
 - Remove `TEST_CREDENTIALS` reference
 - Remove hardcoded admin login (`admin`/`admin`)
 - Remove local account creation from verifyRegistrationCode
 - Remove in-memory verificationSecurity tracking
+- Registration flow now dispatches Google token exchange action instead of SMS code request
 
-### 8.5 Effects Changes
+### 9.6 Effects Changes
 
 - Remove `persistState$` (no more localStorage persistence)
 - Remove `persistGuestTheme$` (or modify to call API)
@@ -874,7 +1050,7 @@ export class JwtInterceptor implements HttpInterceptor {
 - Modify data-loading effects to call API instead of local data sources
 - Navigation effects remain unchanged
 
-### 8.6 Guard Changes
+### 9.7 Guard Changes
 
 Option A (recommended for minimal changes): Keep reading from NgRx store. Store is hydrated from API on app init.
 
@@ -888,11 +1064,11 @@ export const clinicAccountGuard: CanActivateFn = () => {
 };
 ```
 
-### 8.7 Hydration Meta-Reducer
+### 9.8 Hydration Meta-Reducer
 
 After migration, the hydration meta-reducer in `storage.ts` is removed. The NgRx store initializes empty and populates via API effects.
 
-### 8.8 App Config (after migration)
+### 9.9 App Config (after migration)
 
 ```typescript
 export const appConfig: ApplicationConfig = {
@@ -908,9 +1084,7 @@ export const appConfig: ApplicationConfig = {
 };
 ```
 
-### 8.9 Proxy Config for Local Dev
-
-To avoid CORS issues during local development, use an Angular proxy:
+### 9.10 Proxy Config for Local Dev
 
 ```json
 // src/proxy.conf.json
@@ -922,47 +1096,48 @@ To avoid CORS issues during local development, use an Angular proxy:
 }
 ```
 
-```json
-// angular.json snippet
-"serve": {
-  "options": {
-    "proxyConfig": "src/proxy.conf.json"
-  }
-}
-```
-
 ---
 
-## 9. Implementation Phases
+## 10. Implementation Phases
 
 ### Phase 1: Backend Foundation (Week 1)
-- Scaffold solution with 4 projects (Api, Application, Domain, Infrastructure)
+- Scaffold solution with 5 projects (Api, Application, Domain, Infrastructure, Tests)
 - Define domain entities and enums matching frontend types
-- Add NuGet packages: `Npgsql.EntityFrameworkCore.PostgreSQL`, `Microsoft.AspNetCore.Authentication.JwtBearer`, `Twilio`, `Azure.Identity`, `Azure.Security.KeyVault.Secrets`, `Azure.Storage.Blobs`, `MediatR`, `FluentValidation`
+- Add NuGet packages: `Npgsql.EntityFrameworkCore.PostgreSQL`, `Microsoft.AspNetCore.Authentication.Google`, `Azure.Communication.Sms`, `Azure.Identity`, `Azure.Security.KeyVault.Secrets`, `Azure.Storage.Blobs`, `MediatR`, `FluentValidation`
 - Configure EF Core with PostgreSQL (Npgsql), enable connection resilience
 - Write `docker-compose.yml` for local PostgreSQL
 - Create `SmsServiceMock` that logs codes to console/file
+- Create `ExternalLogin` entity + table
 - Create initial migration with development seed data
 - Implement ExceptionMiddleware
 - Verify /health endpoint works on localhost:5000
 - Write integration test fixture using Testcontainers
 
-### Phase 2: Auth System (Week 2)
-- Phone verification: mock for dev, Twilio interface for production
-- JWT issuance with 15-min access + 7-day refresh tokens
-- Rate limiting (3 attempts locks phone, 5 phones flags system)
+### Phase 2: Auth System -- Google OAuth (Week 2)
+- Implement Google ID token validation service
+- Implement `/api/v1/auth/google` endpoint
+- Implement `ExternalLogin` + `Account` creation/retrieval flow
+- JWT issuance with `phoneVerified` claim
 - Admin login against AdminUsers table
-- SMS mock for local development (visible in console)
-- Swagger / OpenAPI documentation for auth endpoints
+- Google OAuth test client for local development
+- Swagger / OpenAPI documentation
 
-### Phase 3: Accounts API (Week 2-3)
+### Phase 3: Auth System -- SMS Fallback (Week 2-3)
+- Implement Azure Communication Services SMS integration
+- Implement `/api/v1/auth/send-code` and `/api/v1/auth/verify-code`
+- Phone linking flow (existing authenticated user adds phone)
+- Rate limiting (3 attempts locks phone, 5 phones flags system)
+- SMS mock visible in developer console
+- **Total SMS costs estimated: $0 for development, ~$10-20/month in production**
+
+### Phase 4: Accounts API (Week 3-4)
 - Account CRUD endpoints
 - Profile update (ClinicDetails, TalentDetails)
 - Contact/theme preferences
 - Founder 1000 Club logic
 - FluentValidation for request models
 
-### Phase 4: Hiring API (Week 3-4)
+### Phase 5: Hiring API (Week 4-5)
 - Opportunity CRUD with slug generation
 - Invite creation with 30-day expiry
 - Passport share creation
@@ -970,156 +1145,116 @@ To avoid CORS issues during local development, use an Angular proxy:
 - Public endpoints (no auth)
 - Domain business rules (canCreateOpportunity, isInviteValid, getNextApplicationStatus)
 
-### Phase 5: Admin API (Week 4)
+### Phase 6: Admin API (Week 5)
 - Verification security overview and reset
 - Account review status management
 - Dashboard stats
 
-### Phase 6: Frontend Auth Integration (Week 4-5)
-- AuthService, JwtInterceptor, ErrorInterceptor
+### Phase 7: Frontend Auth Integration (Week 5-6)
+- AuthService with Google OAuth + SMS fallback
+- Google Identity Services integration (One Tap + button)
+- JwtInterceptor and ErrorInterceptor
 - HttpAccountDataSource and HttpHiringDataSource
 - Feature flag in environment config
 - Angular proxy config for local development
-- Replace TEST_CREDENTIALS and hardcoded admin
-- Update registration/sign-in flows
+- Remove TEST_CREDENTIALS and hardcoded admin from reducer
+- Update registration/sign-in flows for Google-first UX
 - Full end-to-end testing against local Docker backend
 
-### Phase 7: Frontend Full Integration (Week 5-6)
+### Phase 8: Frontend Full Integration (Week 6-7)
 - Remove localStorage persistence effects
 - Remove hydrationMetaReducer
 - Remove local data source implementations
 - Add loading states for API calls
 - Convert date formatting (ISO 8601 -> display)
-- End-to-end testing against local Docker backend
+- End-to-end testing
 
-### Phase 8: Media Storage (Week 6)
-- Azure Blob storage for file uploads (use local filesystem mock in dev)
+### Phase 9: Media Storage (Week 7)
+- Azure Blob storage for file uploads (local filesystem mock in dev)
 - Upload endpoints in AccountsController
 - File type/size validation
 
-### Phase 9: Production Deployment (Week 6-7)
+### Phase 10: Production Deployment (Week 7-8)
 - Set up Azure resources via Bicep/ARM:
   - App Service with green and blue deployment slots
   - PostgreSQL Flexible Server (free tier)
+  - Azure Communication Services (pay-as-you-go)
   - Key Vault with secrets
   - Storage Account
   - Application Insights
+- Google Cloud Console: create OAuth client for production
 - Configure `appsettings.Uat.json` and `appsettings.Production.json`
 - Set up GitHub Actions CI/CD with slot swap
-- Implement additive-only migration strategy
-- Deploy to UAT slot first, test, then deploy and swap to production
+- Deploy to UAT slot first, test Google OAuth flow, then deploy and swap to production
 - Performance and security testing
 
 ---
 
-## 10. Bulletproof Database -- Data Mobility
+## 11. Bulletproof Database -- Data Mobility
 
-The database is designed to be moved, reset, and tested freely across environments.
-
-### 10.1 Migration Philosophy
+### 11.1 Migration Philosophy
 
 Every migration is **additive only** -- this is what makes green/blue swaps safe:
 
 ```
 Good:    ADD COLUMN ... NULL                  -- old code ignores it
-Good:    CREATE INDEX ...                     -- read perf improvement, no breaking change
-Good:    CREATE TABLE ...                     -- new entity, no one touches it yet
+Good:    CREATE INDEX ...                     -- read perf improvement
+Good:    CREATE TABLE ...                     -- new entity
 
 Bad:     DROP COLUMN ...                      -- old code crashes
 Bad:     ALTER COLUMN ... NOT NULL            -- old inserts fail
 Bad:     RENAME TABLE ...                     -- old code can't find it
-Bad:     ALTER COLUMN ... TYPE                -- data conversion risk
 ```
 
 Breaking changes are done in **two deployments**:
 1. First deploy: add new column/table, write dual code (writes to both old and new, reads from new)
 2. Second deploy: remove old column/table reference from code, then drop from schema
 
-### 10.2 Scripts for Data Mobility
+### 11.2 Scripts for Data Mobility
 
 ```bash
-# Save a snapshot of the current database state (dev only)
-scripts/db-snapshot.sh save my-feature-test
-
-# Load demo seed data into any environment
-scripts/db-seed.sh demo --env=uat
-
-# Reset development database to clean state (drops and recreates)
-scripts/db-reset.sh
-
-# Copy database from UAT to local for debugging
-scripts/db-copy.sh uat local
-
-# Dump schema only (no data) from any environment
-scripts/db-schema.sh dump uat > schema.sql
+scripts/db-snapshot.sh save my-feature-test    # Save state
+scripts/db-snapshot.sh restore my-feature-test  # Restore state
+scripts/db-seed.sh demo --env=uat              # Load demo data into UAT
+scripts/db-reset.sh                             # Reset dev database
+scripts/db-copy.sh uat local                    # Copy UAT DB to local
 ```
 
-### 10.3 Seed Data Profiles
+### 11.3 Seed Data Profiles
 
 | Profile | Contents | When |
 |---------|----------|------|
-| `Development` | Full demo set (6 accounts, 1 opportunity, 1 invite, 1 passport, 0 apps) | Local dev, first migration apply |
-| `Test` | Admin user + 2 accounts (1 clinic, 1 talent) | Integration tests, CI |
-| `Production` | Admin user only | First production migration, then live data |
-| `Demo` | Full demo set (like dev, but used for UAT/demo environments) | UAT slot, demo servers |
-
-### 10.4 Testcontainers Integration Tests
-
-Every integration test starts with a fresh, disposable PostgreSQL:
-
-```csharp
-public class AccountRepositoryTests : IClassFixture<DatabaseFixture>
-{
-    private readonly DatabaseFixture _fixture;
-    
-    public AccountRepositoryTests(DatabaseFixture fixture) => _fixture = fixture;
-    
-    [Fact]
-    public async Task Create_Account_Persists()
-    {
-        // Arrange -- fresh DB, fresh migration, fresh seed
-        await using var ctx = _fixture.CreateDbContext();
-        await ctx.Database.MigrateAsync();
-        await SeedData.ApplyAsync(ctx, SeedProfile.Test);
-        
-        // Act
-        var account = new Account { Type = AccountType.Clinic, Phone = "3125550101", ... };
-        ctx.Accounts.Add(account);
-        await ctx.SaveChangesAsync();
-        
-        // Assert
-        var saved = await ctx.Accounts.FindAsync(account.Id);
-        Assert.NotNull(saved);
-    }
-}
-```
-
-No shared state, no cleanup, no ordering problems. Each test method is fully isolated.
+| `Development` | Full demo set (6 accounts, 1 opp, 1 invite, 1 passport) | Local dev |
+| `Test` | Admin user + 2 accounts (1 clinic, 1 talent) | Integration tests |
+| `Production` | Admin user only | First prod migration |
+| `Demo` | Full demo set (for UAT/demo environments) | UAT slot |
 
 ---
 
-## 11. Potential Challenges
+## 12. Potential Challenges
 
 | Challenge | Mitigation |
 |-----------|-----------|
-| Data loss during migration | Keep localStorage fallback; seed database with exact copy of seed data; migration rollback plan |
-| Twilio SMS costs | Twilio Verify free tier: 10,000 verifications/month; local mock during dev |
+| Data loss during migration | Keep localStorage fallback; seed DB with exact copy of seed data; migration rollback plan |
+| Google OAuth dependency | SMS fallback for users without Google accounts; email OTP as tertiary option |
+| Azure ACS SMS cost | ~$0.01 per SMS in US; only used for one-time phone verification and fallback login; estimated <$20/month even at 10K users |
 | JWT expiration UX | Auto-refresh via interceptor; toast on session expiry |
 | Date format mismatch | API returns ISO 8601 UTC; frontend formats via DatePipe |
 | Concurrent founder assignment | Serializable transaction; only first 1000 accounts ever get it |
 | File upload limits | ASP.NET Core request size limits; chunked upload for video |
-| Green/blue DB compatibility | Additive-only migrations; dual-write during transition periods; old code ignores new columns |
+| Green/blue DB compatibility | Additive-only migrations; dual-write during transition periods |
 | PostgreSQL connection pooling | Npgsql built-in pooling (default 100); adjust for Flexible Server limits |
-| Cross-slot CORS in dev | Angular proxy config on :4200 -> :5000; no CORS needed in development |
+| Cross-origin for Google OAuth redirect | Configure correct redirect URIs in Google Cloud Console for each environment |
 
 ---
 
-## 12. Files That Change
+## 13. Files That Change
 
 ### Files to Modify (Frontend):
 - `src/app/app.config.ts` -- swap data source providers, add interceptors
 - `src/app/core/store/app.reducer.ts` -- remove credential matching, admin login, local account creation
 - `src/app/core/store/app.effects.ts` -- remove localStorage persistence, add API calls
+- Registration components -- add Google sign-in button, phone verification step
 
 ### Files to Delete (Frontend):
 - `src/app/core/store/storage.ts` -- hydration meta-reducer replaced by API init
@@ -1137,16 +1272,17 @@ No shared state, no cleanup, no ordering problems. Each test method is fully iso
 ### Files to Create (Backend):
 - Entire solution structure in `ClinicX/` directory (see Section 2)
 - `docker-compose.yml` -- local PostgreSQL + API containers
+- `.env.example` -- template for local environment variables (Google client ID/secret)
 
 ### Files to Create (Operations):
-- `scripts/db-snapshot.sh` -- database snapshot/restore
-- `scripts/db-seed.sh` -- seed data loading
-- `scripts/db-reset.sh` -- development database reset
+- `scripts/db-snapshot.sh`
+- `scripts/db-seed.sh`
+- `scripts/db-reset.sh`
 - `.github/workflows/deploy.yml` -- CI/CD with green/blue swap
 
 ---
 
-## 13. Key Architectural Notes
+## 14. Key Architectural Notes
 
 ### Domain Logic Migration
 
