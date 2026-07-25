@@ -7,46 +7,26 @@ The current application is entirely client-side: domain logic lives in NgRx redu
 **Core architectural principles:**
 - Clean Architecture (Presentation / Application / Domain / Infrastructure layers)
 - ASP.NET Core 9 with minimal API controllers
-- Entity Framework Core with PostgreSQL (via Npgsql)
-- **Google OAuth as primary auth** (industry standard, free, higher conversion)
-- **Azure Communication Services SMS as secondary** (phone verification for registration, fallback login)
+- Entity Framework Core with PostgreSQL (via Npgsql) for relational data
+- Azure Blob Storage for all media files (videos, photos, certificates, galleries)
+- **Google OAuth as primary auth**, Azure Communication Services SMS as phone verification
 - Azure (production) / Docker Compose (development)
+- **Soft delete everywhere** -- accounts, hiring resources, and files are soft-deleted by default. Full hard deletion requires a special admin approval process.
 
-**Why Google OAuth first, phone OTP second:**
-1. **Cost**: Google OAuth is completely free. Phone OTP at scale is expensive -- Twilio Verify charges ~$0.058 per SMS in the US ($0.05 platform fee + $0.0083 SMS). For 1,000 users verifying 2x/month, that is ~$116/month. For 10,000 users, ~$1,160/month. Azure Communication Services SMS is much cheaper (~$0.01 per segment, no platform fee), but still not free at scale.
-2. **Conversion**: Social login achieves 78-85% completion rates vs SMS OTP's 78-80%, with an 18-26% signup completion lift over SMS-only flows. Users onboard faster when they can use Google.
-3. **Security**: NIST SP 800-63B explicitly deprecates SMS as a primary authenticator due to SIM swap attacks ($48M in losses tracked by FBI IC3 in 2023). Google OAuth with PKCE is inherently more secure.
-4. **Industry standard for 2026**: Best practice is a layered approach -- platform passkeys/social login as primary, email magic link as secondary, phone OTP as last resort only.
+**Why Azure Blob Storage for media, not PostgreSQL:** Cheaper ($0.018 vs $0.115/GB/month), CDN-friendly, designed for large blobs (50-100MB videos), no database bloat.
 
-**Phone is still essential for the business model:** Clinics need to contact talent. Phone verification during registration is required, but it is a one-time cost per user, not a per-login cost. This keeps SMS costs low.
+**Why Google OAuth first:** Free (vs SMS ~$0.01/msg), higher conversion (85% vs 78%), NIST-approved over SMS OTP.
 
-**Database choice: PostgreSQL over SQL Server:**
-- Native JSONB columns for `CertificateNames` and `GalleryNames` arrays, avoiding string serialization and enabling real JSON queries at the database level if needed later
-- Better free/developer-tier options (Neon, Supabase, Railway) during early development
-- Azure Database for PostgreSQL Flexible Server is a fully managed Azure service for production
-- EF Core support via Npgsql is first-class with code-first approach, migrations, LINQ
+**Development approach:** Local Docker Compose (PostgreSQL + API), local disk file storage mock, Google test client, SMS mock. No Azure until Phase 9.
 
-**Development approach: local-first, free until production:**
-- Development uses Docker Compose to run PostgreSQL locally + the API + the Angular app
-- SMS verification uses a local mock (logs code to console / writes to file) during dev, Azure Communication Services in production
-- Google OAuth works locally with a test OAuth client ID
-- No Azure deployment until Phase 9 when the system is proven and ready
-- Free managed Postgres (Neon, Supabase) can substitute for the Docker Postgres if a shared dev DB is needed
-- Azure Free Trial covers production deployment costs for the first 12 months
+**Deployment:** Green/blue slot swap with additive-only migrations.
 
-**Deployment approach: green/blue swap:**
-- Two App Service slots (green and blue) -- one active, one staging
-- Deploy to the inactive slot, run smoke tests, then swap
-- Database migrations are additive-only (no destructive changes) to support backward compatibility during swap
-- Rollback = swap back to the previous slot
-
-**Environments:**
-| Environment | Postgres Host | API Host | Auth Mode | Purpose |
-|------------|--------------|----------|-----------|---------|
-| Local dev | Docker Compose (localhost:5432) | localhost:5000 | Google OAuth (test client) + SMS mock | Daily development |
-| Dev | Neon/Supabase free tier | Optional cloud host | Same as local | Shared integration testing |
-| UAT (blue) | Azure PostgreSQL Flexible Server | Azure App Service slot | Google OAuth (prod client) + ACS SMS | Pre-production validation |
-| Production (green) | Azure PostgreSQL Flexible Server | Azure App Service slot | Google OAuth (prod client) + ACS SMS | Live traffic |
+**Soft delete philosophy:**
+- Every record is soft-deleted by default -- a `DeletedAtUtc` timestamp is set, the record is hidden from all normal queries via EF Core global query filters
+- Creators of hiring resources (opportunities, invites, passport shares) can mark them for deletion -- this sets the soft-delete flag
+- Account soft-delete hides the account, their profile, their files, and their hiring data from the system
+- Full permanent deletion requires an admin approval workflow (two-admins or admin+confirmation)
+- Soft-deleted data is preserved for backup/restore purposes; a data retention policy determines when blobs are eligible for permanent deletion
 
 ---
 
@@ -54,26 +34,24 @@ The current application is entirely client-side: domain logic lives in NgRx redu
 
 ```
 ClinicX/
-  docker-compose.yml               # Postgres + API + pgadmin (local dev)
-  docker-compose.prod.yml          # Production overrides
+  docker-compose.yml
   ClinicX.sln
   src/
     ClinicX.Api/
       Controllers/
         AuthController.cs
         AccountsController.cs
+        FilesController.cs
         HiringController.cs
         PassportsController.cs
         AdminController.cs
+          + AdminApprovalController.cs  # NEW: approval workflow endpoints
         PublicController.cs
       Middleware/
         ExceptionMiddleware.cs
         RequestLoggingMiddleware.cs
       Program.cs
-      appsettings.json
-      appsettings.Development.json  # Local PostgreSQL, SMS mock, Google test client
-      appsettings.Uat.json         # UAT PostgreSQL, Azure SMS, Google prod client
-      appsettings.Production.json  # Production PostgreSQL, Azure SMS, Google prod client
+      appsettings*.json
 
     ClinicX.Application/
       Common/
@@ -81,75 +59,58 @@ ClinicX/
           ICurrentUserService.cs
           IJwtService.cs
           ISmsService.cs
-          IGoogleAuthService.cs     # Wraps Google token validation
+          IGoogleAuthService.cs
           IFileStorageService.cs
-      Auth/
-        Commands/
-          SendVerificationCodeCommand.cs
-          VerifyCodeCommand.cs
-          GoogleLoginCommand.cs      # Handles Google ID token exchange
-          LinkPhoneCommand.cs        # Links phone to existing Google account
-          AdminLoginCommand.cs
-        Dtos/
-          AuthResultDto.cs
-          TokenResponseDto.cs
-          GoogleLoginRequestDto.cs
-        Services/
-          JwtService.cs
-          SmsService.cs              # Azure Communication Services impl
-          SmsServiceMock.cs          # Local dev mock (logs to console)
-          GoogleAuthService.cs       # Validates Google ID tokens
-          AdminService.cs
+          ISoftDeleteService.cs       # NEW: reusable soft-delete logic
+      Auth/ ...
       Accounts/
         Commands/
-          CreateAccountCommand.cs
-          UpdateProfileCommand.cs
-          UpdateContactCommand.cs
-          UpdateThemeCommand.cs
+          SoftDeleteAccountCommand.cs       # NEW: marks account as deleted
+          RestoreAccountCommand.cs          # NEW: restores soft-deleted account
+          HardDeleteAccountCommand.cs       # NEW: permanent deletion (admin approval)
         Queries/
-          GetAccountQuery.cs
-          GetMyAccountQuery.cs
-          ListAccountsQuery.cs
-        Dtos/
-          AccountDto.cs
-          ClinicDetailsDto.cs
-          TalentDetailsDto.cs
+          GetDeletedAccountsQuery.cs        # NEW: admin view of soft-deleted accounts
+        ...
+      Files/
+        Commands/
+          UploadProfilePhotoCommand.cs
+          UploadIntroVideoCommand.cs
+          UploadCertificateCommand.cs
+          UploadGalleryImageCommand.cs
+          SoftDeleteFileCommand.cs          # NEW: marks file as deleted
+        ...
       Hiring/
         Commands/
           CreateOpportunityCommand.cs
-          UpdateOpportunityCommand.cs
+          SoftDeleteOpportunityCommand.cs    # NEW: creator can soft-delete
           CreateInviteCommand.cs
+          SoftDeleteInviteCommand.cs         # NEW: creator can soft-delete
           CreatePassportShareCommand.cs
-          CreateApplicationCommand.cs
-          UpdateApplicationStatusCommand.cs
-          AddTalentToClinicCommand.cs
-        Queries/
-          GetOpportunitiesQuery.cs
-          GetInviteByTokenQuery.cs
-          GetPassportByTokenQuery.cs
-          GetApplicationsQuery.cs
-        Dtos/
-          OpportunityDto.cs
-          InviteDto.cs
-          PassportShareDto.cs
-          ApplicationDto.cs
-      Founder/
-        Queries/
-          GetFounderStatusQuery.cs
-        Dtos/
-          FounderStatusDto.cs
+          SoftDeletePassportShareCommand.cs  # NEW: creator can soft-delete
+          ...
+        ...
       Admin/
         Commands/
           SetReviewStatusCommand.cs
           ResetVerificationCommand.cs
+          ApproveHardDeleteCommand.cs        # NEW: approves pending hard delete
+          RequestHardDeleteCommand.cs        # NEW: initiates hard delete request
         Queries/
           GetVerificationSecurityQuery.cs
+          GetPendingHardDeletesQuery.cs      # NEW: lists pending hard delete requests
+          GetDeletedAccountsQuery.cs
+        ...
 
     ClinicX.Domain/
+      Common/
+        ISoftDeletable.cs             # NEW: interface for soft-delete entities
+        SoftDeleteBase.cs             # NEW: base class with DeletedAtUtc + DeletedBy
+        HardDeleteRequest.cs          # NEW: tracks pending hard delete approvals
       Entities/
         Account.cs
         ClinicDetails.cs
         TalentDetails.cs
+        AccountFile.cs
         HiringOpportunity.cs
         HiringInvite.cs
         TalentPassportShare.cs
@@ -158,36 +119,25 @@ ClinicX/
         VerificationSecurityRecord.cs
         AdminUser.cs
         RefreshToken.cs
-        ExternalLogin.cs              # NEW: links Google sub to Account
-      Enums/
-        AccountType.cs
-        ReviewStatus.cs
-        OpportunityStatus.cs
-        ApplicationSource.cs
-        ApplicationStatus.cs
-        ThemePreference.cs
-        ExternalLoginProvider.cs      # NEW: "Google", "Apple", etc.
-      ValueObjects/
-        PhoneNumber.cs
-      Exceptions/
-        DomainException.cs
-        NotFoundException.cs
-        UnauthorizedException.cs
+        ExternalLogin.cs
+      Enums/ ...
+      ValueObjects/ PhoneNumber.cs
+      Exceptions/ ...
 
     ClinicX.Infrastructure/
       Persistence/
         ClinicXDbContext.cs
+          + Global query filters for ISoftDeletable
         Migrations/
         Configurations/
         Repositories/
-        Seed/
-          SeedData.cs               # Test/dev seed data (runs via config switch)
+        Seed/ SeedData.cs
       Services/
-        SmsService.cs               # Azure Communication Services implementation
-        SmsServiceMock.cs           # Local dev mock (logs to console)
+        SmsService.cs / SmsServiceMock.cs
         JwtService.cs
-        GoogleAuthService.cs        # Validates Google ID tokens
-        FileStorageService.cs
+        GoogleAuthService.cs
+        FileStorageService.cs / FileStorageServiceLocal.cs
+        SoftDeleteService.cs          # NEW: reusable soft-delete + restore logic
         CurrentUserService.cs
 
   tests/
@@ -200,26 +150,45 @@ ClinicX/
 
 ## 3. Database Schema (EF Core with PostgreSQL)
 
-### Type mapping (SQL Server -> PostgreSQL):
+### 3.0 Soft Delete Foundation
 
-| SQL Server | PostgreSQL | Reason |
-|-----------|-----------|--------|
-| UNIQUEIDENTIFIER | UUID | Guid in .NET maps natively to PostgreSQL uuid |
-| NEWSEQUENTIALID() | gen_random_uuid() | Built-in UUID v4 generation (no extension needed) |
-| NVARCHAR(n) | VARCHAR(n) | Same semantics; PostgreSQL is UTF-8 natively |
-| NVARCHAR(MAX) for JSON | JSONB | Allows JSON queries and indexing |
-| DATETIME2 | TIMESTAMPTZ | Timezone-aware timestamp (always UTC) |
-| BIT | BOOLEAN | Cleaner semantics |
-| INT | INTEGER | Identical |
-| SYSUTCDATETIME() | NOW() | PostgreSQL NOW() returns current transaction time |
+Every entity that can be soft-deleted implements this interface:
+
+```csharp
+public interface ISoftDeletable
+{
+    DateTime? DeletedAtUtc { get; set; }
+    Guid? DeletedByAccountId { get; set; }  // who deleted it
+}
+```
+
+EF Core applies a global query filter to every `ISoftDeletable` entity:
+
+```csharp
+// ClinicXDbContext.cs
+foreach (var entityType in modelBuilder.Model.GetEntityTypes())
+{
+    if (typeof(ISoftDeletable).IsAssignableFrom(entityType.ClrType))
+    {
+        var parameter = Expression.Parameter(entityType.ClrType, "e");
+        var property = Expression.Property(parameter, nameof(ISoftDeletable.DeletedAtUtc));
+        var condition = Expression.Equal(property, Expression.Constant(null, typeof(DateTime?)));
+        var lambda = Expression.Lambda(condition, parameter);
+        
+        entityType.SetQueryFilter(lambda);
+    }
+}
+```
+
+This means **all normal queries automatically exclude soft-deleted records**. Admin queries can call `.IgnoreQueryFilters()` to see deleted data.
 
 ### 3.1 Accounts
 
 ```sql
 CREATE TABLE Accounts (
     Id              UUID            PRIMARY KEY DEFAULT gen_random_uuid(),
-    Type            VARCHAR(20)     NOT NULL,       -- 'clinic' | 'talent'
-    Phone           VARCHAR(20)     NOT NULL DEFAULT '',  -- empty until phone verified
+    Type            VARCHAR(20)     NOT NULL,
+    Phone           VARCHAR(20)     NOT NULL DEFAULT '',
     DisplayPhone    VARCHAR(20)     NOT NULL DEFAULT '',
     Email           VARCHAR(320)    NOT NULL DEFAULT '',
     ShareEmail      BOOLEAN         NOT NULL DEFAULT FALSE,
@@ -230,72 +199,99 @@ CREATE TABLE Accounts (
     ProfileComplete BOOLEAN         NOT NULL DEFAULT FALSE,
     DisplayName     VARCHAR(200)    NOT NULL DEFAULT '',
     ThemePreference VARCHAR(10)     NOT NULL DEFAULT 'auto',
-    Founder         BOOLEAN         NOT NULL DEFAULT FALSE
+    Founder         BOOLEAN         NOT NULL DEFAULT FALSE,
+    -- Soft delete columns
+    DeletedAtUtc    TIMESTAMPTZ     NULL,
+    DeletedByAccountId UUID         NULL REFERENCES Accounts(Id)
 );
 
-CREATE UNIQUE INDEX IX_Accounts_Phone ON Accounts(Phone);
+CREATE UNIQUE INDEX IX_Accounts_Phone ON Accounts(Phone) WHERE DeletedAtUtc IS NULL AND Phone <> '';
+CREATE INDEX IX_Accounts_DeletedAtUtc ON Accounts(DeletedAtUtc) WHERE DeletedAtUtc IS NOT NULL;
 ```
 
-### 3.2 External Logins (NEW -- links OAuth providers to accounts)
+Soft-deleting an account cascades logically (not via DB cascade -- handled by application code):
+- `ExternalLogins` for that account are soft-deleted
+- `AccountFiles` for that account are soft-deleted
+- `HiringOpportunities` owned by that account are soft-deleted
+- `TalentPassportShares` owned by that account are soft-deleted
+- `TalentApplications` where the account is talent or clinic are soft-deleted
+- All associated `RefreshTokens` are revoked
+
+Restoring an account reverses all of the above.
+
+### 3.2 External Logins
 
 ```sql
 CREATE TABLE ExternalLogins (
     Id              UUID            PRIMARY KEY DEFAULT gen_random_uuid(),
     AccountId       UUID            NOT NULL REFERENCES Accounts(Id),
-    Provider        VARCHAR(50)     NOT NULL,       -- 'Google'
-    ProviderSubject VARCHAR(500)    NOT NULL,       -- Google's unique user ID (sub claim)
+    Provider        VARCHAR(50)     NOT NULL,
+    ProviderSubject VARCHAR(500)    NOT NULL,
     Email           VARCHAR(320)    NOT NULL DEFAULT '',
-    CreatedAtUtc    TIMESTAMPTZ     NOT NULL DEFAULT NOW()
+    CreatedAtUtc    TIMESTAMPTZ     NOT NULL DEFAULT NOW(),
+    -- Soft delete
+    DeletedAtUtc    TIMESTAMPTZ     NULL,
+    DeletedByAccountId UUID         NULL REFERENCES Accounts(Id)
 );
 
 CREATE UNIQUE INDEX IX_ExternalLogins_Provider_Subject 
-    ON ExternalLogins(Provider, ProviderSubject);
-CREATE INDEX IX_ExternalLogins_AccountId ON ExternalLogins(AccountId);
+    ON ExternalLogins(Provider, ProviderSubject) WHERE DeletedAtUtc IS NULL;
 ```
 
-This enables multiple OAuth providers per account (e.g., Google + Apple) and prevents the same Google account from being linked to multiple ClinicX accounts.
-
-### 3.3 Account Details (1:1 with Accounts)
+### 3.3 Account Details
 
 ```sql
 CREATE TABLE ClinicDetails (
     AccountId       UUID            PRIMARY KEY REFERENCES Accounts(Id),
-    ClinicName      VARCHAR(200)    NOT NULL,
-    Location        VARCHAR(500)    NOT NULL DEFAULT '',
-    City            VARCHAR(200)    NOT NULL DEFAULT '',
-    State           VARCHAR(100)    NOT NULL DEFAULT '',
-    Website         VARCHAR(500)    NOT NULL DEFAULT '',
-    Specialties     VARCHAR(1000)   NOT NULL DEFAULT '',
-    About           TEXT            NOT NULL DEFAULT '',
-    Position        VARCHAR(200)    NOT NULL DEFAULT '',
-    MustHaveSkills  VARCHAR(1000)   NOT NULL DEFAULT '',
-    PayRange        VARCHAR(200)    NOT NULL DEFAULT '',
-    Benefits        VARCHAR(1000)   NOT NULL DEFAULT '',
-    Urgency         VARCHAR(200)    NOT NULL DEFAULT '',
-    IdealHire       TEXT            NOT NULL DEFAULT ''
+    -- ... all existing columns ...
+    -- Soft delete (follows account -- deleted when account is deleted)
+    DeletedAtUtc    TIMESTAMPTZ     NULL
 );
 
 CREATE TABLE TalentDetails (
-    AccountId           UUID            PRIMARY KEY REFERENCES Accounts(Id),
-    ProfessionalName    VARCHAR(200)    NOT NULL DEFAULT '',
-    PhotoName           VARCHAR(500)    NOT NULL DEFAULT '',
-    VideoName           VARCHAR(500)    NOT NULL DEFAULT '',
-    Role                VARCHAR(200)    NOT NULL DEFAULT '',
-    Location            VARCHAR(500)    NOT NULL DEFAULT '',
-    YearsExperience     VARCHAR(50)     NOT NULL DEFAULT '',
-    ExperienceTimeline  TEXT            NOT NULL DEFAULT '',
-    Skills              VARCHAR(1000)   NOT NULL DEFAULT '',
-    CertificateNames    JSONB           NOT NULL DEFAULT '[]',  -- native JSON array
-    Availability        VARCHAR(200)    NOT NULL DEFAULT '',
-    SalaryExpectation   VARCHAR(200)    NOT NULL DEFAULT '',
-    Languages           VARCHAR(500)    NOT NULL DEFAULT '',
-    PortfolioUrl        VARCHAR(500)    NOT NULL DEFAULT '',
-    GalleryNames        JSONB           NOT NULL DEFAULT '[]',  -- native JSON array
-    Introduction        TEXT            NOT NULL DEFAULT ''
+    AccountId       UUID            PRIMARY KEY REFERENCES Accounts(Id),
+    ProfessionalName VARCHAR(200)   NOT NULL DEFAULT '',
+    PhotoUrl        VARCHAR(1000)   NOT NULL DEFAULT '',
+    VideoUrl        VARCHAR(1000)   NOT NULL DEFAULT '',
+    Role            VARCHAR(200)    NOT NULL DEFAULT '',
+    Location        VARCHAR(500)    NOT NULL DEFAULT '',
+    YearsExperience VARCHAR(50)     NOT NULL DEFAULT '',
+    ExperienceTimeline TEXT         NOT NULL DEFAULT '',
+    Skills          VARCHAR(1000)   NOT NULL DEFAULT '',
+    CertificateUrls JSONB           NOT NULL DEFAULT '[]',
+    Availability    VARCHAR(200)    NOT NULL DEFAULT '',
+    SalaryExpectation VARCHAR(200)  NOT NULL DEFAULT '',
+    Languages       VARCHAR(500)    NOT NULL DEFAULT '',
+    PortfolioUrl    VARCHAR(1000)   NOT NULL DEFAULT '',
+    GalleryUrls     JSONB           NOT NULL DEFAULT '[]',
+    Introduction    TEXT            NOT NULL DEFAULT '',
+    -- Soft delete
+    DeletedAtUtc    TIMESTAMPTZ     NULL
 );
 ```
 
-### 3.4 Hiring Opportunities
+### 3.4 Account Files
+
+```sql
+CREATE TABLE AccountFiles (
+    Id              UUID            PRIMARY KEY DEFAULT gen_random_uuid(),
+    AccountId       UUID            NOT NULL REFERENCES Accounts(Id),
+    Category        VARCHAR(30)     NOT NULL,
+    BlobPath        VARCHAR(500)    NOT NULL,
+    Url             VARCHAR(1000)   NOT NULL,
+    ContentType     VARCHAR(100)    NOT NULL DEFAULT '',
+    FileSizeBytes   BIGINT          NOT NULL DEFAULT 0,
+    OriginalName    VARCHAR(500)    NOT NULL DEFAULT '',
+    UploadedAtUtc   TIMESTAMPTZ     NOT NULL DEFAULT NOW(),
+    -- Soft delete
+    DeletedAtUtc    TIMESTAMPTZ     NULL,
+    DeletedByAccountId UUID         NULL REFERENCES Accounts(Id)
+);
+
+CREATE INDEX IX_AccountFiles_AccountId ON AccountFiles(AccountId) WHERE DeletedAtUtc IS NULL;
+```
+
+### 3.5 Hiring Opportunities
 
 ```sql
 CREATE TABLE HiringOpportunities (
@@ -312,14 +308,19 @@ CREATE TABLE HiringOpportunities (
     IdealHire       TEXT            NOT NULL DEFAULT '',
     Status          VARCHAR(20)     NOT NULL DEFAULT 'active',
     CreatedAtUtc    TIMESTAMPTZ     NOT NULL DEFAULT NOW(),
-    UpdatedAtUtc    TIMESTAMPTZ     NOT NULL DEFAULT NOW()
+    UpdatedAtUtc    TIMESTAMPTZ     NOT NULL DEFAULT NOW(),
+    -- Soft delete (creator can mark for deletion)
+    DeletedAtUtc    TIMESTAMPTZ     NULL,
+    DeletedByAccountId UUID         NULL REFERENCES Accounts(Id)
 );
 
-CREATE INDEX IX_HiringOpportunities_ClinicAccountId ON HiringOpportunities(ClinicAccountId);
-CREATE INDEX IX_HiringOpportunities_Slug ON HiringOpportunities(Slug, PositionSlug);
+CREATE INDEX IX_HiringOpportunities_ClinicAccountId 
+    ON HiringOpportunities(ClinicAccountId) WHERE DeletedAtUtc IS NULL;
 ```
 
-### 3.5 Hiring Invites
+**Creator management:** The clinic that owns the opportunity sees a "Delete" button. Clicking it calls `PUT /api/v1/hiring/opportunities/{id}/delete` which sets `DeletedAtUtc`. The opportunity disappears from public view and the clinic's active list but is preserved in the database.
+
+### 3.6 Hiring Invites
 
 ```sql
 CREATE TABLE HiringInvites (
@@ -328,14 +329,18 @@ CREATE TABLE HiringInvites (
     Token           VARCHAR(100)    NOT NULL,
     CreatedAtUtc    TIMESTAMPTZ     NOT NULL DEFAULT NOW(),
     ExpiresAtUtc    TIMESTAMPTZ     NOT NULL,
-    Active          BOOLEAN         NOT NULL DEFAULT TRUE
+    Active          BOOLEAN         NOT NULL DEFAULT TRUE,
+    -- Soft delete (creator can deactivate/delete)
+    DeletedAtUtc    TIMESTAMPTZ     NULL,
+    DeletedByAccountId UUID         NULL REFERENCES Accounts(Id)
 );
 
-CREATE UNIQUE INDEX IX_HiringInvites_Token ON HiringInvites(Token);
-CREATE INDEX IX_HiringInvites_OpportunityId ON HiringInvites(OpportunityId);
+CREATE UNIQUE INDEX IX_HiringInvites_Token ON HiringInvites(Token) WHERE DeletedAtUtc IS NULL;
 ```
 
-### 3.6 Talent Passport Shares
+**Creator management:** The clinic sees a list of invites for each opportunity and can delete individual invites. Soft-deleted invites return "expired" when someone tries to use the share link.
+
+### 3.7 Talent Passport Shares
 
 ```sql
 CREATE TABLE TalentPassportShares (
@@ -343,14 +348,17 @@ CREATE TABLE TalentPassportShares (
     TalentAccountId UUID            NOT NULL REFERENCES Accounts(Id),
     Token           VARCHAR(100)    NOT NULL,
     CreatedAtUtc    TIMESTAMPTZ     NOT NULL DEFAULT NOW(),
-    Active          BOOLEAN         NOT NULL DEFAULT TRUE
+    Active          BOOLEAN         NOT NULL DEFAULT TRUE,
+    -- Soft delete (creator can deactivate/delete)
+    DeletedAtUtc    TIMESTAMPTZ     NULL,
+    DeletedByAccountId UUID         NULL REFERENCES Accounts(Id)
 );
 
-CREATE UNIQUE INDEX IX_TalentPassportShares_Token ON TalentPassportShares(Token);
-CREATE INDEX IX_TalentPassportShares_TalentAccountId ON TalentPassportShares(TalentAccountId);
+CREATE UNIQUE INDEX IX_TalentPassportShares_Token 
+    ON TalentPassportShares(Token) WHERE DeletedAtUtc IS NULL;
 ```
 
-### 3.7 Talent Applications
+### 3.8 Talent Applications
 
 ```sql
 CREATE TABLE TalentApplications (
@@ -362,962 +370,586 @@ CREATE TABLE TalentApplications (
     Status          VARCHAR(30)     NOT NULL DEFAULT 'invited',
     AcceptedAtUtc   TIMESTAMPTZ     NOT NULL DEFAULT NOW(),
     SubmittedAtUtc  TIMESTAMPTZ     NOT NULL DEFAULT NOW(),
-    UpdatedAtUtc    TIMESTAMPTZ     NOT NULL DEFAULT NOW()
+    UpdatedAtUtc    TIMESTAMPTZ     NOT NULL DEFAULT NOW(),
+    -- Soft delete (follows account or opportunity deletion)
+    DeletedAtUtc    TIMESTAMPTZ     NULL,
+    DeletedByAccountId UUID         NULL REFERENCES Accounts(Id)
 );
-
-CREATE INDEX IX_TalentApplications_TalentAccountId ON TalentApplications(TalentAccountId);
-CREATE INDEX IX_TalentApplications_ClinicAccountId ON TalentApplications(ClinicAccountId);
-
--- Prevent duplicate applications (PostgreSQL partial unique index)
-CREATE UNIQUE INDEX IX_TalentApplications_Unique 
-    ON TalentApplications(TalentAccountId, ClinicAccountId, OpportunityId)
-    WHERE OpportunityId IS NOT NULL;
-CREATE UNIQUE INDEX IX_TalentApplications_UniqueNoOpp
-    ON TalentApplications(TalentAccountId, ClinicAccountId)
-    WHERE OpportunityId IS NULL;
 ```
 
-### 3.8 Phone Verification
+### 3.9 Hard Delete Requests (NEW -- approval workflow)
+
+```sql
+CREATE TABLE HardDeleteRequests (
+    Id              UUID            PRIMARY KEY DEFAULT gen_random_uuid(),
+    TargetTable     VARCHAR(100)    NOT NULL,       -- 'Accounts', 'HiringOpportunities', etc.
+    TargetId        UUID            NOT NULL,       -- ID of the record to permanently delete
+    RequestedByAccountId UUID      NOT NULL REFERENCES Accounts(Id),
+    RequestedAtUtc  TIMESTAMPTZ     NOT NULL DEFAULT NOW(),
+    ApprovedByAccountId UUID       NULL REFERENCES Accounts(Id),
+    ApprovedAtUtc   TIMESTAMPTZ     NULL,
+    Status          VARCHAR(20)     NOT NULL DEFAULT 'pending',  -- pending | approved | rejected
+    RejectionReason TEXT            NULL
+);
+
+CREATE INDEX IX_HardDeleteRequests_Status ON HardDeleteRequests(Status);
+```
+
+This table tracks the full approval workflow:
+1. Admin A creates a `HardDeleteRequest` for a specific account/resource
+2. Admin B (different admin) reviews and approves or rejects
+3. On approval: the record is permanently deleted from the database + blobs are purged
+4. On rejection: the record remains soft-deleted
+
+### 3.10 Phone Verification, Verification Security, Admin, Refresh Tokens
+
+These are operational tables that do not need soft delete (they are cleaned up or expire naturally).
 
 ```sql
 CREATE TABLE PhoneVerifications (
-    Id              UUID            PRIMARY KEY DEFAULT gen_random_uuid(),
-    Phone           VARCHAR(20)     NOT NULL,
-    CodeHash        VARCHAR(200)    NOT NULL,       -- bcrypt hash of code
-    ExpiresAtUtc    TIMESTAMPTZ     NOT NULL,
-    VerifiedAtUtc   TIMESTAMPTZ     NULL,
-    AttemptCount    INTEGER         NOT NULL DEFAULT 0,
-    CreatedAtUtc    TIMESTAMPTZ     NOT NULL DEFAULT NOW()
+    Id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    Phone VARCHAR(20) NOT NULL,
+    CodeHash VARCHAR(200) NOT NULL,
+    ExpiresAtUtc TIMESTAMPTZ NOT NULL,
+    VerifiedAtUtc TIMESTAMPTZ NULL,
+    AttemptCount INTEGER NOT NULL DEFAULT 0,
+    CreatedAtUtc TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 
-CREATE INDEX IX_PhoneVerifications_Phone ON PhoneVerifications(Phone);
-```
-
-### 3.9 Verification Security (rate limiting)
-
-```sql
 CREATE TABLE VerificationSecurityRecords (
-    Id              UUID            PRIMARY KEY DEFAULT gen_random_uuid(),
-    Phone           VARCHAR(20)     NOT NULL,
-    AttemptCount    INTEGER         NOT NULL DEFAULT 0,
-    LockedUntilUtc  TIMESTAMPTZ     NULL,
-    FirstAttemptUtc TIMESTAMPTZ     NOT NULL DEFAULT NOW(),
-    LastAttemptUtc  TIMESTAMPTZ     NOT NULL DEFAULT NOW(),
-    Flagged         BOOLEAN         NOT NULL DEFAULT FALSE
+    Id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    Phone VARCHAR(20) NOT NULL,
+    AttemptCount INTEGER NOT NULL DEFAULT 0,
+    LockedUntilUtc TIMESTAMPTZ NULL,
+    FirstAttemptUtc TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    LastAttemptUtc TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    Flagged BOOLEAN NOT NULL DEFAULT FALSE
 );
 
-CREATE UNIQUE INDEX IX_VerificationSecurityRecords_Phone ON VerificationSecurityRecords(Phone);
-```
-
-### 3.10 Admin Users
-
-```sql
 CREATE TABLE AdminUsers (
-    Id              UUID            PRIMARY KEY DEFAULT gen_random_uuid(),
-    Username        VARCHAR(100)    NOT NULL,
-    PasswordHash    VARCHAR(500)    NOT NULL,
-    CreatedAtUtc    TIMESTAMPTZ     NOT NULL DEFAULT NOW()
+    Id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    Username VARCHAR(100) NOT NULL,
+    PasswordHash VARCHAR(500) NOT NULL,
+    CreatedAtUtc TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 
-CREATE UNIQUE INDEX IX_AdminUsers_Username ON AdminUsers(Username);
-```
-
-### 3.11 Refresh Tokens
-
-```sql
 CREATE TABLE RefreshTokens (
-    Id              UUID            PRIMARY KEY DEFAULT gen_random_uuid(),
-    AccountId       UUID            NOT NULL REFERENCES Accounts(Id),
-    Token           VARCHAR(500)    NOT NULL,
-    ExpiresAtUtc    TIMESTAMPTZ     NOT NULL,
-    CreatedAtUtc    TIMESTAMPTZ     NOT NULL DEFAULT NOW(),
-    RevokedAtUtc    TIMESTAMPTZ     NULL
+    Id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    AccountId UUID NOT NULL REFERENCES Accounts(Id),
+    Token VARCHAR(500) NOT NULL,
+    ExpiresAtUtc TIMESTAMPTZ NOT NULL,
+    CreatedAtUtc TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    RevokedAtUtc TIMESTAMPTZ NULL       -- revoked when account is soft-deleted
 );
-
-CREATE INDEX IX_RefreshTokens_AccountId ON RefreshTokens(AccountId);
-CREATE UNIQUE INDEX IX_RefreshTokens_Token ON RefreshTokens(Token);
 ```
 
-### 3.12 Bulletproof Database -- Movable Data
+### 3.11 Blob Storage Retention
 
-The database is designed so data can be moved between environments safely. Key principles:
-
-1. **All schema changes are additive migrations.** No destructive DDL (DROP, ALTER COLUMN that removes data). New columns are nullable or have defaults. Old columns are deprecated via code, not removed. This enables safe green/blue swap: the old slot continues to work with the new schema.
-
-2. **Seed data is a configurable concern.** Three seed data profiles:
-   - `Development`: loads `SEEDED_ACCOUNTS`, `SEEDED_OPPORTUNITIES`, etc. from the frontend -- mirrors what localStorage currently has, so developers have a known baseline.
-   - `Test`: minimal essential seeds (admin user, one clinic, one talent).
-   - `Production`: production admin user only. No demo accounts.
-
-   The seed profile is controlled by `appsettings.{Environment}.json`:
-   ```json
-   {
-     "SeedData": {
-       "Profile": "Development"
-     }
-   }
-   ```
-
-3. **Database snapshots for testing.** A CLI tool (or shell script in `scripts/`) can dump and restore a full database snapshot using `pg_dump` / `pg_restore`:
-   ```bash
-   ./scripts/db-snapshot.sh save pre-migration-test
-   dotnet ef database update
-   # test...
-   ./scripts/db-snapshot.sh restore pre-migration-test
-   ```
-
-4. **Testcontainers for integration tests.** Unit tests against a real PostgreSQL spun up in Docker:
-   ```csharp
-   public class DatabaseFixture : IAsyncLifetime
-   {
-       private readonly PostgreSqlContainer _container = 
-           new PostgreSqlBuilder()
-               .WithImage("postgres:16-alpine")
-               .Build();
-       
-       public string ConnectionString => _container.GetConnectionString();
-       public async Task InitializeAsync() => await _container.StartAsync();
-       public async Task DisposeAsync() => await _container.DisposeAsync();
-   }
-   ```
+When an account is soft-deleted, the blobs in Azure Storage are **not** immediately deleted. Instead:
+1. The `AccountFiles` records are soft-deleted (hidden from queries)
+2. A lifecycle management policy on the storage container moves blobs to Cool tier after 30 days and Archive tier after 90 days
+3. Only when a hard-delete request is approved are the blobs permanently purged
+4. This gives a safety window to restore soft-deleted accounts with all their files intact
 
 ---
 
-## 4. Authentication Architecture -- Google OAuth + Phone Fallback
+## 4. Soft Delete API Design
 
-### 4.1 Recommended Auth Flow (Primary: Google OAuth)
-
-This is the key change from the original plan. Instead of relying on phone OTP for every login, Google OAuth handles 90%+ of authentications. Phone verification is used only for:
-- **One-time phone ownership verification** during registration (required to verify the phone number that clinics/talent use to contact each other)
-- **Fallback login** if Google OAuth is unavailable
-- **Account recovery**
+### 4.1 Account Soft Delete & Restore
 
 ```
-FLOW 1: New user registration via Google
+PUT /api/v1/accounts/me/delete
+  Auth: JWT required
+  Response: AccountDto (with DeletedAtUtc set)
+  Notes: Soft-deletes the authenticated account. The account is immediately
+         invisible to all normal operations. The user is signed out.
+         All associated hiring data is soft-deleted in the same transaction.
 
-1. User clicks "Sign in with Google"
-2. Frontend redirects to Google OAuth (or uses Google One Tap)
-3. Google returns ID token to frontend
-4. Frontend POSTs ID token to POST /api/v1/auth/google
-5. Backend:
-   a. Validates Google ID token (checks iss, aud, exp, signature)
-   b. Checks if ExternalLogins already exists for this Google sub
-   c. If new: creates Account with email from Google profile, sets status=under-review
-   d. If existing: signs in (returns JWT)
-   e. Returns { token, refreshToken, account, phoneRequired: true/false }
-6. If phoneRequired=true, frontend shows phone verification step:
-   a. User enters phone number
-   b. POST /api/v1/auth/send-code (sends SMS via Azure Communication Services)
-   c. User enters code
-   d. POST /api/v1/auth/verify-code (links phone to account)
-   e. Account now has phone verified, can proceed to profile setup
-7. If phoneRequired=false (existing user already verified phone), proceed to dashboard
+POST /api/v1/accounts/{id}/restore
+  Auth: JWT + admin
+  Response: AccountDto (with DeletedAtUtc = null)
+  Notes: Restores a soft-deleted account. All associated data is restored.
+         The account reappears in the system as it was before deletion.
 
-FLOW 2: Returning user via Google
-
-1. User clicks "Sign in with Google"
-2. Google returns ID token
-3. POST /api/v1/auth/google -> backend finds existing ExternalLogin + Account
-4. Returns JWT immediately, no phone step needed
-5. User goes straight to dashboard
-
-FLOW 3: Phone-only login (fallback for users without Google)
-
-1. User enters phone number
-2. POST /api/v1/auth/send-code (sends SMS)
-3. User enters code
-4. POST /api/v1/auth/verify-code
-5. Backend looks up account by phone
-6. If found: returns JWT (sign in)
-7. If not found: returns isNewAccount=true, frontend prompts for account type + profile
-
-FLOW 4: Phone verification after Google registration (one-time)
-
-1. User already authenticated via Google, but phone not yet verified
-2. User enters phone number
-3. POST /api/v1/auth/send-code
-4. POST /api/v1/auth/verify-code (links phone to existing account)
-5. Account now has phone on file for clinic/talent communication
+GET /api/v1/admin/accounts/deleted
+  Auth: JWT + admin
+  Query: ?page=1&pageSize=20&from=2026-01-01&to=2026-07-23
+  Response: { items: AccountDto[], total: number }
+  Notes: Lists soft-deleted accounts. Admin can review, restore, or request hard delete.
 ```
 
-### 4.2 Auth Endpoints
+### 4.2 Hard Delete Approval Workflow
 
 ```
-POST /api/v1/auth/google
-  Request:  { idToken: string }
-  Response: { token: string, refreshToken: string, account: AccountDto,
-              isNewAccount: boolean, phoneRequired: boolean }
-  Notes:    Validates Google ID token. Creates account if new (using email/name from Google).
-            Returns phoneRequired=true if the account needs phone verification.
-            This is the PRIMARY auth endpoint.
+POST /api/v1/admin/hard-delete/request
+  Auth: JWT + admin
+  Request: { targetTable: "Accounts", targetId: "uuid" }
+  Response: HardDeleteRequestDto (status: "pending")
+  Notes: Initiates a hard-delete request. The record must already be soft-deleted.
+         Creates a HardDeleteRequests record with status=pending.
 
-POST /api/v1/auth/send-code
-  Request:  { phone: string }
-  Response: { success: boolean, message: string }
-  Notes:    Normalizes phone, sends SMS via Azure Communication Services (or mock in dev).
-            Returns 429 if rate-limited. Used for phone verification + fallback login.
+POST /api/v1/admin/hard-delete/{requestId}/approve
+  Auth: JWT + admin (must be different admin from requester)
+  Response: HardDeleteRequestDto (status: "approved")
+  Notes: Approves the hard delete. Target record is permanently removed from DB.
+         Blobs associated with the account are purged from storage.
+         This action cannot be undone.
 
-POST /api/v1/auth/verify-code
-  Request:  { phone: string, code: string }
-  Response: { token: string, refreshToken: string, account: AccountDto | null,
-              isNewAccount: boolean }
-  Notes:    Verifies phone code. If account exists, signs in. If not, returns isNewAccount.
-            If user is already authenticated (has JWT from Google), links phone to account.
+POST /api/v1/admin/hard-delete/{requestId}/reject
+  Auth: JWT + admin
+  Request: { reason: "string" }
+  Response: HardDeleteRequestDto (status: "rejected")
+  Notes: Rejects the hard delete. The record remains soft-deleted (restorable).
 
-POST /api/v1/auth/refresh
-  Request:  { refreshToken: string }
-  Response: { token: string, refreshToken: string }
-
-POST /api/v1/auth/admin/login
-  Request:  { username: string, password: string }
-  Response: { token: string, adminUser: AdminUserDto }
-
-POST /api/v1/auth/admin/logout
+GET /api/v1/admin/hard-delete/pending
+  Auth: JWT + admin
+  Response: HardDeleteRequestDto[]
+  Notes: Lists all pending hard-delete requests for admin review.
 ```
 
-### 4.3 SMS Cost Analysis
+### 4.3 Hiring Resource Soft Delete (Creator-Managed)
 
-| Provider | Cost per SMS (US) | Platform Fee | Total per Verification | Monthly Cost (1K users, 2x) | Monthly Cost (10K users, 2x) |
-|----------|------------------|-------------|----------------------|---------------------------|----------------------------|
-| Twilio Verify | $0.0083 | $0.05 | ~$0.0583 | ~$116.60 | ~$1,166 |
-| **Azure Communication Services** | **$0.0075 + $0.0025 surcharge** | **None** | **~$0.01** | **~$20.00** | **~$200** |
-| Twilio SMS (no Verify) | $0.0079 | None | ~$0.0079 | ~$15.80 | ~$158 |
+```
+PUT /api/v1/hiring/opportunities/{id}/delete
+  Auth: JWT + owning clinic account
+  Response: OpportunityDto (with DeletedAtUtc set)
+  Notes: Soft-deletes the opportunity. Also soft-deletes all associated invites.
+         The opportunity disappears from public hiring pages and the clinic's list.
+         The creator sees a "Delete" button in their dashboard.
 
-**With Google OAuth as primary:** SMS is only used for:
-- One-time phone verification during registration (1 SMS per new user)
-- Fallback login for users without Google (maybe 5-10% of users, 2 SMS/month each)
+PUT /api/v1/hiring/opportunities/{id}/restore
+  Auth: JWT + owning clinic account
+  Response: OpportunityDto (with DeletedAtUtc = null)
+  Notes: Restores a soft-deleted opportunity. Invites are also restored.
+         The opportunity reappears in the clinic's list and public pages.
+         Note: expired invites remain expired regardless of restore.
 
-**Estimated SMS costs with Google OAuth + Azure Communication Services:**
-- 10,000 users registering: one-time cost of ~$100 (10,000 x $0.01)
-- 500 users using phone fallback (5%): ~$10/month (500 x 2 x $0.01)
-- **Total: ~$110 first month, ~$10/month ongoing**
+PUT /api/v1/hiring/invites/{id}/delete
+  Auth: JWT + owning clinic account
+  Response: InviteDto (with DeletedAtUtc set)
+  Notes: Soft-deletes a specific invite. The share link stops working.
+         The clinic sees a "Delete" or "Revoke" button next to each invite.
 
-Compare to phone-only with Twilio Verify: ~$1,166/month for 10K users x 2 logins.
+PUT /api/v1/hiring/passports/{id}/delete
+  Auth: JWT + owning talent account
+  Response: PassportShareDto (with DeletedAtUtc set)
+  Notes: Soft-deletes a specific passport share. The share link stops working.
 
-### 4.4 Google OAuth Integration in ASP.NET Core (for reference)
+PUT /api/v1/hiring/passports/{id}/restore
+  Auth: JWT + owning talent account
+  Response: PassportShareDto (with DeletedAtUtc = null)
+  Notes: Restores a soft-deleted passport share. The share link works again.
+```
+
+### 4.4 File Soft Delete
+
+```
+PUT /api/v1/files/{fileId}/delete
+  Auth: JWT + owning account
+  Response: FileMetadataDto (with DeletedAtUtc set)
+  Notes: Soft-deletes the file record. The blob remains in storage (cool tier).
+         The file disappears from the profile/gallery immediately.
+         If all files in a category are deleted, the corresponding URL field is cleared.
+
+PUT /api/v1/files/{fileId}/restore
+  Auth: JWT + owning account or admin
+  Response: FileMetadataDto (with DeletedAtUtc = null)
+  Notes: Restores the file record. The file reappears in the profile/gallery.
+```
+
+---
+
+## 5. Soft Delete Implementation Details
+
+### 5.1 SoftDeleteService
 
 ```csharp
-// NuGet: Microsoft.AspNetCore.Authentication.Google
-
-builder.Services
-    .AddAuthentication(options =>
-    {
-        options.DefaultScheme = JwtBearerDefaults.AuthenticationScheme;
-    })
-    .AddJwtBearer(options => { /* existing JWT config */ })
-    .AddGoogle(options =>
-    {
-        options.ClientId = builder.Configuration["Google:ClientId"];
-        options.ClientSecret = builder.Configuration["Google:ClientSecret"];
-    });
-
-// Backend validates Google ID tokens issued by the frontend's Google sign-in
-// using Google.Apis.Auth:
-public class GoogleAuthService : IGoogleAuthService
+public class SoftDeleteService : ISoftDeleteService
 {
-    public async Task<GoogleJsonWebSignature.Payload> ValidateIdTokenAsync(string idToken)
+    private readonly ClinicXDbContext _db;
+    private readonly ICurrentUserService _currentUser;
+
+    public async Task SoftDeleteAccountAsync(Guid accountId)
     {
-        var settings = new GoogleJsonWebSignature.ValidationSettings
+        var account = await _db.Accounts
+            .IgnoreQueryFilters()  // Include already-deleted if re-deleting
+            .FirstAsync(a => a.Id == accountId);
+
+        var now = DateTime.UtcNow;
+        var userId = _currentUser.AccountId;
+
+        // Soft-delete the account
+        account.DeletedAtUtc = now;
+        account.DeletedByAccountId = userId;
+
+        // Cascade: soft-delete all owned data
+        await _db.ExternalLogins
+            .Where(e => e.AccountId == accountId)
+            .ExecuteUpdateAsync(setters => setters
+                .SetProperty(e => e.DeletedAtUtc, now)
+                .SetProperty(e => e.DeletedByAccountId, userId));
+
+        await _db.AccountFiles
+            .Where(f => f.AccountId == accountId)
+            .ExecuteUpdateAsync(setters => setters
+                .SetProperty(f => f.DeletedAtUtc, now)
+                .SetProperty(f => f.DeletedByAccountId, userId));
+
+        await _db.HiringOpportunities
+            .Where(o => o.ClinicAccountId == accountId)
+            .ExecuteUpdateAsync(setters => setters
+                .SetProperty(o => o.DeletedAtUtc, now)
+                .SetProperty(o => o.DeletedByAccountId, userId));
+
+        // ... cascade to TalentPassportShares, TalentApplications
+
+        await _db.SaveChangesAsync();
+    }
+
+    public async Task RestoreAccountAsync(Guid accountId)
+    {
+        var account = await _db.Accounts
+            .IgnoreQueryFilters()
+            .FirstAsync(a => a.Id == accountId);
+
+        account.DeletedAtUtc = null;
+        account.DeletedByAccountId = null;
+
+        // Restore all cascaded data
+        await _db.ExternalLogins
+            .Where(e => e.AccountId == accountId)
+            .ExecuteUpdateAsync(setters => setters
+                .SetProperty(e => e.DeletedAtUtc, (DateTime?)null)
+                .SetProperty(e => e.DeletedByAccountId, (Guid?)null));
+
+        // ... restore AccountFiles, HiringOpportunities, etc.
+
+        await _db.SaveChangesAsync();
+    }
+
+    public async Task HardDeleteAccountAsync(Guid accountId)
+    {
+        // Warning: this is permanent
+        var account = await _db.Accounts
+            .IgnoreQueryFilters()
+            .FirstAsync(a => a.Id == accountId);
+
+        // Delete blobs from storage first
+        var files = await _db.AccountFiles
+            .IgnoreQueryFilters()
+            .Where(f => f.AccountId == accountId)
+            .ToListAsync();
+
+        foreach (var file in files)
         {
-            Audience = new[] { _config["Google:ClientId"] }
-        };
-        return await GoogleJsonWebSignature.ValidateAsync(idToken, settings);
+            await _fileStorageService.DeleteAsync(file.BlobPath);
+        }
+
+        // Remove all dependent records
+        _db.AccountFiles.RemoveRange(files);
+        _db.ExternalLogins.RemoveRange(await _db.ExternalLogins
+            .IgnoreQueryFilters()
+            .Where(e => e.AccountId == accountId).ToListAsync());
+        _db.HiringOpportunities.RemoveRange(await _db.HiringOpportunities
+            .IgnoreQueryFilters()
+            .Where(o => o.ClinicAccountId == accountId).ToListAsync());
+        // ... remove all other cascaded data
+
+        // Finally, remove the account
+        _db.Accounts.Remove(account);
+        await _db.SaveChangesAsync();
     }
 }
 ```
 
-### 4.5 SMS Implementation: Azure Communication Services (not Twilio)
+### 5.2 Query Behavior Summary
 
-```csharp
-public class SmsService : ISmsService
-{
-    private readonly SmsClient _client;
-    
-    public SmsService(string connectionString)
-    {
-        _client = new SmsClient(connectionString);
-    }
-    
-    public async Task SendVerificationCodeAsync(string phone, string code)
-    {
-        await _client.SendAsync(
-            from: "+15551234567",  // Azure ACS toll-free number
-            to: phone,
-            message: $"Your ClinicX verification code is: {code}",
-            options: new SmsSendOptions { EnableDeliveryReport = false }
-        );
-    }
-}
-```
+| User | Viewing | Sees |
+|------|---------|------|
+| Anonymous | Public hiring page | Only active, non-deleted opportunities |
+| Clinic | Their own opportunities | All their opportunities (including soft-deleted, with a "Deleted" badge) |
+| Clinic | Other clinics' profiles | Only non-deleted accounts |
+| Talent | Their own applications | All their applications |
+| Talent | Talent directory | Only non-deleted talent accounts |
+| Admin | Admin dashboard | All records including deleted (can toggle filter) |
+| Admin | Deleted accounts view | Only deleted accounts (for review/restore) |
+| Admin | Pending hard deletes | Only hard-delete requests with status=pending |
 
 ---
 
-## 5. Backend API Design
+## 6. Authentication Architecture
 
-### 5.1 Base URL
-
-```
-Dev:   http://localhost:5000/api/v1/
-Prod:  https://api.clinicx-talent.com/api/v1/
-UAT:   https://uat-api.clinicx-talent.com/api/v1/
-```
-
-### 5.2 Account Endpoints
+### 6.1 Auth Endpoints
 
 ```
-GET    /api/v1/accounts/me               -> AccountDto
-PUT    /api/v1/accounts/me               -> AccountDto (displayName, email, etc.)
-PUT    /api/v1/accounts/me/profile       -> AccountDto (ClinicDetails / TalentDetails)
-PUT    /api/v1/accounts/me/theme         -> AccountDto (themePreference)
-POST   /api/v1/accounts/me/phone         -> sends SMS code to link phone
-PUT    /api/v1/accounts/me/phone         -> verifies code, links phone to account
-GET    /api/v1/accounts?type=&page=      -> paginated list (admin)
-GET    /api/v1/accounts/{id}             -> AccountDto (admin or own)
-PUT    /api/v1/accounts/{id}/status      -> AccountDto (admin only)
+POST /api/v1/auth/google          -- Primary: Google OAuth login
+POST /api/v1/auth/send-code       -- Secondary: SMS code for phone verification
+POST /api/v1/auth/verify-code     -- Verify SMS code (login or link phone)
+POST /api/v1/auth/refresh         -- Refresh JWT
+POST /api/v1/auth/admin/login     -- Admin login
+POST /api/v1/auth/admin/logout    -- Admin logout
 ```
 
-### 5.3 Hiring Endpoints
+### 6.2 Account Endpoints
 
 ```
-GET    /api/v1/hiring/opportunities              -> OpportunityDto[]
-POST   /api/v1/hiring/opportunities              -> OpportunityDto (creates + invite)
-PUT    /api/v1/hiring/opportunities/{id}         -> OpportunityDto
-PUT    /api/v1/hiring/opportunities/{id}/status  -> OpportunityDto
-POST   /api/v1/hiring/opportunities/{id}/invites -> { invite, shareUrl }
-POST   /api/v1/hiring/passports                  -> { passport, shareUrl }
-PUT    /api/v1/hiring/passports/{id}/deactivate  -> PassportShareDto
-GET    /api/v1/hiring/applications               -> ApplicationDto[]
-POST   /api/v1/hiring/applications               -> ApplicationDto
-PUT    /api/v1/hiring/applications/{id}/status   -> ApplicationDto
+GET    /api/v1/accounts/me
+PUT    /api/v1/accounts/me
+PUT    /api/v1/accounts/me/profile
+PUT    /api/v1/accounts/me/theme
+PUT    /api/v1/accounts/me/delete        -- Soft-delete own account
+POST   /api/v1/accounts/{id}/restore     -- Admin restores account
+GET    /api/v1/accounts?type=&page=
+GET    /api/v1/accounts/{id}
+PUT    /api/v1/accounts/{id}/status
 ```
 
-### 5.4 Public Endpoints (no auth)
+### 6.3 File Upload Endpoints
 
 ```
-GET    /api/v1/public/hiring/{clinicSlug}/{positionSlug}?invite={token}
-GET    /api/v1/public/talent/{talentSlug}
-GET    /api/v1/public/clinic/{clinicSlug}
-GET    /api/v1/public/invite/{token}
+POST   /api/v1/files/profile-photo
+POST   /api/v1/files/intro-video
+POST   /api/v1/files/certificate
+POST   /api/v1/files/gallery-image
+PUT    /api/v1/files/{fileId}/delete      -- Soft-delete file
+PUT    /api/v1/files/{fileId}/restore     -- Restore file
+DELETE /api/v1/files/{fileId}             -- Hard delete (admin only)
+GET    /api/v1/files/{fileId}/download
 ```
 
-### 5.5 Admin Endpoints
+### 6.4 Hiring Endpoints
 
 ```
+GET    /api/v1/hiring/opportunities
+POST   /api/v1/hiring/opportunities
+PUT    /api/v1/hiring/opportunities/{id}
+PUT    /api/v1/hiring/opportunities/{id}/status
+PUT    /api/v1/hiring/opportunities/{id}/delete     -- Soft delete (creator)
+PUT    /api/v1/hiring/opportunities/{id}/restore    -- Restore (creator)
+POST   /api/v1/hiring/opportunities/{id}/invites
+PUT    /api/v1/hiring/invites/{id}/delete           -- Soft delete (creator)
+POST   /api/v1/hiring/passports
+PUT    /api/v1/hiring/passports/{id}/delete         -- Soft delete (creator)
+PUT    /api/v1/hiring/passports/{id}/restore        -- Restore (creator)
+GET    /api/v1/hiring/applications
+POST   /api/v1/hiring/applications
+PUT    /api/v1/hiring/applications/{id}/status
+```
+
+### 6.5 Admin Endpoints
+
+```
+GET    /api/v1/admin/accounts/deleted               -- List soft-deleted accounts
 GET    /api/v1/admin/accounts/verification-security
 POST   /api/v1/admin/accounts/verification-security/reset
+POST   /api/v1/admin/hard-delete/request            -- Request hard delete
+POST   /api/v1/admin/hard-delete/{id}/approve       -- Approve hard delete
+POST   /api/v1/admin/hard-delete/{id}/reject        -- Reject hard delete
+GET    /api/v1/admin/hard-delete/pending            -- List pending approvals
 GET    /api/v1/admin/stats
 ```
 
-### 5.6 Response Envelope
+---
 
-```json
-{
-  "data": { ... },
-  "success": true,
-  "error": null
-}
-```
+## 7. Azure Services
 
-Error response:
-```json
-{
-  "data": null,
-  "success": false,
-  "error": {
-    "code": "INVALID_CODE",
-    "message": "The verification code does not match.",
-    "details": { "remainingAttempts": 2 }
-  }
-}
-```
-
-Error codes: `PHONE_LOCKED`, `INVALID_CODE`, `RATE_LIMITED`, `DUPLICATE_APPLICATION`, `INVALID_STATUS_TRANSITION`, `INVITE_EXPIRED`, `NOT_FOUND`, `UNAUTHORIZED`, `FORBIDDEN`, `VALIDATION_ERROR`, `GOOGLE_TOKEN_INVALID`.
+| Resource | SKU | Purpose |
+|----------|-----|---------|
+| App Service | B1 (Linux) -- 2 slots (green + blue) | ASP.NET Core API |
+| PostgreSQL Flexible Server | Burstable B1ms (1 vCore, 2 GB) | Relational data + soft-delete records |
+| Blob Storage | Standard LRS (Hot -> Cool lifecycle) | Videos, photos, certificates, galleries |
+| Key Vault | Standard | Secrets |
+| Communication Services | Pay-as-you-go | SMS (~$0.01/msg US) |
+| App Insights | Per-GB | Logging, monitoring |
 
 ---
 
-## 6. Auth and Security
+## 8. Implementation Phases
 
-### 6.1 JWT Claims
+### Phase 1: Backend Foundation (Week 1)
+- Scaffold solution with 5 projects
+- Domain entities with `ISoftDeletable` interface
+- EF Core + PostgreSQL with global query filters
+- `docker-compose.yml` for local PostgreSQL
+- `FileStorageServiceLocal` (disk-based mock for dev)
+- `SmsServiceMock` (logs codes to console)
+- Initial migration with `DeletedAtUtc` on all entities
+- ExceptionMiddleware, /health endpoint
+- Testcontainers integration test fixture
 
-```json
-{
-  "sub": "account-guid",
-  "type": "clinic",
-  "status": "approved",
-  "role": "user",
-  "phone": "3125550101",
-  "phoneVerified": true,
-  "iat": 1721836800,
-  "exp": 1721923200,
-  "iss": "clinicx-talent-api",
-  "aud": "clinicx-talent-app"
-}
-```
+### Phase 2: Auth -- Google OAuth (Week 2)
+- Google ID token validation
+- `POST /api/v1/auth/google`
+- ExternalLogin + Account creation
+- JWT issuance with phoneVerified claim
+- Google test client for local dev
 
-- Access token TTL: 15 minutes
-- Refresh token TTL: 7 days
-- Admin tokens include `"role": "admin"`
-- `phoneVerified` claim lets the frontend know if phone step is still needed
-- Signing key in Azure Key Vault (production) / appsettings.Development.json (local dev)
+### Phase 3: Auth -- SMS Fallback (Week 3)
+- Azure Communication Services SMS (or mock)
+- `POST /api/v1/auth/send-code`, `/verify-code`
+- Phone linking flow, rate limiting
 
-### 6.2 Authorization Policies
+### Phase 4: Accounts + Soft Delete (Week 3-4)
+- Account CRUD endpoints
+- `SoftDeleteService` with account cascade
+- `PUT /api/v1/accounts/me/delete`
+- `POST /api/v1/accounts/{id}/restore` (admin)
+- `GET /api/v1/admin/accounts/deleted`
+- Profile update, contact/theme, founder logic
 
-```csharp
-builder.Services.AddAuthorization(options =>
-{
-    options.AddPolicy("ClinicOnly", policy =>
-        policy.RequireClaim("type", "clinic"));
-    options.AddPolicy("TalentOnly", policy =>
-        policy.RequireClaim("type", "talent"));
-    options.AddPolicy("AdminOnly", policy =>
-        policy.RequireClaim("role", "admin"));
-    options.AddPolicy("ApprovedClinic", policy =>
-        policy.RequireClaim("type", "clinic")
-              .RequireClaim("status", "approved"));
-    options.AddPolicy("PhoneVerified", policy =>
-        policy.RequireClaim("phoneVerified", "True"));  // NEW
-});
-```
+### Phase 5: File Upload API (Week 4-5)
+- `IFileStorageService` (Blob + Local)
+- `FilesController` with all upload/download/delete endpoints
+- `AccountFiles` table integration
+- File type/size validation
+- Soft delete for files
 
-### 6.3 Rate Limiting
+### Phase 6: Hiring API + Soft Delete (Week 5-6)
+- Opportunity CRUD
+- Creator-facing delete/restore for opportunities
+- Invite/passport creation with token
+- Creator-facing delete for invites and passports
+- Application pipeline with status transitions
+- Public endpoints (no auth)
+- Soft delete cascading for all hiring resources
+- Domain business rules
 
-- 3 failed verification attempts per phone -> 15-minute lockout
-- 5 distinct phones in 60 minutes -> admin flag
-- General API: 100 requests/minute per IP
-- SMS: 1 per 30 seconds per phone number
+### Phase 7: Hard Delete Approval Workflow (Week 6)
+- `HardDeleteRequests` table
+- `POST /api/v1/admin/hard-delete/request`
+- `POST /api/v1/admin/hard-delete/{id}/approve`
+- `POST /api/v1/admin/hard-delete/{id}/reject`
+- `GET /api/v1/admin/hard-delete/pending`
+- Two-admin approval enforcement
+- Blob purge on hard delete
 
----
+### Phase 8: Admin Dashboard (Week 7)
+- Verification security overview/reset
+- Review status management
+- Deleted accounts view
+- Pending hard deletes view
+- Dashboard stats
 
-## 7. Azure Services (Production / UAT)
+### Phase 9: Frontend Integration (Week 7-9)
+- AuthService with Google OAuth
+- JwtInterceptor, ErrorInterceptor
+- HttpAccountDataSource, HttpHiringDataSource
+- File upload components with progress
+- **Delete button on account settings page**
+- **Delete/restore buttons on hiring opportunity cards**
+- **Delete button on passport share links**
+- **Admin dashboard for deleted accounts and hard-delete approvals**
+- Remove TEST_CREDENTIALS and hardcoded admin
+- Remove localStorage persistence
+- End-to-end testing
 
-### 7.1 Resource Table
-
-| Resource | SKU / Tier | Purpose |
-|----------|-----------|---------|
-| App Service | B1 (Linux) -- 2 slots (green + blue) | Host ASP.NET Core API |
-| PostgreSQL Flexible Server | Burstable B1ms (1 vCore, 2 GB) | Primary data store |
-| Key Vault | Standard | JWT signing key, Google client secret, ACS connection string |
-| Storage Account | Standard LRS (Blob) | Certificates, photos, videos |
-| Communication Services | Pay-as-you-go | SMS sending (~$0.01 per message, no monthly fee) |
-| App Insights | Per-GB | Logging, exceptions, perf monitoring |
-
-All resources fit within Azure Free Trial (12 months) except PostgreSQL which has its own 12-month free tier.
-
-**SMS cost with Azure Communication Services:** $0.01 per SMS segment in the US. Since SMS is only used for one-time phone verification and fallback login (not every login), monthly costs are expected to be under $10-20 even at significant scale.
-
-### 7.2 Green/Blue Deployment Architecture
-
-```
-[Azure Front Door / DNS]
-        |
-        v
-   [App Service]
-   /            \
-  Slot: green    Slot: blue
-  (production)   (staging)
-       |              |
-       +---- DB ------+
-       (single PostgreSQL instance)
-```
-
-**Deployment flow:**
-1. Deploy new build to the inactive slot
-2. Run smoke tests against the inactive slot
-3. Run EF Core migrations (additive only)
-4. Swap the slots: blue becomes production, green becomes staging
-5. Monitor the new production slot
-6. If rollback needed: swap back
-
-### 7.3 Environment Configuration
-
-```
-appsettings.json                  # Shared defaults
-appsettings.Development.json      # Local Docker PostgreSQL, SMS mock, Google test client
-appsettings.Uat.json              # UAT Azure PostgreSQL, ACS SMS, Google prod client
-appsettings.Production.json       # Production Azure PostgreSQL, ACS SMS, Google prod client + Key Vault refs
-```
-
-### 7.4 Deployment Pipeline
-
-```
-GitHub main branch
-  -> GitHub Actions:
-     1. dotnet restore, build, test
-     2. dotnet publish
-     3. Deploy to Azure App Service (inactive slot)
-     4. Run smoke tests against inactive slot
-     5. Run EF Core migrations (idempotent, additive)
-     6. Swap slots (green <-> blue)
-     7. Run post-deploy validation
-```
-
----
-
-## 8. Migration Strategy
-
-### 8.1 Key Insight: Abstract Data Sources
-
-The frontend already uses abstract data sources:
-
-```typescript
-export abstract class AccountDataSource {
-  abstract getAll(): Record<string, AccountRecord>;
-  abstract getById(id: string): AccountRecord | undefined;
-  abstract invalidate(): void;
-}
-```
-
-Migration swaps the provider in `app.config.ts`:
-
-```typescript
-// Before:
-{ provide: AccountDataSource, useClass: LocalAccountDataSource },
-
-// After:
-{ provide: AccountDataSource, useClass: HttpAccountDataSource, deps: [HttpClient] },
-```
-
-**No component code changes required.**
-
-### 8.2 Dual-Run Strategy
-
-During phases 2-6, both systems coexist:
-
-1. Frontend data sources check for API reachability
-2. Fall back to localStorage if backend unreachable
-3. Feature flag in environment config: `useBackend: false`
-
-```typescript
-// src/environments/environment.ts
-export const environment = {
-  apiUrl: 'http://localhost:5000/api/v1',
-  googleClientId: 'xxx.apps.googleusercontent.com',  // Google OAuth client ID
-  useBackend: false,
-};
-```
-
-### 8.3 Seed Data Strategy
-
-Existing `SEEDED_ACCOUNTS`, `SEEDED_OPPORTUNITIES`, etc. from the frontend become EF Core seed data, loaded only in development environment. On the frontend, the hydration meta-reducer no longer carries seeds -- the API is the single source of truth.
-
-### 8.4 Local Development Setup
-
-```yaml
-# docker-compose.yml
-version: '3.8'
-services:
-  postgres:
-    image: postgres:16-alpine
-    environment:
-      POSTGRES_DB: clinicx
-      POSTGRES_USER: clinicx
-      POSTGRES_PASSWORD: clinicx_dev
-    ports:
-      - "5432:5432"
-    volumes:
-      - pgdata:/var/lib/postgresql/data
-
-  api:
-    build: .
-    ports:
-      - "5000:5000"
-    environment:
-      ASPNETCORE_ENVIRONMENT: Development
-      ConnectionStrings__ClinicXDb: "Host=postgres;Database=clinicx;Username=clinicx;Password=clinicx_dev"
-      Google__ClientId: "${GOOGLE_CLIENT_ID}"       # from .env file
-      Google__ClientSecret: "${GOOGLE_CLIENT_SECRET}" # from .env file
-    depends_on:
-      - postgres
-
-volumes:
-  pgdata:
-```
+### Phase 10: Production Deployment (Week 9-10)
+- Azure resources via Bicep/ARM
+- Google Cloud Console production OAuth client
+- GitHub Actions CI/CD with green/blue swap
+- UAT -> smoke tests -> production swap
+- Blob lifecycle policy (Hot -> Cool -> Archive)
 
 ---
 
 ## 9. Frontend Changes
 
-### 9.1 New Files
+### 9.1 Account Delete UI
 
-```
-src/app/core/
-  http-account.data.source.ts    # HTTP impl of AccountDataSource
-  http-hiring.data.source.ts     # HTTP impl of HiringDataSource
-  auth.service.ts                # Token management, Google OAuth, SMS fallback
-  jwt.interceptor.ts             # Attach JWT to all outgoing requests
-  error.interceptor.ts           # Handle 401/403/429 globally
-  api-error.ts                   # Error types matching backend envelope
-
-src/environments/
-  environment.ts                 # apiUrl, googleClientId, useBackend flag
-```
-
-### 9.2 Auth Service (with Google OAuth)
-
-```typescript
-@Injectable({ providedIn: 'root' })
-export class AuthService {
-  private readonly tokenKey = 'clinicx.jwt';
-  private readonly refreshKey = 'clinicx.refresh';
-
-  // Google OAuth
-  signInWithGoogle(): Promise<AuthResult> { ... }   // uses @angular/fire or Google Identity Services
-  exchangeGoogleToken(idToken: string): Observable<AuthResult> { ... }  // POST /api/v1/auth/google
-
-  // SMS fallback
-  sendCode(phone: string): Observable<boolean> { ... }
-  verifyCode(phone: string, code: string): Observable<AuthResult> { ... }
-
-  // Token management
-  getToken(): string | null { ... }
-  setToken(token: string): void { ... }
-  clearTokens(): void { ... }
-  isAuthenticated(): boolean { ... }
-  refreshToken(): Observable<TokenPair> { ... }
-
-  // Admin
-  adminLogin(username: string, password: string): Observable<AdminLoginResult> { ... }
-  adminLogout(): void { ... }
-}
+```html
+<!-- Account settings page -->
+<section class="danger-zone">
+  <h3>Delete Account</h3>
+  <p>This will hide your profile and all associated data. 
+     You can restore within 30 days by contacting support.</p>
+  <button (click)="confirmSoftDelete()" class="mat-warn">
+    Delete My Account
+  </button>
+</section>
 ```
 
-### 9.3 Google Sign-In Integration (Frontend)
+### 9.2 Hiring Resource Delete UI
 
-The frontend uses Google Identity Services (GIS) or the `@angular/fire` library:
-
-```typescript
-// registration.ts (or a dedicated auth component)
-import { CredentialResponse } from 'google-one-tap';
-
-protected async handleGoogleSignIn(): Promise<void> {
-  // Use Google Identity Services One Tap or button
-  const google = window.google?.accounts?.id;
-  if (!google) {
-    // Fallback to SMS if Google script not loaded
-    this.useSmsFallback();
-    return;
-  }
-  
-  google.initialize({
-    client_id: environment.googleClientId,
-    callback: async (response: CredentialResponse) => {
-      const result = await this.authService
-        .exchangeGoogleToken(response.credential).toPromise();
-      
-      if (result.phoneRequired) {
-        // Navigate to phone verification step
-        this.router.navigate(['/register', 'phone']);
-      } else {
-        // Go to dashboard
-        this.router.navigate(['/']);
-      }
-    },
-  });
-  
-  google.prompt(); // Show One Tap UI
-}
+```html
+<!-- Hiring opportunity card -->
+<mat-card>
+  <mat-card-header>{{ opportunity.title }}</mat-card-header>
+  <mat-card-actions>
+    <button (click)="edit()">Edit</button>
+    <button (click)="toggleStatus()">
+      {{ opportunity.status === 'active' ? 'Pause' : 'Activate' }}
+    </button>
+    <button (click)="delete()" class="mat-warn" 
+            *ngIf="!opportunity.deletedAtUtc">
+      Delete
+    </button>
+    <button (click)="restore()" class="mat-accent"
+            *ngIf="opportunity.deletedAtUtc">
+      Restore
+    </button>
+  </mat-card-actions>
+</mat-card>
 ```
 
-### 9.4 JWT Interceptor
+### 9.3 Admin Hard Delete UI
 
-```typescript
-@Injectable()
-export class JwtInterceptor implements HttpInterceptor {
-  intercept(req: HttpRequest<unknown>, next: HttpHandlerFn) {
-    const token = inject(AuthService).getToken();
-    if (token) {
-      req = req.clone({ setHeaders: { Authorization: `Bearer ${token}` } });
-    }
-    return next(req);
-  }
-}
+```html
+<!-- Admin hard delete approval page -->
+<section>
+  <h2>Pending Hard Delete Requests</h2>
+  <table>
+    <tr *ngFor="let request of pendingRequests">
+      <td>{{ request.targetTable }}</td>
+      <td>{{ request.targetId }}</td>
+      <td>{{ request.requestedByName }}</td>
+      <td>{{ request.requestedAtUtc | date }}</td>
+      <td>
+        <button (click)="approve(request.id)" class="mat-warn">Approve</button>
+        <button (click)="reject(request.id)" class="mat-accent">Reject</button>
+      </td>
+    </tr>
+  </table>
+</section>
 ```
 
-### 9.5 Reducer Changes
+### 9.4 New/Modified Files
 
-- Remove `credentialMatches()` function
-- Remove `TEST_CREDENTIALS` reference
-- Remove hardcoded admin login (`admin`/`admin`)
-- Remove local account creation from verifyRegistrationCode
-- Remove in-memory verificationSecurity tracking
-- Registration flow now dispatches Google token exchange action instead of SMS code request
-
-### 9.6 Effects Changes
-
-- Remove `persistState$` (no more localStorage persistence)
-- Remove `persistGuestTheme$` (or modify to call API)
-- Remove `persistReviewReminder$` (move to API)
-- Modify data-loading effects to call API instead of local data sources
-- Navigation effects remain unchanged
-
-### 9.7 Guard Changes
-
-Option A (recommended for minimal changes): Keep reading from NgRx store. Store is hydrated from API on app init.
-
-Option B: Read JWT claims directly:
-```typescript
-export const clinicAccountGuard: CanActivateFn = () => {
-  const auth = inject(AuthService);
-  if (!auth.isAuthenticated()) return router.createUrlTree(['/signin']);
-  const claims = parseJwt(auth.getToken()!);
-  return claims.type === 'clinic' ? true : router.createUrlTree(['/signin']);
-};
 ```
+New files:
+  src/app/core/file-upload.service.ts
+  src/app/features/account-delete/           # Account delete dialog
+  src/app/features/admin-hard-delete/        # Admin hard-delete approval page
+  src/app/features/admin-deleted-accounts/   # Admin view of deleted accounts
 
-### 9.8 Hydration Meta-Reducer
-
-After migration, the hydration meta-reducer in `storage.ts` is removed. The NgRx store initializes empty and populates via API effects.
-
-### 9.9 App Config (after migration)
-
-```typescript
-export const appConfig: ApplicationConfig = {
-  providers: [
-    { provide: AccountDataSource, useClass: HttpAccountDataSource },
-    { provide: HiringDataSource, useClass: HttpHiringDataSource },
-    provideHttpClient(withInterceptors([jwtInterceptor, errorInterceptor])),
-    provideRouter(routes),
-    provideStore({ app: appReducer }),
-    provideEffects(AppEffects),
-    provideStoreDevtools({ maxAge: 25, logOnly: false }),
-  ],
-};
-```
-
-### 9.10 Proxy Config for Local Dev
-
-```json
-// src/proxy.conf.json
-{
-  "/api": {
-    "target": "http://localhost:5000",
-    "secure": false
-  }
-}
+Modified files:
+  src/app/core/account.ts                    # Add DeletedAtUtc to interfaces
+  src/app/core/hiring.ts                     # Add DeletedAtUtc to interfaces
+  src/app/features/clinic-home/              # Add delete/restore buttons to opp cards
+  src/app/features/talent-passport/          # Add delete/restore buttons to passport shares
+  src/app/features/talent-settings/          # Add account delete option
 ```
 
 ---
 
-## 10. Implementation Phases
+## 10. Soft Delete Policy Summary
 
-### Phase 1: Backend Foundation (Week 1)
-- Scaffold solution with 5 projects (Api, Application, Domain, Infrastructure, Tests)
-- Define domain entities and enums matching frontend types
-- Add NuGet packages: `Npgsql.EntityFrameworkCore.PostgreSQL`, `Microsoft.AspNetCore.Authentication.Google`, `Azure.Communication.Sms`, `Azure.Identity`, `Azure.Security.KeyVault.Secrets`, `Azure.Storage.Blobs`, `MediatR`, `FluentValidation`
-- Configure EF Core with PostgreSQL (Npgsql), enable connection resilience
-- Write `docker-compose.yml` for local PostgreSQL
-- Create `SmsServiceMock` that logs codes to console/file
-- Create `ExternalLogin` entity + table
-- Create initial migration with development seed data
-- Implement ExceptionMiddleware
-- Verify /health endpoint works on localhost:5000
-- Write integration test fixture using Testcontainers
+| Entity | Can Soft Delete By | Can Restore By | Can Hard Delete By |
+|--------|-------------------|---------------|-------------------|
+| Account | Account owner (self-delete) | Admin | Admin (2-admin approval) |
+| Account Files | Account owner | Account owner or admin | Admin (hard-deleting account also purges files) |
+| Hiring Opportunity | Owning clinic | Owning clinic | Admin (part of account hard delete) |
+| Hiring Invite | Owning clinic | Owning clinic | Admin |
+| Talent Passport Share | Owning talent | Owning talent | Admin |
+| Talent Application | System (on account/opportunity delete) | System (on restore) | Admin |
 
-### Phase 2: Auth System -- Google OAuth (Week 2)
-- Implement Google ID token validation service
-- Implement `/api/v1/auth/google` endpoint
-- Implement `ExternalLogin` + `Account` creation/retrieval flow
-- JWT issuance with `phoneVerified` claim
-- Admin login against AdminUsers table
-- Google OAuth test client for local development
-- Swagger / OpenAPI documentation
-
-### Phase 3: Auth System -- SMS Fallback (Week 2-3)
-- Implement Azure Communication Services SMS integration
-- Implement `/api/v1/auth/send-code` and `/api/v1/auth/verify-code`
-- Phone linking flow (existing authenticated user adds phone)
-- Rate limiting (3 attempts locks phone, 5 phones flags system)
-- SMS mock visible in developer console
-- **Total SMS costs estimated: $0 for development, ~$10-20/month in production**
-
-### Phase 4: Accounts API (Week 3-4)
-- Account CRUD endpoints
-- Profile update (ClinicDetails, TalentDetails)
-- Contact/theme preferences
-- Founder 1000 Club logic
-- FluentValidation for request models
-
-### Phase 5: Hiring API (Week 4-5)
-- Opportunity CRUD with slug generation
-- Invite creation with 30-day expiry
-- Passport share creation
-- Application creation and status pipeline
-- Public endpoints (no auth)
-- Domain business rules (canCreateOpportunity, isInviteValid, getNextApplicationStatus)
-
-### Phase 6: Admin API (Week 5)
-- Verification security overview and reset
-- Account review status management
-- Dashboard stats
-
-### Phase 7: Frontend Auth Integration (Week 5-6)
-- AuthService with Google OAuth + SMS fallback
-- Google Identity Services integration (One Tap + button)
-- JwtInterceptor and ErrorInterceptor
-- HttpAccountDataSource and HttpHiringDataSource
-- Feature flag in environment config
-- Angular proxy config for local development
-- Remove TEST_CREDENTIALS and hardcoded admin from reducer
-- Update registration/sign-in flows for Google-first UX
-- Full end-to-end testing against local Docker backend
-
-### Phase 8: Frontend Full Integration (Week 6-7)
-- Remove localStorage persistence effects
-- Remove hydrationMetaReducer
-- Remove local data source implementations
-- Add loading states for API calls
-- Convert date formatting (ISO 8601 -> display)
-- End-to-end testing
-
-### Phase 9: Media Storage (Week 7)
-- Azure Blob storage for file uploads (local filesystem mock in dev)
-- Upload endpoints in AccountsController
-- File type/size validation
-
-### Phase 10: Production Deployment (Week 7-8)
-- Set up Azure resources via Bicep/ARM:
-  - App Service with green and blue deployment slots
-  - PostgreSQL Flexible Server (free tier)
-  - Azure Communication Services (pay-as-you-go)
-  - Key Vault with secrets
-  - Storage Account
-  - Application Insights
-- Google Cloud Console: create OAuth client for production
-- Configure `appsettings.Uat.json` and `appsettings.Production.json`
-- Set up GitHub Actions CI/CD with slot swap
-- Deploy to UAT slot first, test Google OAuth flow, then deploy and swap to production
-- Performance and security testing
-
----
-
-## 11. Bulletproof Database -- Data Mobility
-
-### 11.1 Migration Philosophy
-
-Every migration is **additive only** -- this is what makes green/blue swaps safe:
-
-```
-Good:    ADD COLUMN ... NULL                  -- old code ignores it
-Good:    CREATE INDEX ...                     -- read perf improvement
-Good:    CREATE TABLE ...                     -- new entity
-
-Bad:     DROP COLUMN ...                      -- old code crashes
-Bad:     ALTER COLUMN ... NOT NULL            -- old inserts fail
-Bad:     RENAME TABLE ...                     -- old code can't find it
-```
-
-Breaking changes are done in **two deployments**:
-1. First deploy: add new column/table, write dual code (writes to both old and new, reads from new)
-2. Second deploy: remove old column/table reference from code, then drop from schema
-
-### 11.2 Scripts for Data Mobility
-
-```bash
-scripts/db-snapshot.sh save my-feature-test    # Save state
-scripts/db-snapshot.sh restore my-feature-test  # Restore state
-scripts/db-seed.sh demo --env=uat              # Load demo data into UAT
-scripts/db-reset.sh                             # Reset dev database
-scripts/db-copy.sh uat local                    # Copy UAT DB to local
-```
-
-### 11.3 Seed Data Profiles
-
-| Profile | Contents | When |
-|---------|----------|------|
-| `Development` | Full demo set (6 accounts, 1 opp, 1 invite, 1 passport) | Local dev |
-| `Test` | Admin user + 2 accounts (1 clinic, 1 talent) | Integration tests |
-| `Production` | Admin user only | First prod migration |
-| `Demo` | Full demo set (for UAT/demo environments) | UAT slot |
-
----
-
-## 12. Potential Challenges
-
-| Challenge | Mitigation |
-|-----------|-----------|
-| Data loss during migration | Keep localStorage fallback; seed DB with exact copy of seed data; migration rollback plan |
-| Google OAuth dependency | SMS fallback for users without Google accounts; email OTP as tertiary option |
-| Azure ACS SMS cost | ~$0.01 per SMS in US; only used for one-time phone verification and fallback login; estimated <$20/month even at 10K users |
-| JWT expiration UX | Auto-refresh via interceptor; toast on session expiry |
-| Date format mismatch | API returns ISO 8601 UTC; frontend formats via DatePipe |
-| Concurrent founder assignment | Serializable transaction; only first 1000 accounts ever get it |
-| File upload limits | ASP.NET Core request size limits; chunked upload for video |
-| Green/blue DB compatibility | Additive-only migrations; dual-write during transition periods |
-| PostgreSQL connection pooling | Npgsql built-in pooling (default 100); adjust for Flexible Server limits |
-| Cross-origin for Google OAuth redirect | Configure correct redirect URIs in Google Cloud Console for each environment |
-
----
-
-## 13. Files That Change
-
-### Files to Modify (Frontend):
-- `src/app/app.config.ts` -- swap data source providers, add interceptors
-- `src/app/core/store/app.reducer.ts` -- remove credential matching, admin login, local account creation
-- `src/app/core/store/app.effects.ts` -- remove localStorage persistence, add API calls
-- Registration components -- add Google sign-in button, phone verification step
-
-### Files to Delete (Frontend):
-- `src/app/core/store/storage.ts` -- hydration meta-reducer replaced by API init
-- `src/app/core/account-data.source.ts` -- LocalAccountDataSource removed
-- `src/app/core/hiring-data.source.ts` -- LocalHiringDataSource removed
-
-### Files to Create (Frontend):
-- `src/app/core/http-account.data.source.ts`
-- `src/app/core/http-hiring.data.source.ts`
-- `src/app/core/auth.service.ts`
-- `src/app/core/jwt.interceptor.ts`
-- `src/app/core/error.interceptor.ts`
-- `src/proxy.conf.json` -- Angular dev server proxy
-
-### Files to Create (Backend):
-- Entire solution structure in `ClinicX/` directory (see Section 2)
-- `docker-compose.yml` -- local PostgreSQL + API containers
-- `.env.example` -- template for local environment variables (Google client ID/secret)
-
-### Files to Create (Operations):
-- `scripts/db-snapshot.sh`
-- `scripts/db-seed.sh`
-- `scripts/db-reset.sh`
-- `.github/workflows/deploy.yml` -- CI/CD with green/blue swap
-
----
-
-## 14. Key Architectural Notes
-
-### Domain Logic Migration
-
-The following pure functions from the frontend move to the backend with minimal changes:
-
-| Frontend File | Function | Backend Destination |
-|--------------|----------|-------------------|
-| `account.ts` | `normalizePhone()` | `PhoneNumber.cs` value object |
-| `account.ts` | `formatPhone()` | `PhoneNumber.cs` value object |
-| `hiring.ts` | `canCreateOpportunity()` | `HiringService.cs` or domain service |
-| `hiring.ts` | `isInviteValid()` | `HiringInvite.cs` entity method |
-| `hiring.ts` | `generateSlug()` | `HiringOpportunity.cs` or service |
-| `hiring.ts` | `generateInviteToken()` | `HiringService.cs` |
-| `hiring.ts` | `getNextApplicationStatus()` | `TalentApplication.cs` or service |
-| `founder.ts` | `getFounderStatus()` | `AccountService.cs` or query handler |
-| `founder.ts` | `canBecomeFounder()` | `AccountService.cs` |
-| `founder.ts` | `isFounder()` | `Account.cs` entity property |
-
-### NgRx Store Future
-
-After migration, the NgRx store transitions from being the primary data store to being a client-side cache layer:
-
-- Store reads trigger API calls (via effects)
-- Store mutations trigger API writes (via effects)
-- Components read from selectors as before (no component changes)
-- Selectors that derive computed values (e.g., `selectPendingTalentCount`) remain unchanged
-
-This is a standard "cache-first, API-backed" pattern that NgRx handles well. The existing selector structure needs no changes.
+**Data retention:** Soft-deleted records are preserved for a minimum of 90 days before being eligible for lifecycle archival. Hard-deleted records are permanently removed within 24 hours of approval.
 
 ---
 
 ### Critical Files for Implementation
 
-- `/Users/katemac/Documents/Codex/2026-07-14/can/clinicx-talent/src/app/core/account.ts` -- Domain types that become `ClinicX.Domain` entities; the source of truth for database schema and API contracts
-- `/Users/katemac/Documents/Codex/2026-07-14/can/clinicx-talent/src/app/core/hiring.ts` -- Domain types and business logic that translate to service layer logic
-- `/Users/katemac/Documents/Codex/2026-07-14/can/clinicx-talent/src/app/core/store/app.reducer.ts` -- Contains all current "backend" logic; each handler maps to a backend endpoint
+- `/Users/katemac/Documents/Codex/2026-07-14/can/clinicx-talent/src/app/core/account.ts` -- Domain types; add `DeletedAtUtc` to `AccountRecord`
+- `/Users/katemac/Documents/Codex/2026-07-14/can/clinicx-talent/src/app/core/hiring.ts` -- Domain types; add `DeletedAtUtc` to `HiringOpportunity`, `HiringInvite`, `TalentPassportShare`, `TalentApplication`
+- `/Users/katemac/Documents/Codex/2026-07-14/can/clinicx-talent/src/app/core/store/app.reducer.ts` -- Contains all current backend logic; each handler maps to a backend endpoint
 - `/Users/katemac/Documents/Codex/2026-07-14/can/clinicx-talent/src/app/core/account-data.source.ts` -- The abstract data source that is the migration seam
-- `/Users/katemac/Documents/Codex/2026-07-14/can/clinicx-talent/src/app/app.config.ts` -- Central DI configuration where data source providers and interceptors are registered
+- `/Users/katemac/Documents/Codex/2026-07-14/can/clinicx-talent/src/app/app.config.ts` -- Central DI configuration where providers and interceptors are registered
