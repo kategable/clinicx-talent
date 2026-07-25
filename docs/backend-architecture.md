@@ -7,12 +7,19 @@ The current application is entirely client-side: domain logic lives in NgRx redu
 **Core architectural principles:**
 - Clean Architecture (Presentation / Application / Domain / Infrastructure layers)
 - ASP.NET Core 9 with minimal API controllers
-- Entity Framework Core with SQL Server (Azure SQL Database)
+- Entity Framework Core with PostgreSQL (via Npgsql)
 - JWT bearer tokens for authentication
 - Twilio Verify API for phone verification
 - Azure Key Vault for secrets
 - Azure App Service for hosting
+- Azure Database for PostgreSQL Flexible Server
 - Azure Storage Blobs for media uploads
+
+**Why PostgreSQL over SQL Server for this app:**
+- Native JSONB columns for `CertificateNames` and `GalleryNames` arrays, avoiding string serialization overhead and enabling real JSON queries at the database level if needed later
+- Better free/developer-tier options (Neon, Supabase) during early development
+- Azure Database for PostgreSQL Flexible Server is a mature, fully managed Azure service
+- EF Core support via Npgsql is first-class with the same code-first approach, migrations, and LINQ support
 
 ---
 
@@ -109,26 +116,39 @@ ClinicX/
 
 ---
 
-## 3. Database Schema (EF Core)
+## 3. Database Schema (EF Core with PostgreSQL)
+
+### Type mapping notes (SQL Server -> PostgreSQL):
+
+| SQL Server | PostgreSQL | Reason |
+|-----------|-----------|--------|
+| UNIQUEIDENTIFIER | UUID | Guid in .NET maps natively to PostgreSQL uuid |
+| NEWSEQUENTIALID() | gen_random_uuid() | Built-in UUID v4 generation (no extension needed) |
+| NVARCHAR(n) | VARCHAR(n) | Same semantics; PostgreSQL is UTF-8 natively |
+| NVARCHAR(MAX) for JSON | JSONB | Allows JSON queries and indexing; no string parsing |
+| DATETIME2 | TIMESTAMPTZ | Timezone-aware timestamp (always UTC) |
+| BIT | BOOLEAN | Cleaner semantics |
+| INT | INTEGER | Identical |
+| SYSUTCDATETIME() | NOW() | PostgreSQL NOW() returns current transaction time |
 
 ### 3.1 Accounts
 
 ```sql
 CREATE TABLE Accounts (
-    Id              UNIQUEIDENTIFIER PRIMARY KEY DEFAULT NEWSEQUENTIALID(),
-    Type            NVARCHAR(20)    NOT NULL,       -- 'clinic' | 'talent'
-    Phone           NVARCHAR(20)    NOT NULL,       -- normalized (digits only)
-    DisplayPhone    NVARCHAR(20)    NOT NULL DEFAULT '',
-    Email           NVARCHAR(320)   NOT NULL DEFAULT '',
-    ShareEmail      BIT             NOT NULL DEFAULT 0,
-    SharePhone      BIT             NOT NULL DEFAULT 0,
-    Status          NVARCHAR(20)    NOT NULL DEFAULT 'under-review',
-    CreatedAtUtc    DATETIME2       NOT NULL DEFAULT SYSUTCDATETIME(),
-    UpdatedAtUtc    DATETIME2       NOT NULL DEFAULT SYSUTCDATETIME(),
-    ProfileComplete BIT             NOT NULL DEFAULT 0,
-    DisplayName     NVARCHAR(200)   NOT NULL DEFAULT '',
-    ThemePreference NVARCHAR(10)    NOT NULL DEFAULT 'auto',
-    Founder         BIT             NOT NULL DEFAULT 0
+    Id              UUID            PRIMARY KEY DEFAULT gen_random_uuid(),
+    Type            VARCHAR(20)     NOT NULL,       -- 'clinic' | 'talent'
+    Phone           VARCHAR(20)     NOT NULL,       -- normalized (digits only)
+    DisplayPhone    VARCHAR(20)     NOT NULL DEFAULT '',
+    Email           VARCHAR(320)    NOT NULL DEFAULT '',
+    ShareEmail      BOOLEAN         NOT NULL DEFAULT FALSE,
+    SharePhone      BOOLEAN         NOT NULL DEFAULT FALSE,
+    Status          VARCHAR(20)     NOT NULL DEFAULT 'under-review',
+    CreatedAtUtc    TIMESTAMPTZ     NOT NULL DEFAULT NOW(),
+    UpdatedAtUtc    TIMESTAMPTZ     NOT NULL DEFAULT NOW(),
+    ProfileComplete BOOLEAN         NOT NULL DEFAULT FALSE,
+    DisplayName     VARCHAR(200)    NOT NULL DEFAULT '',
+    ThemePreference VARCHAR(10)     NOT NULL DEFAULT 'auto',
+    Founder         BOOLEAN         NOT NULL DEFAULT FALSE
 );
 
 CREATE UNIQUE INDEX IX_Accounts_Phone ON Accounts(Phone);
@@ -138,39 +158,39 @@ CREATE UNIQUE INDEX IX_Accounts_Phone ON Accounts(Phone);
 
 ```sql
 CREATE TABLE ClinicDetails (
-    AccountId       UNIQUEIDENTIFIER PRIMARY KEY REFERENCES Accounts(Id),
-    ClinicName      NVARCHAR(200)   NOT NULL,
-    Location        NVARCHAR(500)   NOT NULL DEFAULT '',
-    City            NVARCHAR(200)   NOT NULL DEFAULT '',
-    State           NVARCHAR(100)   NOT NULL DEFAULT '',
-    Website         NVARCHAR(500)   NOT NULL DEFAULT '',
-    Specialties     NVARCHAR(1000)  NOT NULL DEFAULT '',
-    About           NVARCHAR(2000)  NOT NULL DEFAULT '',
-    Position        NVARCHAR(200)   NOT NULL DEFAULT '',
-    MustHaveSkills  NVARCHAR(1000)  NOT NULL DEFAULT '',
-    PayRange        NVARCHAR(200)   NOT NULL DEFAULT '',
-    Benefits        NVARCHAR(1000)  NOT NULL DEFAULT '',
-    Urgency         NVARCHAR(200)   NOT NULL DEFAULT '',
-    IdealHire       NVARCHAR(2000)  NOT NULL DEFAULT ''
+    AccountId       UUID            PRIMARY KEY REFERENCES Accounts(Id),
+    ClinicName      VARCHAR(200)    NOT NULL,
+    Location        VARCHAR(500)    NOT NULL DEFAULT '',
+    City            VARCHAR(200)    NOT NULL DEFAULT '',
+    State           VARCHAR(100)    NOT NULL DEFAULT '',
+    Website         VARCHAR(500)    NOT NULL DEFAULT '',
+    Specialties     VARCHAR(1000)   NOT NULL DEFAULT '',
+    About           TEXT            NOT NULL DEFAULT '',
+    Position        VARCHAR(200)    NOT NULL DEFAULT '',
+    MustHaveSkills  VARCHAR(1000)   NOT NULL DEFAULT '',
+    PayRange        VARCHAR(200)    NOT NULL DEFAULT '',
+    Benefits        VARCHAR(1000)   NOT NULL DEFAULT '',
+    Urgency         VARCHAR(200)    NOT NULL DEFAULT '',
+    IdealHire       TEXT            NOT NULL DEFAULT ''
 );
 
 CREATE TABLE TalentDetails (
-    AccountId           UNIQUEIDENTIFIER PRIMARY KEY REFERENCES Accounts(Id),
-    ProfessionalName    NVARCHAR(200)   NOT NULL DEFAULT '',
-    PhotoName           NVARCHAR(500)   NOT NULL DEFAULT '',
-    VideoName           NVARCHAR(500)   NOT NULL DEFAULT '',
-    Role                NVARCHAR(200)   NOT NULL DEFAULT '',
-    Location            NVARCHAR(500)   NOT NULL DEFAULT '',
-    YearsExperience     NVARCHAR(50)    NOT NULL DEFAULT '',
-    ExperienceTimeline  NVARCHAR(2000)  NOT NULL DEFAULT '',
-    Skills              NVARCHAR(1000)  NOT NULL DEFAULT '',
-    CertificateNames    NVARCHAR(MAX)   NOT NULL DEFAULT '[]',  -- JSON array
-    Availability        NVARCHAR(200)   NOT NULL DEFAULT '',
-    SalaryExpectation   NVARCHAR(200)   NOT NULL DEFAULT '',
-    Languages           NVARCHAR(500)   NOT NULL DEFAULT '',
-    PortfolioUrl        NVARCHAR(500)   NOT NULL DEFAULT '',
-    GalleryNames        NVARCHAR(MAX)   NOT NULL DEFAULT '[]',  -- JSON array
-    Introduction        NVARCHAR(2000)  NOT NULL DEFAULT ''
+    AccountId           UUID            PRIMARY KEY REFERENCES Accounts(Id),
+    ProfessionalName    VARCHAR(200)    NOT NULL DEFAULT '',
+    PhotoName           VARCHAR(500)    NOT NULL DEFAULT '',
+    VideoName           VARCHAR(500)    NOT NULL DEFAULT '',
+    Role                VARCHAR(200)    NOT NULL DEFAULT '',
+    Location            VARCHAR(500)    NOT NULL DEFAULT '',
+    YearsExperience     VARCHAR(50)     NOT NULL DEFAULT '',
+    ExperienceTimeline  TEXT            NOT NULL DEFAULT '',
+    Skills              VARCHAR(1000)   NOT NULL DEFAULT '',
+    CertificateNames    JSONB           NOT NULL DEFAULT '[]',  -- native JSON array
+    Availability        VARCHAR(200)    NOT NULL DEFAULT '',
+    SalaryExpectation   VARCHAR(200)    NOT NULL DEFAULT '',
+    Languages           VARCHAR(500)    NOT NULL DEFAULT '',
+    PortfolioUrl        VARCHAR(500)    NOT NULL DEFAULT '',
+    GalleryNames        JSONB           NOT NULL DEFAULT '[]',  -- native JSON array
+    Introduction        TEXT            NOT NULL DEFAULT ''
 );
 ```
 
@@ -178,20 +198,20 @@ CREATE TABLE TalentDetails (
 
 ```sql
 CREATE TABLE HiringOpportunities (
-    Id              UNIQUEIDENTIFIER PRIMARY KEY DEFAULT NEWSEQUENTIALID(),
-    ClinicAccountId UNIQUEIDENTIFIER NOT NULL REFERENCES Accounts(Id),
-    Slug            NVARCHAR(200)   NOT NULL,
-    PositionSlug    NVARCHAR(200)   NOT NULL,
-    Title           NVARCHAR(200)   NOT NULL,
-    Location        NVARCHAR(500)   NOT NULL DEFAULT '',
-    PayRange        NVARCHAR(200)   NOT NULL DEFAULT '',
-    MustHaveSkills  NVARCHAR(1000)  NOT NULL DEFAULT '',
-    Benefits        NVARCHAR(1000)  NOT NULL DEFAULT '',
-    Urgency         NVARCHAR(200)   NOT NULL DEFAULT '',
-    IdealHire       NVARCHAR(2000)  NOT NULL DEFAULT '',
-    Status          NVARCHAR(20)    NOT NULL DEFAULT 'active',
-    CreatedAtUtc    DATETIME2       NOT NULL DEFAULT SYSUTCDATETIME(),
-    UpdatedAtUtc    DATETIME2       NOT NULL DEFAULT SYSUTCDATETIME()
+    Id              UUID            PRIMARY KEY DEFAULT gen_random_uuid(),
+    ClinicAccountId UUID            NOT NULL REFERENCES Accounts(Id),
+    Slug            VARCHAR(200)    NOT NULL,
+    PositionSlug    VARCHAR(200)    NOT NULL,
+    Title           VARCHAR(200)    NOT NULL,
+    Location        VARCHAR(500)    NOT NULL DEFAULT '',
+    PayRange        VARCHAR(200)    NOT NULL DEFAULT '',
+    MustHaveSkills  VARCHAR(1000)   NOT NULL DEFAULT '',
+    Benefits        VARCHAR(1000)   NOT NULL DEFAULT '',
+    Urgency         VARCHAR(200)    NOT NULL DEFAULT '',
+    IdealHire       TEXT            NOT NULL DEFAULT '',
+    Status          VARCHAR(20)     NOT NULL DEFAULT 'active',
+    CreatedAtUtc    TIMESTAMPTZ     NOT NULL DEFAULT NOW(),
+    UpdatedAtUtc    TIMESTAMPTZ     NOT NULL DEFAULT NOW()
 );
 
 CREATE INDEX IX_HiringOpportunities_ClinicAccountId ON HiringOpportunities(ClinicAccountId);
@@ -202,12 +222,12 @@ CREATE INDEX IX_HiringOpportunities_Slug ON HiringOpportunities(Slug, PositionSl
 
 ```sql
 CREATE TABLE HiringInvites (
-    Id              UNIQUEIDENTIFIER PRIMARY KEY DEFAULT NEWSEQUENTIALID(),
-    OpportunityId   UNIQUEIDENTIFIER NOT NULL REFERENCES HiringOpportunities(Id),
-    Token           NVARCHAR(100)   NOT NULL,
-    CreatedAtUtc    DATETIME2       NOT NULL DEFAULT SYSUTCDATETIME(),
-    ExpiresAtUtc    DATETIME2       NOT NULL,
-    Active          BIT             NOT NULL DEFAULT 1
+    Id              UUID            PRIMARY KEY DEFAULT gen_random_uuid(),
+    OpportunityId   UUID            NOT NULL REFERENCES HiringOpportunities(Id),
+    Token           VARCHAR(100)    NOT NULL,
+    CreatedAtUtc    TIMESTAMPTZ     NOT NULL DEFAULT NOW(),
+    ExpiresAtUtc    TIMESTAMPTZ     NOT NULL,
+    Active          BOOLEAN         NOT NULL DEFAULT TRUE
 );
 
 CREATE UNIQUE INDEX IX_HiringInvites_Token ON HiringInvites(Token);
@@ -218,11 +238,11 @@ CREATE INDEX IX_HiringInvites_OpportunityId ON HiringInvites(OpportunityId);
 
 ```sql
 CREATE TABLE TalentPassportShares (
-    Id              UNIQUEIDENTIFIER PRIMARY KEY DEFAULT NEWSEQUENTIALID(),
-    TalentAccountId UNIQUEIDENTIFIER NOT NULL REFERENCES Accounts(Id),
-    Token           NVARCHAR(100)   NOT NULL,
-    CreatedAtUtc    DATETIME2       NOT NULL DEFAULT SYSUTCDATETIME(),
-    Active          BIT             NOT NULL DEFAULT 1
+    Id              UUID            PRIMARY KEY DEFAULT gen_random_uuid(),
+    TalentAccountId UUID            NOT NULL REFERENCES Accounts(Id),
+    Token           VARCHAR(100)    NOT NULL,
+    CreatedAtUtc    TIMESTAMPTZ     NOT NULL DEFAULT NOW(),
+    Active          BOOLEAN         NOT NULL DEFAULT TRUE
 );
 
 CREATE UNIQUE INDEX IX_TalentPassportShares_Token ON TalentPassportShares(Token);
@@ -233,20 +253,21 @@ CREATE INDEX IX_TalentPassportShares_TalentAccountId ON TalentPassportShares(Tal
 
 ```sql
 CREATE TABLE TalentApplications (
-    Id              UNIQUEIDENTIFIER PRIMARY KEY DEFAULT NEWSEQUENTIALID(),
-    OpportunityId   UNIQUEIDENTIFIER NULL REFERENCES HiringOpportunities(Id),
-    TalentAccountId UNIQUEIDENTIFIER NOT NULL REFERENCES Accounts(Id),
-    ClinicAccountId UNIQUEIDENTIFIER NOT NULL REFERENCES Accounts(Id),
-    Source          NVARCHAR(30)    NOT NULL,
-    Status          NVARCHAR(30)    NOT NULL DEFAULT 'invited',
-    AcceptedAtUtc   DATETIME2       NOT NULL DEFAULT SYSUTCDATETIME(),
-    SubmittedAtUtc  DATETIME2       NOT NULL DEFAULT SYSUTCDATETIME(),
-    UpdatedAtUtc    DATETIME2       NOT NULL DEFAULT SYSUTCDATETIME()
+    Id              UUID            PRIMARY KEY DEFAULT gen_random_uuid(),
+    OpportunityId   UUID            NULL REFERENCES HiringOpportunities(Id),
+    TalentAccountId UUID            NOT NULL REFERENCES Accounts(Id),
+    ClinicAccountId UUID            NOT NULL REFERENCES Accounts(Id),
+    Source          VARCHAR(30)     NOT NULL,
+    Status          VARCHAR(30)     NOT NULL DEFAULT 'invited',
+    AcceptedAtUtc   TIMESTAMPTZ     NOT NULL DEFAULT NOW(),
+    SubmittedAtUtc  TIMESTAMPTZ     NOT NULL DEFAULT NOW(),
+    UpdatedAtUtc    TIMESTAMPTZ     NOT NULL DEFAULT NOW()
 );
 
 CREATE INDEX IX_TalentApplications_TalentAccountId ON TalentApplications(TalentAccountId);
 CREATE INDEX IX_TalentApplications_ClinicAccountId ON TalentApplications(ClinicAccountId);
--- Prevent duplicate applications
+
+-- Prevent duplicate applications (PostgreSQL partial unique index)
 CREATE UNIQUE INDEX IX_TalentApplications_Unique 
     ON TalentApplications(TalentAccountId, ClinicAccountId, OpportunityId)
     WHERE OpportunityId IS NOT NULL;
@@ -259,13 +280,13 @@ CREATE UNIQUE INDEX IX_TalentApplications_UniqueNoOpp
 
 ```sql
 CREATE TABLE PhoneVerifications (
-    Id              UNIQUEIDENTIFIER PRIMARY KEY DEFAULT NEWSEQUENTIALID(),
-    Phone           NVARCHAR(20)    NOT NULL,
-    CodeHash        NVARCHAR(200)   NOT NULL,       -- bcrypt hash of code
-    ExpiresAtUtc    DATETIME2       NOT NULL,
-    VerifiedAtUtc   DATETIME2       NULL,
-    AttemptCount    INT             NOT NULL DEFAULT 0,
-    CreatedAtUtc    DATETIME2       NOT NULL DEFAULT SYSUTCDATETIME()
+    Id              UUID            PRIMARY KEY DEFAULT gen_random_uuid(),
+    Phone           VARCHAR(20)     NOT NULL,
+    CodeHash        VARCHAR(200)    NOT NULL,       -- bcrypt hash of code
+    ExpiresAtUtc    TIMESTAMPTZ     NOT NULL,
+    VerifiedAtUtc   TIMESTAMPTZ     NULL,
+    AttemptCount    INTEGER         NOT NULL DEFAULT 0,
+    CreatedAtUtc    TIMESTAMPTZ     NOT NULL DEFAULT NOW()
 );
 
 CREATE INDEX IX_PhoneVerifications_Phone ON PhoneVerifications(Phone);
@@ -275,13 +296,13 @@ CREATE INDEX IX_PhoneVerifications_Phone ON PhoneVerifications(Phone);
 
 ```sql
 CREATE TABLE VerificationSecurityRecords (
-    Id              UNIQUEIDENTIFIER PRIMARY KEY DEFAULT NEWSEQUENTIALID(),
-    Phone           NVARCHAR(20)    NOT NULL,
-    AttemptCount    INT             NOT NULL DEFAULT 0,
-    LockedUntilUtc  DATETIME2       NULL,
-    FirstAttemptUtc DATETIME2       NOT NULL DEFAULT SYSUTCDATETIME(),
-    LastAttemptUtc  DATETIME2       NOT NULL DEFAULT SYSUTCDATETIME(),
-    Flagged         BIT             NOT NULL DEFAULT 0
+    Id              UUID            PRIMARY KEY DEFAULT gen_random_uuid(),
+    Phone           VARCHAR(20)     NOT NULL,
+    AttemptCount    INTEGER         NOT NULL DEFAULT 0,
+    LockedUntilUtc  TIMESTAMPTZ     NULL,
+    FirstAttemptUtc TIMESTAMPTZ     NOT NULL DEFAULT NOW(),
+    LastAttemptUtc  TIMESTAMPTZ     NOT NULL DEFAULT NOW(),
+    Flagged         BOOLEAN         NOT NULL DEFAULT FALSE
 );
 
 CREATE UNIQUE INDEX IX_VerificationSecurityRecords_Phone ON VerificationSecurityRecords(Phone);
@@ -291,10 +312,10 @@ CREATE UNIQUE INDEX IX_VerificationSecurityRecords_Phone ON VerificationSecurity
 
 ```sql
 CREATE TABLE AdminUsers (
-    Id              UNIQUEIDENTIFIER PRIMARY KEY DEFAULT NEWSEQUENTIALID(),
-    Username        NVARCHAR(100)   NOT NULL,
-    PasswordHash    NVARCHAR(500)   NOT NULL,
-    CreatedAtUtc    DATETIME2       NOT NULL DEFAULT SYSUTCDATETIME()
+    Id              UUID            PRIMARY KEY DEFAULT gen_random_uuid(),
+    Username        VARCHAR(100)    NOT NULL,
+    PasswordHash    VARCHAR(500)    NOT NULL,
+    CreatedAtUtc    TIMESTAMPTZ     NOT NULL DEFAULT NOW()
 );
 
 CREATE UNIQUE INDEX IX_AdminUsers_Username ON AdminUsers(Username);
@@ -304,17 +325,34 @@ CREATE UNIQUE INDEX IX_AdminUsers_Username ON AdminUsers(Username);
 
 ```sql
 CREATE TABLE RefreshTokens (
-    Id              UNIQUEIDENTIFIER PRIMARY KEY DEFAULT NEWSEQUENTIALID(),
-    AccountId       UNIQUEIDENTIFIER NOT NULL REFERENCES Accounts(Id),
-    Token           NVARCHAR(500)   NOT NULL,
-    ExpiresAtUtc    DATETIME2       NOT NULL,
-    CreatedAtUtc    DATETIME2       NOT NULL DEFAULT SYSUTCDATETIME(),
-    RevokedAtUtc    DATETIME2       NULL
+    Id              UUID            PRIMARY KEY DEFAULT gen_random_uuid(),
+    AccountId       UUID            NOT NULL REFERENCES Accounts(Id),
+    Token           VARCHAR(500)    NOT NULL,
+    ExpiresAtUtc    TIMESTAMPTZ     NOT NULL,
+    CreatedAtUtc    TIMESTAMPTZ     NOT NULL DEFAULT NOW(),
+    RevokedAtUtc    TIMESTAMPTZ     NULL
 );
 
 CREATE INDEX IX_RefreshTokens_AccountId ON RefreshTokens(AccountId);
 CREATE UNIQUE INDEX IX_RefreshTokens_Token ON RefreshTokens(Token);
 ```
+
+### 3.11 EF Core Configuration Notes
+
+- Use `Npgsql.EntityFrameworkCore.PostgreSQL` NuGet package.
+- JSONB columns (`CertificateNames`, `GalleryNames`) use EF Core's `OwnsOne` or value conversion with `Npgsql`'s built-in JSON support:
+  ```csharp
+  .Property(e => e.CertificateNames)
+  .HasColumnType("jsonb")
+  .HasConversion(
+      v => JsonSerializer.Serialize(v, JsonSerializerOptions.Default),
+      v => JsonSerializer.Deserialize<List<string>>(v, JsonSerializerOptions.Default) ?? new()
+  );
+  ```
+  Alternatively, use Npgsql's built-in `NpgsqlDataSource` with `List<string>` mapping which handles JSONB natively without manual serialization.
+- All `DateTime` properties use `DateTime.UtcNow` in C# and `TIMESTAMPTZ` in PostgreSQL.
+- Seed the initial migration with `HasData()` matching the frontend `SEEDED_ACCOUNTS`, `SEEDED_OPPORTUNITIES`, `SEEDED_INVITES`, `SEEDED_PASSPORTS`.
+- Enable `app.UseNpgsql()` for connection resilience (automatic retry on transient failures).
 
 ---
 
@@ -503,11 +541,13 @@ builder.Services.AddAuthorization(options =>
 | Resource | SKU / Tier | Purpose |
 |----------|-----------|---------|
 | App Service | B1 (Linux) | Host ASP.NET Core API |
-| SQL Database | Serverless (GP_S_Gen5_1) | Primary data store |
+| PostgreSQL Flexible Server | Burstable B1ms (1 vCore, 2 GB) | Primary data store |
 | Key Vault | Standard | JWT signing key, Twilio creds, connection strings |
 | Storage Account | Standard LRS (Blob) | Certificates, photos, videos |
 | App Insights | Per-GB | Logging, exceptions, perf monitoring |
 | Front Door | Standard (optional MVP) | CDN, SSL, WAF |
+
+**PostgreSQL hosting note:** Azure Database for PostgreSQL Flexible Server is the recommended Azure-native option. For earlier development stages (before production), a managed Postgres service like Neon, Supabase, or Railway can be used for faster iteration -- the EF Core provider (`Npgsql`) is identical regardless. The connection string is the only thing that changes.
 
 ### Deployment Pipeline
 
@@ -515,7 +555,7 @@ builder.Services.AddAuthorization(options =>
 GitHub main branch
   -> GitHub Actions: dotnet restore, build, test, publish
   -> Deploy to Azure App Service
-  -> Run EF Core migrations
+  -> Run EF Core migrations (dotnet ef database update)
 ```
 
 ---
@@ -678,7 +718,9 @@ export const appConfig: ApplicationConfig = {
 ### Phase 1: Backend Foundation (Week 1)
 - Scaffold solution with 4 projects (Api, Application, Domain, Infrastructure)
 - Define domain entities and enums matching frontend types
-- Configure EF Core with SQL Server
+- Add NuGet packages: `Npgsql.EntityFrameworkCore.PostgreSQL`, `Microsoft.AspNetCore.Authentication.JwtBearer`, `Twilio`, `Azure.Identity`, `Azure.Security.KeyVault.Secrets`, `Azure.Storage.Blobs`, `MediatR`, `FluentValidation`
+- Configure EF Core with PostgreSQL (Npgsql)
+- Enable connection resilience (`EnableRetryOnFailure`)
 - Create initial migration with seed data
 - Implement ExceptionMiddleware
 - Verify /health endpoint works
@@ -731,7 +773,7 @@ export const appConfig: ApplicationConfig = {
 - File type/size validation
 
 ### Phase 9: Deployment (Week 6-7)
-- Azure resources via Bicep/ARM
+- Azure resources via Bicep/ARM (App Service + PostgreSQL Flexible Server)
 - GitHub Actions CI/CD
 - Application Insights
 - Performance and security testing
@@ -749,6 +791,7 @@ export const appConfig: ApplicationConfig = {
 | Date format mismatch | API returns ISO 8601 UTC; frontend formats via DatePipe |
 | Concurrent founder assignment | Serializable transaction; only first 1000 accounts get it |
 | File upload limits | ASP.NET Core request size limits; chunked upload for video |
+| PostgreSQL connection pooling | Use Npgsql built-in pooling (default 100 connections); adjust for Flexible Server limits |
 
 ---
 
