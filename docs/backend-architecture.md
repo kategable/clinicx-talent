@@ -1,939 +1,788 @@
 # ClinicX Talent -- Backend Implementation Plan
 
-## 1. Overview and Key Design Decisions
+## 1. Overview and Execution Order
+
+### The Big Picture
 
 The current application is entirely client-side: domain logic lives in NgRx reducers, data persists in localStorage, authentication is simulated via hardcoded test credentials, and SMS verification is a no-op that accepts a fixed set of phone/code pairs. The data source abstractions (`AccountDataSource`, `HiringDataSource`) already exist and are injected via Angular DI -- the frontend migration path is clean: swap local implementations for HTTP implementations that call the new ASP.NET Core API.
 
-**Core architectural principles:**
-- Clean Architecture (Presentation / Application / Domain / Infrastructure layers)
-- ASP.NET Core 9 with minimal API controllers
-- Entity Framework Core with PostgreSQL (via Npgsql) for relational data
-- Azure Blob Storage for all media files (videos, photos, certificates, galleries)
-- **Google OAuth as primary auth**, Azure Communication Services SMS as phone verification
-- Azure (production) / Docker Compose (development)
-- **Soft delete everywhere** -- accounts, hiring resources, and files are soft-deleted by default. Full hard deletion requires a special admin approval process.
-- **Repeatable deployments** -- Infrastructure as Code (Bicep), immutable artifacts, CI/CD with green/blue slot swaps, zero-downtime deployments, approval gates, and automated rollback.
+### Execution Order
 
-**Why Azure Blob Storage for media, not PostgreSQL:** Cheaper ($0.018 vs $0.115/GB/month), CDN-friendly, designed for large blobs, no database bloat.
+**Phase 0 (NOW): Frontend login UI + auth services + tests -- no backend required**
+Build the Google OAuth and phone login UI in the Angular app. All API interactions are mocked. Unit tests and Playwright E2E tests validate every flow. The CI/CD pipeline enforces these tests on every PR and before production deployment.
 
-**Why Google OAuth first:** Free, higher conversion (85% vs 78%), NIST-approved over SMS OTP.
+**Phase 1+: Backend implementation (later)**
+Build the ASP.NET Core API, PostgreSQL database, Azure services, and connect the frontend to the real backend.
 
-**Why soft delete everywhere:** Accidental data loss is permanent. Soft delete gives a 90-day safety window for restore. Full permanent deletion requires a two-admin approval workflow.
-
-**Development approach:** Local Docker Compose (PostgreSQL + API), local disk file storage mock, Google test client, SMS mock. No Azure until Phase 10.
-
-**Deployment approach:** Green/blue slot swap with additive-only migrations, health check gates, automated rollback.
+This plan documents Phase 0 in detail. The backend architecture (Phases 1+) remains from earlier versions as reference.
 
 ---
 
-## 2. Backend Project Structure
+## 2. Phase 0: Frontend Login UI -- What We Are Building
+
+### 2.1 Goal
+
+Replace the current hardcoded test credential login with a real two-path authentication UI:
+
+1. **Google OAuth** (primary) -- "Sign in with Google" button using Google Identity Services
+2. **Phone SMS** (secondary) -- phone number input + 6-digit code verification
+3. All interactions go through abstract services that are **mocked** during development until the backend is ready
+
+### 2.2 Current Auth Flow (to be replaced)
+
+The existing login lives in `src/app/features/registration/registration.ts` and is driven by NgRx actions in the reducer:
+- `AppActions.selectAccountType` -- picks clinic or talent
+- `AppActions.requestSMSCode` -- enters phone, matched against `TEST_CREDENTIALS`
+- `AppActions.verifyRegistrationCode` -- enters code, matched against `TEST_CREDENTIALS`
+- `AppActions.verifySignInCode` -- same for sign-in
+- `AppActions.adminLogin` -- hardcoded `admin`/`admin` check
+
+These all use hardcoded test data (`TEST_CREDENTIALS`, `SEEDED_ACCOUNTS`). We replace them with Google OAuth + real phone input backed by mock services.
+
+### 2.3 New Auth Service Architecture
 
 ```
-ClinicX/
-  docker-compose.yml
-  ClinicX.sln
-  src/
-    ClinicX.Api/
-      Controllers/
-        AuthController.cs
-        AccountsController.cs
-        FilesController.cs
-        HiringController.cs
-        PassportsController.cs
-        AdminController.cs
-        AdminApprovalController.cs
-        PublicController.cs
-      Middleware/
-        ExceptionMiddleware.cs
-        RequestLoggingMiddleware.cs
-      Program.cs
-      appsettings*.json
-
-    ClinicX.Application/
-      Common/Interfaces/
-        ICurrentUserService.cs, IJwtService.cs, ISmsService.cs,
-        IGoogleAuthService.cs, IFileStorageService.cs, ISoftDeleteService.cs
-      Auth/ ...
-      Accounts/ ...
-      Files/ ...
-      Hiring/ ...
-      Founder/ ...
-      Admin/ ...
-
-    ClinicX.Domain/
-      Common/
-        ISoftDeletable.cs
-        SoftDeleteBase.cs
-        HardDeleteRequest.cs
-      Entities/
-        Account.cs, ClinicDetails.cs, TalentDetails.cs, AccountFile.cs,
-        HiringOpportunity.cs, HiringInvite.cs, TalentPassportShare.cs,
-        TalentApplication.cs, PhoneVerification.cs, VerificationSecurityRecord.cs,
-        AdminUser.cs, RefreshToken.cs, ExternalLogin.cs
-      Enums/ ...
-      ValueObjects/ PhoneNumber.cs
-      Exceptions/ ...
-
-    ClinicX.Infrastructure/
-      Persistence/
-        ClinicXDbContext.cs (with ISoftDeletable global query filters)
-        Migrations/
-        Configurations/
-        Seed/ SeedData.cs
-      Services/
-        SmsService.cs / SmsServiceMock.cs
-        JwtService.cs
-        GoogleAuthService.cs
-        FileStorageService.cs / FileStorageServiceLocal.cs
-        SoftDeleteService.cs
-        CurrentUserService.cs
-
-  tests/
-    ClinicX.UnitTests/
-    ClinicX.IntegrationTests/
-    ClinicX.Api.Tests/
-
-  infrastructure/                            # NEW: Infrastructure as Code
-    main.bicep                               # Top-level orchestration
-    modules/
-    app-service.bicep                        # App Service + slots
-    postgres.bicep                           # PostgreSQL Flexible Server
-    blob-storage.bicep                       # Storage account + containers
-    key-vault.bicep                          # Key Vault + secrets
-    communication-services.bicep             # ACS SMS
-    app-insights.bicep                       # Application Insights
-    networking.bicep                         # VNet, NSG, private endpoints
-    monitoring.bicep                         # Alerts, dashboards
-    parameters/
-      development.bicepparam
-      uat.bicepparam
-      production.bicepparam
-
-  scripts/
-    deploy.sh                                # Full deployment script (azd up equivalent)
-    db-snapshot.sh                           # pg_dump / pg_restore
-    db-seed.sh                               # Seed data loading
-    db-reset.sh                              # Dev database reset
-    smoke-test.sh                            # Post-deployment smoke tests
-    rollback.sh                              # Slot swap rollback
-
-  .github/
-    workflows/
-      ci.yml                                 # Build + test on every PR
-      cd.yml                                 # Deploy to UAT + production
+[Registration Component] 
+    |
+    +--- [AuthService] ---------> [IAuthProvider] ---------> [MockAuthProvider]  (dev)
+    |       (orchestrator)        (abstract)                  [HttpAuthProvider]  (future)
+    |
+    +--- Google Identity Services (GIS) library (window.google.accounts.id)
+    |
+    +--- NgRx Store (for state)
 ```
 
----
+The `AuthService` replaces the direct NgRx action dispatches for auth. It:
+- Orchestrates the Google sign-in flow
+- Manages phone SMS entry and code verification
+- Stores/retrieves JWT tokens in memory (or sessionStorage for MVP)
+- Provides `isAuthenticated()` and `currentAccount` observables
 
-## 3. Database Schema (EF Core with PostgreSQL)
+### 2.4 New Files to Create
 
-### 3.0 Soft Delete Foundation
+```
+src/app/core/
+  auth.service.ts                  # Orchestrates all auth flows
+  auth.service.spec.ts             # Unit tests for AuthService
+  auth-provider.ts                 # Abstract IAuthProvider interface
+  mock-auth.provider.ts            # Mock implementation for development
+  jwt-interceptor.ts               # Attaches JWT to HTTP requests
+  jwt-interceptor.spec.ts          # Unit tests for interceptor
+  error-interceptor.ts             # Handles 401/403/429 globally
 
-Every entity that can be soft-deleted implements:
+src/app/core/auth/
+  models.ts                        # AuthResult, TokenPair, AuthState interfaces
+  constants.ts                     # Token storage keys
 
-```csharp
-public interface ISoftDeletable
-{
-    DateTime? DeletedAtUtc { get; set; }
-    Guid? DeletedByAccountId { get; set; }
+src/app/shared/
+  google-signin-button/
+    google-signin-button.ts        # Reusable Google sign-in button component
+    google-signin-button.html
+    google-signin-button.scss
+    google-signin-button.spec.ts   # Unit tests
+  phone-input/
+    phone-input.ts                 # Phone number input with country code
+    phone-input.html
+    phone-input.scss
+    phone-input.spec.ts
+  verification-code-input/
+    verification-code-input.ts     # 6-digit code input
+    verification-code-input.html
+    verification-code-input.scss
+    verification-code-input.spec.ts
+
+src/app/features/
+  signin/
+    signin.ts                      # New sign-in page component (replaces registration)
+    signin.html
+    signin.scss
+    signin.spec.ts                 # Unit tests
+  register/
+    register-phone.ts              # Phone registration step
+    register-phone.html
+    register-phone.scss
+    register-phone.spec.ts
+
+src/environments/
+  environment.ts                   # googleClientId, useMockAuth, apiUrl
+
+e2e/
+  auth/
+    google-signin.spec.ts          # Playwright: Google sign-in flow
+    phone-signin.spec.ts           # Playwright: phone SMS sign-in flow
+    registration.spec.ts           # Playwright: new account registration
+    admin-login.spec.ts            # Playwright: admin login
+```
+
+### 2.5 AuthService Design
+
+```typescript
+// src/app/core/auth.service.ts
+@Injectable({ providedIn: 'root' })
+export class AuthService {
+  private readonly store = inject(Store);
+  private readonly provider = inject(AuthProvider);  // Mock or real
+  private readonly router = inject(Router);
+
+  // State
+  readonly authState = signal<AuthState>({ 
+    status: 'idle',           // idle | loading | authenticated | error
+    account: null,
+    error: null,
+    phoneRequired: false,
+  });
+
+  constructor() {
+    // Hydrate from sessionStorage on init
+    const saved = sessionStorage.getItem(TOKEN_STORAGE_KEY);
+    if (saved) {
+      const parsed = JSON.parse(saved) as TokenPair;
+      this.authState.set({ ...this.authState(), status: 'authenticated' });
+    }
+  }
+
+  // --- Google OAuth ---
+  async signInWithGoogle(): Promise<void> { ... }
+  async handleGoogleCallback(idToken: string): Promise<void> { ... }
+
+  // --- Phone SMS ---
+  async sendSmsCode(phone: string): Promise<void> { ... }
+  async verifySmsCode(phone: string, code: string): Promise<void> { ... }
+
+  // --- Registration (new account) ---
+  async createAccount(type: AccountType, phone: string): Promise<void> { ... }
+
+  // --- Admin ---
+  async adminLogin(username: string, password: string): Promise<void> { ... }
+  adminLogout(): void { ... }
+
+  // --- Token management ---
+  getToken(): string | null { ... }
+  clearSession(): void { ... }
+  isAuthenticated(): boolean { ... }
 }
 ```
 
-EF Core global query filters automatically exclude soft-deleted records from all normal queries. Admin queries use `.IgnoreQueryFilters()`.
+### 2.6 MockAuthProvider Design
 
-### 3.1 Accounts
+```typescript
+// src/app/core/mock-auth.provider.ts
+@Injectable()
+export class MockAuthProvider implements AuthProvider {
+  async exchangeGoogleToken(idToken: string): Promise<AuthResult> {
+    // Simulate network delay
+    await delay(800);
+    
+    // Mock response -- returns a simulated account
+    return {
+      token: 'mock-jwt-token-' + Date.now(),
+      refreshToken: 'mock-refresh-token-' + Date.now(),
+      account: {
+        id: 'mock-account-1',
+        type: 'talent',
+        phone: '3125550199',
+        status: 'approved',
+        displayName: 'Demo User',
+        email: 'demo@gmail.com',
+        founder: false,
+        profileComplete: true,
+      },
+      isNewAccount: false,
+      phoneRequired: false,
+    };
+  }
 
-```sql
-CREATE TABLE Accounts (
-    Id              UUID            PRIMARY KEY DEFAULT gen_random_uuid(),
-    Type            VARCHAR(20)     NOT NULL,
-    Phone           VARCHAR(20)     NOT NULL DEFAULT '',
-    DisplayPhone    VARCHAR(20)     NOT NULL DEFAULT '',
-    Email           VARCHAR(320)    NOT NULL DEFAULT '',
-    ShareEmail      BOOLEAN         NOT NULL DEFAULT FALSE,
-    SharePhone      BOOLEAN         NOT NULL DEFAULT FALSE,
-    Status          VARCHAR(20)     NOT NULL DEFAULT 'under-review',
-    CreatedAtUtc    TIMESTAMPTZ     NOT NULL DEFAULT NOW(),
-    UpdatedAtUtc    TIMESTAMPTZ     NOT NULL DEFAULT NOW(),
-    ProfileComplete BOOLEAN         NOT NULL DEFAULT FALSE,
-    DisplayName     VARCHAR(200)    NOT NULL DEFAULT '',
-    ThemePreference VARCHAR(10)     NOT NULL DEFAULT 'auto',
-    Founder         BOOLEAN         NOT NULL DEFAULT FALSE,
-    DeletedAtUtc    TIMESTAMPTZ     NULL,
-    DeletedByAccountId UUID         NULL REFERENCES Accounts(Id)
-);
+  async sendSmsCode(phone: string): Promise<void> {
+    await delay(500);
+    // In dev mode: log the code to console so the tester can read it
+    const mockCode = '123456';
+    console.log(`[MOCK SMS] Code for ${phone}: ${mockCode}`);
+    sessionStorage.setItem('clinicx.mock.code', mockCode);
+  }
 
-CREATE UNIQUE INDEX IX_Accounts_Phone 
-    ON Accounts(Phone) WHERE DeletedAtUtc IS NULL AND Phone <> '';
-```
+  async verifySmsCode(phone: string, code: string): Promise<AuthResult> {
+    await delay(500);
+    const expectedCode = sessionStorage.getItem('clinicx.mock.code') ?? '123456';
+    if (code !== expectedCode) {
+      throw new AuthError('INVALID_CODE', 'The code does not match.');
+    }
+    return { token: '...', account: { ... }, isNewAccount: true };
+  }
 
-### 3.2 External Logins
-
-```sql
-CREATE TABLE ExternalLogins (
-    Id              UUID            PRIMARY KEY DEFAULT gen_random_uuid(),
-    AccountId       UUID            NOT NULL REFERENCES Accounts(Id),
-    Provider        VARCHAR(50)     NOT NULL,
-    ProviderSubject VARCHAR(500)    NOT NULL,
-    Email           VARCHAR(320)    NOT NULL DEFAULT '',
-    CreatedAtUtc    TIMESTAMPTZ     NOT NULL DEFAULT NOW(),
-    DeletedAtUtc    TIMESTAMPTZ     NULL,
-    DeletedByAccountId UUID         NULL REFERENCES Accounts(Id)
-);
-
-CREATE UNIQUE INDEX IX_ExternalLogins_Provider_Subject 
-    ON ExternalLogins(Provider, ProviderSubject) WHERE DeletedAtUtc IS NULL;
-```
-
-### 3.3 Account Details
-
-```sql
-CREATE TABLE ClinicDetails (
-    AccountId       UUID            PRIMARY KEY REFERENCES Accounts(Id),
-    -- ... all clinic fields ...
-    DeletedAtUtc    TIMESTAMPTZ     NULL
-);
-
-CREATE TABLE TalentDetails (
-    AccountId       UUID            PRIMARY KEY REFERENCES Accounts(Id),
-    ProfessionalName VARCHAR(200)   NOT NULL DEFAULT '',
-    PhotoUrl        VARCHAR(1000)   NOT NULL DEFAULT '',
-    VideoUrl        VARCHAR(1000)   NOT NULL DEFAULT '',
-    Role            VARCHAR(200)    NOT NULL DEFAULT '',
-    Location        VARCHAR(500)    NOT NULL DEFAULT '',
-    YearsExperience VARCHAR(50)     NOT NULL DEFAULT '',
-    ExperienceTimeline TEXT         NOT NULL DEFAULT '',
-    Skills          VARCHAR(1000)   NOT NULL DEFAULT '',
-    CertificateUrls JSONB           NOT NULL DEFAULT '[]',
-    Availability    VARCHAR(200)    NOT NULL DEFAULT '',
-    SalaryExpectation VARCHAR(200)  NOT NULL DEFAULT '',
-    Languages       VARCHAR(500)    NOT NULL DEFAULT '',
-    PortfolioUrl    VARCHAR(1000)   NOT NULL DEFAULT '',
-    GalleryUrls     JSONB           NOT NULL DEFAULT '[]',
-    Introduction    TEXT            NOT NULL DEFAULT '',
-    DeletedAtUtc    TIMESTAMPTZ     NULL
-);
-```
-
-### 3.4 Account Files
-
-```sql
-CREATE TABLE AccountFiles (
-    Id              UUID            PRIMARY KEY DEFAULT gen_random_uuid(),
-    AccountId       UUID            NOT NULL REFERENCES Accounts(Id),
-    Category        VARCHAR(30)     NOT NULL,
-    BlobPath        VARCHAR(500)    NOT NULL,
-    Url             VARCHAR(1000)   NOT NULL,
-    ContentType     VARCHAR(100)    NOT NULL DEFAULT '',
-    FileSizeBytes   BIGINT          NOT NULL DEFAULT 0,
-    OriginalName    VARCHAR(500)    NOT NULL DEFAULT '',
-    UploadedAtUtc   TIMESTAMPTZ     NOT NULL DEFAULT NOW(),
-    DeletedAtUtc    TIMESTAMPTZ     NULL,
-    DeletedByAccountId UUID         NULL REFERENCES Accounts(Id)
-);
-```
-
-### 3.5 Hiring Opportunities
-
-```sql
-CREATE TABLE HiringOpportunities (
-    Id              UUID            PRIMARY KEY DEFAULT gen_random_uuid(),
-    ClinicAccountId UUID            NOT NULL REFERENCES Accounts(Id),
-    Slug            VARCHAR(200)    NOT NULL,
-    PositionSlug    VARCHAR(200)    NOT NULL,
-    Title           VARCHAR(200)    NOT NULL,
-    Location        VARCHAR(500)    NOT NULL DEFAULT '',
-    PayRange        VARCHAR(200)    NOT NULL DEFAULT '',
-    MustHaveSkills  VARCHAR(1000)   NOT NULL DEFAULT '',
-    Benefits        VARCHAR(1000)   NOT NULL DEFAULT '',
-    Urgency         VARCHAR(200)    NOT NULL DEFAULT '',
-    IdealHire       TEXT            NOT NULL DEFAULT '',
-    Status          VARCHAR(20)     NOT NULL DEFAULT 'active',
-    CreatedAtUtc    TIMESTAMPTZ     NOT NULL DEFAULT NOW(),
-    UpdatedAtUtc    TIMESTAMPTZ     NOT NULL DEFAULT NOW(),
-    DeletedAtUtc    TIMESTAMPTZ     NULL,
-    DeletedByAccountId UUID         NULL REFERENCES Accounts(Id)
-);
-```
-
-### 3.6 Hiring Invites
-
-```sql
-CREATE TABLE HiringInvites (
-    Id              UUID            PRIMARY KEY DEFAULT gen_random_uuid(),
-    OpportunityId   UUID            NOT NULL REFERENCES HiringOpportunities(Id),
-    Token           VARCHAR(100)    NOT NULL,
-    CreatedAtUtc    TIMESTAMPTZ     NOT NULL DEFAULT NOW(),
-    ExpiresAtUtc    TIMESTAMPTZ     NOT NULL,
-    Active          BOOLEAN         NOT NULL DEFAULT TRUE,
-    DeletedAtUtc    TIMESTAMPTZ     NULL,
-    DeletedByAccountId UUID         NULL REFERENCES Accounts(Id)
-);
-
-CREATE UNIQUE INDEX IX_HiringInvites_Token 
-    ON HiringInvites(Token) WHERE DeletedAtUtc IS NULL;
-```
-
-### 3.7 Talent Passport Shares
-
-```sql
-CREATE TABLE TalentPassportShares (
-    Id              UUID            PRIMARY KEY DEFAULT gen_random_uuid(),
-    TalentAccountId UUID            NOT NULL REFERENCES Accounts(Id),
-    Token           VARCHAR(100)    NOT NULL,
-    CreatedAtUtc    TIMESTAMPTZ     NOT NULL DEFAULT NOW(),
-    Active          BOOLEAN         NOT NULL DEFAULT TRUE,
-    DeletedAtUtc    TIMESTAMPTZ     NULL,
-    DeletedByAccountId UUID         NULL REFERENCES Accounts(Id)
-);
-
-CREATE UNIQUE INDEX IX_TalentPassportShares_Token 
-    ON TalentPassportShares(Token) WHERE DeletedAtUtc IS NULL;
-```
-
-### 3.8 Talent Applications
-
-```sql
-CREATE TABLE TalentApplications (
-    Id              UUID            PRIMARY KEY DEFAULT gen_random_uuid(),
-    OpportunityId   UUID            NULL REFERENCES HiringOpportunities(Id),
-    TalentAccountId UUID            NOT NULL REFERENCES Accounts(Id),
-    ClinicAccountId UUID            NOT NULL REFERENCES Accounts(Id),
-    Source          VARCHAR(30)     NOT NULL,
-    Status          VARCHAR(30)     NOT NULL DEFAULT 'invited',
-    AcceptedAtUtc   TIMESTAMPTZ     NOT NULL DEFAULT NOW(),
-    SubmittedAtUtc  TIMESTAMPTZ     NOT NULL DEFAULT NOW(),
-    UpdatedAtUtc    TIMESTAMPTZ     NOT NULL DEFAULT NOW(),
-    DeletedAtUtc    TIMESTAMPTZ     NULL,
-    DeletedByAccountId UUID         NULL REFERENCES Accounts(Id)
-);
-```
-
-### 3.9 Hard Delete Requests (approval workflow)
-
-```sql
-CREATE TABLE HardDeleteRequests (
-    Id                  UUID            PRIMARY KEY DEFAULT gen_random_uuid(),
-    TargetTable         VARCHAR(100)    NOT NULL,
-    TargetId            UUID            NOT NULL,
-    RequestedByAccountId UUID           NOT NULL REFERENCES Accounts(Id),
-    RequestedAtUtc      TIMESTAMPTZ     NOT NULL DEFAULT NOW(),
-    ApprovedByAccountId UUID            NULL REFERENCES Accounts(Id),
-    ApprovedAtUtc       TIMESTAMPTZ     NULL,
-    Status              VARCHAR(20)     NOT NULL DEFAULT 'pending',
-    RejectionReason     TEXT            NULL
-);
-```
-
-### 3.10 Operational Tables (no soft delete)
-
-```sql
-CREATE TABLE PhoneVerifications (
-    Id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    Phone VARCHAR(20) NOT NULL,
-    CodeHash VARCHAR(200) NOT NULL,
-    ExpiresAtUtc TIMESTAMPTZ NOT NULL,
-    VerifiedAtUtc TIMESTAMPTZ NULL,
-    AttemptCount INTEGER NOT NULL DEFAULT 0,
-    CreatedAtUtc TIMESTAMPTZ NOT NULL DEFAULT NOW()
-);
-
-CREATE TABLE VerificationSecurityRecords (
-    Id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    Phone VARCHAR(20) NOT NULL,
-    AttemptCount INTEGER NOT NULL DEFAULT 0,
-    LockedUntilUtc TIMESTAMPTZ NULL,
-    FirstAttemptUtc TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-    LastAttemptUtc TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-    Flagged BOOLEAN NOT NULL DEFAULT FALSE
-);
-
-CREATE TABLE AdminUsers (
-    Id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    Username VARCHAR(100) NOT NULL,
-    PasswordHash VARCHAR(500) NOT NULL,
-    CreatedAtUtc TIMESTAMPTZ NOT NULL DEFAULT NOW()
-);
-
-CREATE TABLE RefreshTokens (
-    Id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    AccountId UUID NOT NULL REFERENCES Accounts(Id),
-    Token VARCHAR(500) NOT NULL,
-    ExpiresAtUtc TIMESTAMPTZ NOT NULL,
-    CreatedAtUtc TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-    RevokedAtUtc TIMESTAMPTZ NULL
-);
-```
-
----
-
-## 4. Soft Delete API
-
-### 4.1 Account
-
-```
-PUT    /api/v1/accounts/me/delete           -- Self-service soft delete
-POST   /api/v1/accounts/{id}/restore        -- Admin restores account
-GET    /api/v1/admin/accounts/deleted       -- Admin lists deleted accounts
-```
-
-### 4.2 Hiring Resources (Creator-Managed)
-
-```
-PUT    /api/v1/hiring/opportunities/{id}/delete     -- Creator soft deletes
-PUT    /api/v1/hiring/opportunities/{id}/restore    -- Creator restores
-PUT    /api/v1/hiring/invites/{id}/delete            -- Creator deletes invite
-PUT    /api/v1/hiring/passports/{id}/delete          -- Creator deletes passport
-PUT    /api/v1/hiring/passports/{id}/restore         -- Creator restores passport
-```
-
-### 4.3 Files
-
-```
-PUT    /api/v1/files/{fileId}/delete    -- Owner soft deletes
-PUT    /api/v1/files/{fileId}/restore   -- Owner or admin restores
-```
-
-### 4.4 Hard Delete Approval Workflow
-
-```
-POST   /api/v1/admin/hard-delete/request            -- Admin requests hard delete
-POST   /api/v1/admin/hard-delete/{id}/approve       -- Second admin approves
-POST   /api/v1/admin/hard-delete/{id}/reject        -- Admin rejects
-GET    /api/v1/admin/hard-delete/pending            -- List pending requests
-```
-
----
-
-## 5. Authentication Architecture
-
-### 5.1 Auth Endpoints
-
-```
-POST /api/v1/auth/google          -- Primary: Google OAuth login
-POST /api/v1/auth/send-code       -- Secondary: SMS code
-POST /api/v1/auth/verify-code     -- Verify SMS code
-POST /api/v1/auth/refresh         -- Refresh JWT
-POST /api/v1/auth/admin/login     -- Admin login
-POST /api/v1/auth/admin/logout
-```
-
-### 5.2 JWT Claims
-
-```json
-{
-  "sub": "account-guid",
-  "type": "clinic",
-  "status": "approved",
-  "role": "user",
-  "phoneVerified": true,
-  "iat": ...,
-  "exp": ...,
-  "iss": "clinicx-talent-api",
-  "aud": "clinicx-talent-app"
+  async adminLogin(username: string, password: string): Promise<AuthResult> {
+    await delay(500);
+    if (username === 'admin' && password === 'admin') {
+      return { token: 'mock-admin-token', account: { ... } };
+    }
+    throw new AuthError('INVALID_CREDENTIALS', 'Incorrect admin credentials.');
+  }
 }
 ```
 
-Access token: 15 minutes. Refresh token: 7 days.
+### 2.7 Registration Page Redesign
 
----
-
-## 6. Backend API
-
-### 6.1 Account Endpoints
+The current `src/app/features/registration/registration.ts` has a multi-step flow (type -> phone -> code). It is replaced with a cleaner two-path design:
 
 ```
-GET    /api/v1/accounts/me
-PUT    /api/v1/accounts/me
-PUT    /api/v1/accounts/me/profile
-PUT    /api/v1/accounts/me/theme
-PUT    /api/v1/accounts/me/delete
-POST   /api/v1/accounts/{id}/restore
-GET    /api/v1/accounts?type=&page=
-GET    /api/v1/accounts/{id}
-PUT    /api/v1/accounts/{id}/status
+New user arrives at /register
+   |
+   +--> [Sign in with Google button]  --> Google consent screen
+   |       |
+   |       +--> Existing account? --> Dashboard (JWT in memory)
+   |       +--> New account? --> Choose type (clinic/talent) --> Phone verification step --> Dashboard
+   |
+   +--> [Sign in with phone]  --> Enter phone number
+           |
+           +--> Enter 6-digit code
+           +--> Existing account? --> Dashboard
+           +--> New account? --> Choose type --> Dashboard
 ```
 
-### 6.2 File Upload Endpoints
+The Google button is prominent and primary. The phone option is below as a text link ("Sign in with phone instead").
 
-```
-POST   /api/v1/files/profile-photo     (multipart, max 10MB)
-POST   /api/v1/files/intro-video       (multipart, max 200MB, chunked)
-POST   /api/v1/files/certificate       (multipart, max 20MB)
-POST   /api/v1/files/gallery-image     (multipart, max 10MB)
-PUT    /api/v1/files/{fileId}/delete
-PUT    /api/v1/files/{fileId}/restore
-DELETE /api/v1/files/{fileId}           (admin hard delete)
-GET    /api/v1/files/{fileId}/download
-```
+### 2.8 NgRx Changes (minimal -- all auth logic moves to AuthService)
 
-### 6.3 Hiring Endpoints
+The reducer loses these handlers:
+- `selectAccountType` -- replaced by AuthService + Google flow
+- `requestSMSCode` -- replaced by AuthService mock/real
+- `verifyRegistrationCode` -- replaced by AuthService
+- `verifySignInCode` -- replaced by AuthService
+- `adminLogin` -- replaced by AuthService
+- `adminLogout` -- replaced by AuthService clearSession
 
-```
-GET    /api/v1/hiring/opportunities
-POST   /api/v1/hiring/opportunities
-PUT    /api/v1/hiring/opportunities/{id}
-PUT    /api/v1/hiring/opportunities/{id}/status
-PUT    /api/v1/hiring/opportunities/{id}/delete
-PUT    /api/v1/hiring/opportunities/{id}/restore
-POST   /api/v1/hiring/opportunities/{id}/invites
-PUT    /api/v1/hiring/invites/{id}/delete
-POST   /api/v1/hiring/passports
-PUT    /api/v1/hiring/passports/{id}/delete
-PUT    /api/v1/hiring/passports/{id}/restore
-GET    /api/v1/hiring/applications
-POST   /api/v1/hiring/applications
-PUT    /api/v1/hiring/applications/{id}/status
-```
+What remains:
+- `saveClinicDetails` -- profile editing (not auth)
+- `saveTalentDetails` -- profile editing (not auth)
+- `setThemePreference` -- UI preference
+- `signOut` -- can delegate to AuthService.clearSession()
+- All hiring actions -- unchanged
+- `setReviewStatus` -- unchanged
 
-### 6.4 Public Endpoints (no auth)
+The store keeps `activeAccountId` but it is set by the AuthService after successful authentication, not by the reducer matching test credentials.
 
-```
-GET    /api/v1/public/hiring/{clinicSlug}/{positionSlug}?invite={token}
-GET    /api/v1/public/talent/{talentSlug}
-GET    /api/v1/public/clinic/{clinicSlug}
-GET    /api/v1/public/invite/{token}
-```
+### 2.9 DI Registration
 
-### 6.5 Admin Endpoints
-
-```
-GET    /api/v1/admin/accounts/deleted
-GET    /api/v1/admin/accounts/verification-security
-POST   /api/v1/admin/accounts/verification-security/reset
-POST   /api/v1/admin/hard-delete/request
-POST   /api/v1/admin/hard-delete/{id}/approve
-POST   /api/v1/admin/hard-delete/{id}/reject
-GET    /api/v1/admin/hard-delete/pending
-GET    /api/v1/admin/stats
+```typescript
+// app.config.ts
+export const appConfig: ApplicationConfig = {
+  providers: [
+    // Auth -- mock until backend is ready
+    { provide: AuthProvider, useClass: environment.useBackend 
+        ? HttpAuthProvider : MockAuthProvider },
+    AuthService,
+    
+    // Existing data sources (still local until backend)
+    { provide: AccountDataSource, useClass: LocalAccountDataSource },
+    { provide: HiringDataSource, useClass: LocalHiringDataSource },
+    
+    // Interceptors (for future HTTP auth)
+    provideHttpClient(withInterceptors([jwtInterceptor, errorInterceptor])),
+    
+    // Routing + store
+    provideRouter(routes),
+    provideStore({ app: appReducer }),
+    provideEffects(AppEffects),
+    provideStoreDevtools({ maxAge: 25, logOnly: false }),
+  ],
+};
 ```
 
-### 6.6 Response Envelope
-
-```json
-{
-  "data": { ... },
-  "success": true,
-  "error": null
-}
+```typescript
+// src/environments/environment.ts
+export const environment = {
+  production: false,
+  apiUrl: 'http://localhost:5000/api/v1',
+  googleClientId: '1234567890-xxxxx.apps.googleusercontent.com',
+  useBackend: false,
+  useMockAuth: true,
+};
 ```
 
 ---
 
-## 7. Azure Services
+## 3. Unit Tests
 
-| Resource | SKU / Tier | Purpose |
-|----------|-----------|---------|
-| App Service | B1 (Linux) -- 2 slots (green + blue) | ASP.NET Core API |
-| PostgreSQL Flexible Server | Burstable B1ms (1 vCore, 2 GB, 32 GB) | Relational data |
-| Blob Storage | Standard LRS (Hot -> Cool lifecycle) | Videos, photos, certificates |
-| Key Vault | Standard | Secrets |
-| Communication Services | Pay-as-you-go | SMS (~$0.01/msg US) |
-| App Insights | Per-GB | Logging, monitoring |
-| App Configuration | Free tier | Feature flags, non-secret config |
+### 3.1 Test Plan
 
----
+All new and modified files must have corresponding unit tests. The existing reducer tests in `src/app/core/store/app.reducer.spec.ts` should be updated to reflect the removal of auth logic.
 
-## 8. Repeatable Deployments -- Industry Standard Approach
+| File | Test File | What to Test |
+|------|-----------|-------------|
+| `auth.service.ts` | `auth.service.spec.ts` | Google sign-in flow; phone send + verify; token persistence; error states; session clear |
+| `auth-provider.ts` | — (interface, no tests needed) | — |
+| `mock-auth.provider.ts` | Included in auth.service.spec.ts | Mock returns correct shapes; mock delay simulates network |
+| `jwt-interceptor.ts` | `jwt-interceptor.spec.ts` | Token attached to outgoing requests; no token skips header; 401 triggers redirect |
+| `error-interceptor.ts` | `error-interceptor.spec.ts` | 401 -> redirect to sign-in; 403 -> forbidden toast; 429 -> rate limit message |
+| `signin.ts` | `signin.spec.ts` | Google button renders; phone input renders; form validation; loading state; error display; navigation on success |
+| `register-phone.ts` | `register-phone.spec.ts` | Phone input validation; code input; retry sends new code; error handling |
+| `google-signin-button.ts` | `google-signin-button.spec.ts` | Button renders; click triggers Google flow; loading state; disabled when authenticating |
+| `phone-input.ts` | `phone-input.spec.ts` | Input formatting ( (312) 555-0101 ); validation (10 digits); disabled state |
+| `verification-code-input.ts` | `verification-code-input.spec.ts` | 6-digit input; auto-submit on full code; paste support; error display; resend timer |
 
-### 8.1 Philosophy: Build Once, Deploy Many
+### 3.2 AuthService Unit Tests (Detailed)
 
-A single immutable artifact (the compiled .NET binary + Razor views + static assets) is built once and promoted through every environment without recompilation. The exact SHA that passes CI tests, UAT smoke tests, and approval gates runs in production. This eliminates the classic "works on my machine" gap and guarantees that what was tested is what is deployed.
+```typescript
+// src/app/core/auth.service.spec.ts
+describe('AuthService', () => {
+  let service: AuthService;
+  let mockProvider: MockAuthProvider;
+  let store: MockStore;
 
-### 8.2 Infrastructure as Code with Bicep
+  beforeEach(() => {
+    TestBed.configureTestingModule({
+      providers: [
+        AuthService,
+        { provide: AuthProvider, useClass: MockAuthProvider },
+        provideMockStore({ initialState }),
+      ],
+    });
+    service = TestBed.inject(AuthService);
+    mockProvider = TestBed.inject(AuthProvider) as MockAuthProvider;
+  });
 
-For an Azure-only shop, **Bicep** is the industry standard IaC tool. It is free, MIT-licensed, has no state file to manage (ARM itself is the source of truth), and supports new Azure features on day one.
+  afterEach(() => {
+    sessionStorage.clear();
+  });
 
-Bicep modules for each Azure resource:
+  describe('signInWithGoogle', () => {
+    it('should set auth state to loading when Google sign-in starts', () => { ... });
+    it('should set auth state to authenticated on successful Google callback', () => { ... });
+    it('should set auth state to error on Google token validation failure', () => { ... });
+    it('should store JWT in sessionStorage on success', () => { ... });
+    it('should set phoneRequired flag when account needs phone verification', () => { ... });
+  });
 
-```
-infrastructure/
-  main.bicep                     # Orchestrates all modules
-  parameters/
-    development.bicepparam       # Dev-specific values (smaller SKUs)
-    uat.bicepparam               # UAT-specific values
-    production.bicepparam        # Production values (larger SKUs, HA)
-  modules/
-    app-service.bicep            # App Service plan + green/blue slots + auto-swap
-    postgres.bicep               # PostgreSQL Flexible Server + firewall rules
-    blob-storage.bicep           # Storage account + containers + lifecycle policies
-    key-vault.bicep              # Vault + access policies + secrets
-    communication-services.bicep # ACS for SMS
-    app-insights.bicep           # Logging + metrics + alerts
-    networking.bicep             # Private endpoints, NSG rules
-    monitoring.bicep             # Dashboards, alert rules
-```
+  describe('sendSmsCode', () => {
+    it('should call provider.sendSmsCode with normalized phone', () => { ... });
+    it('should set state to loading during send', () => { ... });
+    it('should handle rate limit errors (429)', () => { ... });
+    it('should handle phone already locked errors', () => { ... });
+  });
 
-Deploying a full environment:
-```bash
-az deployment group create \
-  --resource-group clinicx-{env} \
-  --template-file infrastructure/main.bicep \
-  --parameters infrastructure/parameters/{env}.bicepparam
-```
+  describe('verifySmsCode', () => {
+    it('should call provider.verifySmsCode with phone and code', () => { ... });
+    it('should set auth state to authenticated on valid code', () => { ... });
+    it('should set auth state to error on invalid code', () => { ... });
+    it('should handle account creation for new phone numbers', () => { ... });
+    it('should handle max attempts exceeded', () => { ... });
+  });
 
-Or using `azd` for a unified `azd up` experience:
-```bash
-# Single command: provision infrastructure + build + deploy
-azd up --environment production
-```
+  describe('token management', () => {
+    it('should persist token across page reloads via sessionStorage', () => { ... });
+    it('should clear token on logout', () => { ... });
+    it('should return null for token when not authenticated', () => { ... });
+  });
 
-### 8.3 CI/CD Pipeline: GitHub Actions with OIDC
-
-**No static secrets in CI/CD.** GitHub Actions authenticates to Azure via OpenID Connect (OIDC) federated credentials -- short-lived tokens, no service principal passwords, no PAT secrets.
-
-```
-File: .github/workflows/ci.yml (Pull Request validation)
-
-Trigger: pull_request to main
-Steps:
-  1. Checkout code
-  2. dotnet restore
-  3. dotnet build --configuration Release
-  4. dotnet test (unit tests + integration tests with Testcontainers)
-  5. dotnet format --verify-no-changes
-  6. SonarQube / code quality scan (optional)
-  7. Report status on PR
-```
-
-```
-File: .github/workflows/cd.yml (Deployment)
-
-Trigger: push to main (after PR merge)
-Environment: production (requires approval gate)
-
-Jobs:
-  1. Build:
-      - Checkout
-      - dotnet restore
-      - dotnet build --configuration Release
-      - dotnet test
-      - dotnet publish --configuration Release --output ./publish
-      - Upload artifact (actions/upload-artifact)
-
-  2. Deploy to UAT (blue slot):
-      - Download artifact
-      - az webapp deploy --resource-group clinicx-uat --name clinicx-api-uat
-                         --slot blue --type zip --src ./publish.zip
-      - Run smoke tests against UAT blue slot
-      - Run EF Core migrations (dotnet ef database update --connection ...)
-      - Swap UAT blue -> UAT production slot
-      - Run post-deploy validation
-
-  3. Production approval gate (manual):
-      - Requires approval from a designated reviewer in GitHub Environments
-      - Shows diff: what is being deployed, what changed since last deploy
-
-  4. Deploy to Production (blue slot):
-      - Download artifact (same artifact from job 1, no rebuild)
-      - az webapp deploy ... --slot blue
-      - Run smoke tests against production blue slot
-      - Health check validates (/health endpoint returns 200)
-      - Request slot swap
-
-  5. Slot swap:
-      - az webapp deployment slot swap --name clinicx-api-prod
-                                        --slot blue --target-slot production
-      - Automatic: health checks gate the swap (swap aborts if health check fails)
-      - Run post-swap validation
-
-  6. Post-deploy:
-      - Run E2E tests against production
-      - Tag release in GitHub
-      - Notify team (Slack, email, etc.)
+  describe('adminLogin', () => {
+    it('should succeed with valid admin credentials', () => { ... });
+    it('should fail with invalid admin credentials', () => { ... });
+  });
+});
 ```
 
-### 8.4 Green/Blue Slot Architecture
-
-```
-[Azure Front Door / DNS: api.clinicx-talent.com]
-                       |
-            [App Service: clinicx-api-prod]
-            /                             \
-  Slot: production (green)          Slot: blue (staging)
-  - Current live traffic            - Incoming new release
-  - ASPNETCORE_ENVIRONMENT=Prod     - ASPNETCORE_ENVIRONMENT=Prod
-  - Serves all traffic              - No external traffic
-```
-
-**Slot-sticky settings** (stay with the slot, not the code):
-- `ASPNETCORE_ENVIRONMENT` (always "Production" for both slots)
-- Connection strings (each slot points to production DB)
-- Logging levels
-
-**Swap process:**
-1. Deploy to blue slot (staging)
-2. Blue slot auto-warms (calls /health, loads assemblies, opens DB connections)
-3. Warmup validates the deployment is healthy before traffic hits it
-4. Swap atomically swaps the slot identities: blue becomes production, green becomes staging
-5. The old production slot (now green/staging) is available for immediate rollback
-6. Auto-rollback: if health checks fail post-swap, swap back automatically
-
-**Rollback:**
-```bash
-# Immediate rollback -- swap back
-az webapp deployment slot swap \
-  --name clinicx-api-prod \
-  --slot blue \
-  --target-slot production
-
-# Takes seconds, no deploy needed
-```
-
-### 8.5 Database Migrations: Additive-Only
-
-Database migrations run as part of the deployment pipeline, never manually.
-
-**Rules:**
-- Every migration must be **additive only**: ADD COLUMN, CREATE TABLE, CREATE INDEX
-- No destructive DDL: DROP COLUMN, ALTER COLUMN, RENAME TABLE
-- Breaking changes require two deployments: (1) add new column, write dual code, (2) remove old column reference
-- Migrations are **idempotent**: running `dotnet ef database update` multiple times is safe
-
-**When migrations run:**
-```
-In the deploy pipeline, AFTER the new code is deployed to the staging slot
-but BEFORE the slot swap:
-
-  1. Deploy new code to blue slot
-  2. Run smoke tests against blue slot
-  3. dotnet ef database update --connection "{production-db}"
-  4. Verify DB health (new tables/columns exist, old code still works)
-  5. Swap slots
-```
-
-The old slot (still running old code) is fine because the migration only added new columns/tables -- old code ignores them.
-
-### 8.6 Environment Parity
-
-```
-| Aspect               | Local Dev          | UAT                  | Production           |
-|---------------------|-------------------|----------------------|----------------------|
-| PostgreSQL          | Docker 16-alpine  | Azure Flexible (B1ms)| Azure Flex (B1ms)    |
-| File storage        | Local disk        | Azure Blob (Hot)     | Azure Blob (Hot+Cool)|
-| SMS                 | Mock (console)    | Azure ACS            | Azure ACS            |
-| Google OAuth        | Test client       | Prod client          | Prod client          |
-| .NET version        | Same everywhere   | Same                 | Same                 |
-| Build artifact      | Same binary       | Same binary          | Same binary          |
-| App Insights        | Disabled          | Enabled              | Enabled              |
-```
-
-The key constraint: **the same compiled binary runs in all environments.** Only configuration differs.
-
-### 8.7 Secrets Management
-
-```csharp
-// Program.cs -- no connection strings in config files for UAT/Production
-if (builder.Environment.IsDevelopment())
-{
-    builder.Configuration.AddUserSecrets<Program>();
-}
-else
-{
-    builder.Configuration.AddAzureKeyVault(
-        new Uri($"https://clinicx-{environment}-kv.vault.azure.net/"),
-        new DefaultAzureCredential());
-}
-```
-
-**What goes in Key Vault:**
-- `Google--ClientId` and `Google--ClientSecret`
-- `ConnectionStrings--ClinicXDb` (PostgreSQL connection string)
-- `Azure--CommunicationServices--ConnectionString`
-- `Azure--Storage--ConnectionString`
-- `Jwt--SigningKey`
-
-**What goes in appsettings.json (defaults only):**
-- Logging levels
-- Feature flags (override via App Configuration)
-- Non-sensitive defaults
-
-### 8.8 Quality Gates
-
-| Gate | Where | What Happens on Failure |
-|------|-------|------------------------|
-| Unit tests | CI (PR) | PR cannot merge |
-| Integration tests | CI (PR) | PR cannot merge |
-| Code quality | CI (PR) | Warning, optional block |
-| Smoke tests | Deploy to UAT | Deploy stops, alert |
-| Health check | Pre-swap (both slots) | Swap aborts automatically |
-| Post-deploy validation | Post-swap | Auto-rollback if failed |
-| Approval gate | Prod deploy | Manual reviewer must approve |
-
-### 8.9 Monitoring and Observability
-
-- **Application Insights** -- request rates, response times, failure rates, dependency tracking
-- **Live Metrics** -- watch deployment health in real time during a slot swap
-- **Alerts:**
-  - HTTP 5xx rate > 1% over 5 minutes -> PagerDuty/Slack
-  - Health check endpoint fails -> automated rollback trigger
-  - DB connection pool exhaustion -> alert
-- **Dashboards:**
-  - Deployment dashboard (last N deployments, duration, success/failure)
-  - Application dashboard (requests, errors, performance)
-  - Business dashboard (accounts created, applications submitted)
-
-### 8.10 Deployment Scripts
+### 3.3 Running Tests
 
 ```bash
-# scripts/deploy.sh
-# Usage: ./deploy.sh <environment> <artifact-path>
+# Unit tests (Vitest)
+npm test                              # All unit tests
+npm run test:coverage                 # With coverage report
+npm test -- --include src/app/core/auth.service.spec.ts  # Single file
 
-ENV=$1
-ARTIFACT=$2
-SLOT="blue"
-
-echo "=== Deploying to $ENV ($SLOT slot) ==="
-
-# 1. Deploy artifact
-az webapp deploy --resource-group "clinicx-$ENV" \
-                 --name "clinicx-api-$ENV" \
-                 --slot $SLOT \
-                 --type zip \
-                 --src $ARTIFACT
-
-# 2. Warmup and health check
-for i in $(seq 1 30); do
-    STATUS=$(curl -s -o /dev/null -w "%{http_code}" \
-                "https://clinicx-api-$ENV-$SLOT.azurewebsites.net/health")
-    if [ "$STATUS" = "200" ]; then
-        echo "Health check passed"
-        break
-    fi
-    sleep 5
-done
-
-# 3. Run smoke tests
-./scripts/smoke-test.sh "https://clinicx-api-$ENV-$SLOT.azurewebsites.net"
-if [ $? -ne 0 ]; then
-    echo "Smoke tests failed -- aborting deploy"
-    exit 1
-fi
-
-# 4. Run migrations
-dotnet ef database update --connection "$DB_CONNECTION_STRING"
-
-# 5. Swap slots
-az webapp deployment slot swap \
-    --resource-group "clinicx-$ENV" \
-    --name "clinicx-api-$ENV" \
-    --slot $SLOT \
-    --target-slot production
-
-echo "=== Deploy to $ENV complete ==="
+# Expected coverage targets:
+#   Branches:   80%+
+#   Functions:  90%+
+#   Lines:      90%+
 ```
 
 ---
 
-## 9. Implementation Phases
+## 4. Playwright E2E Tests
 
-### Phase 1: Backend Foundation (Week 1)
-- Scaffold solution with 5 projects
-- Domain entities with `ISoftDeletable` interface
-- EF Core + PostgreSQL with global query filters
-- `docker-compose.yml` for local PostgreSQL
-- `FileStorageServiceLocal`, `SmsServiceMock`
-- Initial migration with `DeletedAtUtc` on all entities
-- ExceptionMiddleware, /health endpoint
-- Testcontainers integration test fixture
+### 4.1 Test Plan
 
-### Phase 2: Auth -- Google OAuth (Week 2)
-- Google ID token validation
-- `POST /api/v1/auth/google`
-- ExternalLogin + Account creation
-- JWT issuance, Google test client for local dev
+| Test File | Scenario | Steps |
+|-----------|----------|-------|
+| `e2e/auth/google-signin.spec.ts` | Google sign-in button visible and clickable | 1. Navigate to /register 2. Assert Google button renders 3. Click button 4. Assert loading state 5. Assert Google popup opens (or mock intercepts) |
+| `e2e/auth/phone-signin.spec.ts` | Sign in with phone SMS | 1. Navigate to /signin 2. Click "Sign in with phone" 3. Enter phone number 4. Click "Send Code" 5. Enter mock code from sessionStorage 6. Assert redirected to dashboard |
+| `e2e/auth/phone-signin-wrong-code.spec.ts` | Wrong code shows error | 1. Same as above through step 5 2. Enter wrong code 3. Assert error message displayed 4. Assert able to retry |
+| `e2e/auth/registration.spec.ts` | New account registration | 1. Navigate to /register 2. Click Google sign-in (mock) 3. Assert navigated to account type selection 4. Select "talent" 5. Assert navigated to phone verification 6. Enter phone + code 7. Assert navigated to onboarding |
+| `e2e/auth/admin-login.spec.ts` | Admin login | 1. Navigate to /admin/login 2. Enter username/password 3. Click login 4. Assert navigated to admin dashboard 5. Assert admin controls visible |
+| `e2e/auth/admin-login-wrong.spec.ts` | Bad admin login shows error | 1. Navigate to /admin/login 2. Enter wrong credentials 3. Assert error message |
+| `e2e/auth/signout.spec.ts` | Sign out clears session | 1. Sign in 2. Navigate to settings 3. Click sign out 4. Assert redirected to home 5. Assert dashboard not accessible |
 
-### Phase 3: Auth -- SMS Fallback (Week 3)
-- Azure Communication Services SMS (or mock)
-- `POST /api/v1/auth/send-code`, `/verify-code`
-- Phone linking, rate limiting
+### 4.2 Mock Setup for E2E Tests
 
-### Phase 4: Accounts + Soft Delete (Week 3-4)
-- Account CRUD, SoftDeleteService with cascade
-- Self-service account soft delete
-- Admin restore endpoint
-- Profile update, founder logic
+Since there is no backend, E2E tests need the mock auth provider active. The Playwright tests intercept Google's third-party script and inject a mock response:
 
-### Phase 5: File Upload API (Week 4-5)
-- IFileStorageService (Blob + Local)
-- FilesController with upload/download/delete
-- AccountFiles table
-- File type/size validation
-- Soft delete for files
+```typescript
+// e2e/auth/google-signin.spec.ts
+import { test, expect } from '@playwright/test';
 
-### Phase 6: Hiring API + Soft Delete (Week 5-6)
-- Opportunity CRUD
-- Creator-facing delete/restore for opportunities
-- Invite/passport management with token
-- Creator-facing delete for invites and passports
-- Application pipeline with status transitions
-- Public endpoints, domain business rules
+test.describe('Google sign-in', () => {
+  test('shows Google sign-in button on registration page', async ({ page }) => {
+    await page.goto('/register');
+    
+    // The Google Sign-In button renders even without the real GIS library
+    // because the mock provider simulates the button UI
+    const googleButton = page.getByTestId('google-signin-button');
+    await expect(googleButton).toBeVisible();
+    await expect(googleButton).toContainText('Sign in with Google');
+  });
 
-### Phase 7: Hard Delete Approval Workflow (Week 6)
-- HardDeleteRequests table
-- Request/approve/reject endpoints
-- Two-admin approval enforcement
-- Blob purge on hard delete
+  test('mock Google sign-in completes and redirects to dashboard', async ({ page }) => {
+    // Mock the Google Identity Services callback
+    await page.goto('/register');
+    await page.evaluate(() => {
+      // Simulate Google One Tap callback with mock token
+      (window as any).__googleMockCallback?.({
+        credential: 'mock-google-id-token',
+      });
+    });
+    
+    // Assert loading state
+    await expect(page.getByText('Signing in...')).toBeVisible();
+    
+    // Assert redirected to dashboard (mock returns approved account)
+    await page.waitForURL('**/talent/home');
+  });
+});
+```
 
-### Phase 8: Infrastructure as Code (Week 7)
-- Write Bicep modules for all Azure resources
-- Parameter files for dev, UAT, production
-- Validate locally with `az deployment what-if`
-- Test resource creation in a throwaway environment
+### 4.3 Running E2E Tests
 
-### Phase 9: CI/CD Pipeline (Week 7-8)
-- GitHub Actions `ci.yml` -- PR validation workflow
-- GitHub Actions `cd.yml` -- deploy workflow with:
-  - OIDC federated credentials to Azure
-  - Slot deployment + swap
-  - Health check gates
-  - Approval gate for production
-  - Smoke tests
-- `scripts/deploy.sh` for local/CI deploy runs
-- `scripts/smoke-test.sh` for post-deploy validation
+```bash
+# Prerequisites: dev server running on :4200
+npm start &
 
-### Phase 10: Frontend Integration (Week 8-10)
-- AuthService with Google OAuth
-- JwtInterceptor, ErrorInterceptor
-- HttpAccountDataSource, HttpHiringDataSource
-- File upload components with progress
-- Delete/restore buttons on accounts, opportunities, passports, files
-- Admin dashboard for deleted accounts and hard-delete approvals
-- Remove TEST_CREDENTIALS and hardcoded admin
-- Remove localStorage persistence
-- End-to-end testing
+# Run all E2E tests
+npm run test:e2e
 
-### Phase 11: Production Deployment (Week 10-11)
-- Deploy infrastructure via Bicep (green + blue slots)
-- Google Cloud Console production OAuth client
-- Run CI/CD pipeline: UAT -> approval -> production
-- Verify green/blue swap, rollback, health checks
-- Configure monitoring dashboards and alerts
-- Apply Blob lifecycle policy (Hot -> Cool -> Archive)
+# Run specific file
+npm run test:e2e -- e2e/auth/google-signin.spec.ts
 
----
+# Run with UI mode (debugging)
+npm run test:e2e:ui
 
-## 10. Potential Challenges
+# Headless with trace on failure
+npm run test:e2e -- --trace on
+```
 
-| Challenge | Mitigation |
-|-----------|-----------|
-| Large video uploads (200MB+) | Chunked upload via Azure Blob SDK; progress tracking |
-| Orphaned blobs after soft delete | Retention policy (Hot->Cool->Archive); hard-delete purges |
-| Google OAuth dependency | SMS fallback + email OTP for users without Google |
-| SMS costs | ~$0.01/msg via Azure ACS; only for verification, not login |
-| Green/blue DB compatibility | Additive-only migrations; two-deploy breaking changes |
-| Concurrent founder assignment | Serializable transaction; first 1000 only |
-| Bicep state management | No state file -- ARM is source of truth |
-| OIDC credential expiry | Auto-rotated by Azure AD; no manual management |
-| Rollback with DB changes | Additive migrations mean old code works with new schema |
-| Environment-specific config drift | Same artifact, different `appsettings.{env}.json` + Key Vault |
+The Playwright config in `playwright.config.ts` should include the auth route:
+
+```typescript
+// playwright.config.ts additions
+testMatch: ['e2e/**/*.spec.ts'],
+use: {
+  baseURL: 'http://localhost:4200',
+  testIdAttribute: 'data-testid',
+},
+webServer: {
+  command: 'npm start',
+  port: 4200,
+  reuseExistingServer: true,
+},
+```
 
 ---
 
-### Critical Files for Implementation
+## 5. CI/CD Pipeline with Tests and Approval Gates
 
-- `/Users/katemac/Documents/Codex/2026-07-14/can/clinicx-talent/src/app/core/account.ts` -- Domain types; add `DeletedAtUtc` to `AccountRecord`
-- `/Users/katemac/Documents/Codex/2026-07-14/can/clinicx-talent/src/app/core/hiring.ts` -- Domain types; add `DeletedAtUtc` to hiring entities
-- `/Users/katemac/Documents/Codex/2026-07-14/can/clinicx-talent/src/app/core/store/app.reducer.ts` -- Contains all current backend logic
-- `/Users/katemac/Documents/Codex/2026-07-14/can/clinicx-talent/src/app/core/account-data.source.ts` -- The migration seam
-- `/Users/katemac/Documents/Codex/2026-07-14/can/clinicx-talent/src/app/app.config.ts` -- Central DI configuration
+### 5.1 Pipeline Files
+
+```yaml
+# .github/workflows/ci.yml -- Runs on every PR
+name: CI - Pull Request Validation
+
+on:
+  pull_request:
+    branches: [main]
+
+jobs:
+  build-and-test:
+    runs-on: ubuntu-latest
+    
+    steps:
+      - uses: actions/checkout@v4
+      
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+          cache: 'npm'
+      
+      - name: Install dependencies
+        run: npm ci
+      
+      - name: Lint check
+        run: npx prettier --check .
+      
+      - name: Build
+        run: npm run build
+        
+      - name: Run unit tests with coverage
+        run: npm run test:coverage
+      
+      - name: Upload coverage report
+        uses: actions/upload-artifact@v4
+        with:
+          name: coverage-report
+          path: coverage/
+      
+      - name: Start dev server for E2E tests
+        run: npm start & npx wait-on http://localhost:4200
+      
+      - name: Run Playwright E2E tests
+        run: npx playwright test e2e/auth/
+      
+      - name: Upload Playwright report
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-report
+          path: playwright-report/
+```
+
+```yaml
+# .github/workflows/cd.yml -- Deploys on push to main (with approval gate)
+name: CD - Deploy to Production
+
+on:
+  push:
+    branches: [main]
+
+jobs:
+  lint-build-test:
+    # Same build+test as CI above
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+      - run: npm ci
+      - run: npx prettier --check .
+      - run: npm run build
+      - run: npm run test:coverage
+      
+      # Playwright E2E tests must pass before deployment can proceed
+      - run: npm start & npx wait-on http://localhost:4200
+      - run: npx playwright test e2e/
+      
+      # Upload built artifact for downstream jobs
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: dist/clinicx-talent
+
+  deploy-uat:
+    needs: lint-build-test
+    environment:
+      name: uat
+      url: https://uat.clinicx-talent.com
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/download-pages-artifact@v3
+      - name: Deploy to Azure App Service (UAT slot)
+        run: |
+          az webapp deploy ...
+      - name: Run smoke tests against UAT
+        run: |
+          ./scripts/smoke-test.sh https://uat.clinicx-talent.com
+
+  deploy-production:
+    needs: deploy-uat
+    environment:
+      name: production
+      url: https://clinicx-talent.com
+      
+      # *** APPROVAL GATE ***
+      # Deployment to production requires manual approval
+      # Configured in GitHub repo: Settings > Environments > production
+      # Approvers must be added in the environment configuration
+      required_approvers: 1
+      
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/download-pages-artifact@v3
+      
+      - name: Deploy to production green slot
+        run: |
+          az webapp deploy ... --slot green
+      
+      - name: Swap green slot to production
+        run: |
+          az webapp deployment slot swap ...
+      
+      - name: Post-deploy smoke tests
+        run: |
+          ./scripts/smoke-test.sh https://clinicx-talent.com
+```
+
+### 5.2 Environment Configuration in GitHub
+
+The `deploy-production` job uses GitHub Environments with a manual approval gate:
+
+1. Go to GitHub repo: Settings > Environments > New Environment
+2. Create `production` environment
+3. Add required reviewers (1 or more)
+4. Add environment secrets (if needed for deployment)
+5. The `cd.yml` workflow will pause at `deploy-production` until an approver clicks "Approve"
+
+**Approval workflow:**
+1. CI passes all checks on `main` branch
+2. Developer creates a PR, gets it reviewed and merged
+3. `cd.yml` triggers on push to `main`
+4. Build + test runs automatically
+5. If tests pass, deploy to UAT (no approval needed)
+6. **Deploy to production pauses -- requires manual approval**
+7. Designated reviewer checks the UAT deployment, reviews the diff
+8. Reviewer clicks "Approve deploy" in GitHub Actions UI
+9. Pipeline resumes: deploy to production green slot, swap, smoke tests
+
+### 5.3 Branch Protection Rules
+
+```yaml
+# Configured in GitHub repo: Settings > Branches > Branch protection rules
+
+Branch: main
+  - Require pull request reviews (1 reviewer)
+  - Require status checks: 
+      - "build-and-test" from CI workflow must pass
+      - "deploy-uat" from CD workflow must pass
+  - Require branches to be up to date
+  - Include administrators
+  - Allow force pushes: false
+```
+
+---
+
+## 6. What Stays Unchanged
+
+The following are NOT part of Phase 0 -- they remain exactly as they are now:
+
+- **Backend** -- no ASP.NET Core code, no PostgreSQL, no Azure services
+- **LocalAccountDataSource** -- still reads from localStorage
+- **LocalHiringDataSource** -- still reads from localStorage
+- **NgRx reducer for hiring** -- all hiring actions are unchanged
+- **Existing components** -- clinic/talent dashboards, profile setup, hiring pages
+- **Theme management** -- unchanged
+- **Founder 1000 Club** -- unchanged (still computed client-side)
+- **Playwright config** -- only adding `e2e/auth/` test files; existing E2E tests remain
+
+---
+
+## 7. Phase 0 Implementation Checklist
+
+### Step 1: Define auth models and interfaces
+- [ ] Create `src/app/core/auth/models.ts` -- AuthResult, TokenPair, AuthState, AuthError
+- [ ] Create `src/app/core/auth/constants.ts` -- token keys
+- [ ] Create `src/app/core/auth-provider.ts` -- abstract IAuthProvider interface
+
+### Step 2: Build mock auth provider
+- [ ] Create `src/app/core/mock-auth.provider.ts`
+- [ ] Mock Google token exchange
+- [ ] Mock phone SMS send/verify
+- [ ] Mock admin login
+- [ ] Mock rate limiting and error states
+
+### Step 3: Build AuthService
+- [ ] Create `src/app/core/auth.service.ts`
+- [ ] Implement Google sign-in flow
+- [ ] Implement phone SMS send/verify
+- [ ] Implement admin login/logout
+- [ ] Implement token persistence in sessionStorage
+- [ ] Implement session clear on logout
+- [ ] Wire up to NgRx store for activeAccountId
+
+### Step 4: Update DI configuration
+- [ ] Update `src/app/environments/environment.ts` with googleClientId and useMockAuth
+- [ ] Update `src/app/app.config.ts` to register AuthProvider and AuthService
+- [ ] Add JwtInterceptor and ErrorInterceptor
+
+### Step 5: Build shared UI components
+- [ ] Create `google-signin-button` component
+- [ ] Create `phone-input` component with formatting
+- [ ] Create `verification-code-input` component (6-digit, auto-submit)
+
+### Step 6: Build sign-in and registration pages
+- [ ] Create `signin` feature component (Google + phone options)
+- [ ] Create `register-phone` feature component (phone + code for new accounts)
+- [ ] Update routing for new pages
+- [ ] Remove old `registration` component or repurpose
+
+### Step 7: Update NgRx reducer
+- [ ] Remove `credentialMatches()` function
+- [ ] Remove `TEST_CREDENTIALS` reference
+- [ ] Remove hardcoded `admin`/`admin` login
+- [ ] Remove local account creation from verifyRegistrationCode
+- [ ] Remove in-memory verificationSecurity tracking
+- [ ] Keep `activeAccountId` but set it from AuthService
+
+### Step 8: Guard updates
+- [ ] Update `clinicAccountGuard` to check AuthService.isAuthenticated()
+- [ ] Update `talentAccountGuard` to check AuthService.isAuthenticated()
+- [ ] Update `adminGuard` to check AuthService for admin role
+- [ ] Update `approvedClinicGuard` to check auth + status
+
+### Step 9: Write unit tests
+- [ ] `auth.service.spec.ts` (15+ tests)
+- [ ] `jwt-interceptor.spec.ts` (5+ tests)
+- [ ] `error-interceptor.spec.ts` (5+ tests)
+- [ ] `signin.spec.ts` (8+ tests)
+- [ ] `register-phone.spec.ts` (8+ tests)
+- [ ] `google-signin-button.spec.ts` (4+ tests)
+- [ ] `phone-input.spec.ts` (6+ tests)
+- [ ] `verification-code-input.spec.ts` (6+ tests)
+
+### Step 10: Write Playwright E2E tests
+- [ ] `e2e/auth/google-signin.spec.ts` (2+ scenarios)
+- [ ] `e2e/auth/phone-signin.spec.ts` (happy path)
+- [ ] `e2e/auth/phone-signin-wrong-code.spec.ts` (error path)
+- [ ] `e2e/auth/registration.spec.ts` (new account)
+- [ ] `e2e/auth/admin-login.spec.ts` (happy path)
+- [ ] `e2e/auth/admin-login-wrong.spec.ts` (error path)
+- [ ] `e2e/auth/signout.spec.ts` (session clear)
+
+### Step 11: CI/CD pipeline
+- [ ] Create `.github/workflows/ci.yml` (PR validation)
+- [ ] Create `.github/workflows/cd.yml` (UAT + production with approval)
+- [ ] Configure GitHub Environments with approval gate
+- [ ] Configure branch protection rules
+
+### Step 12: Final review
+- [ ] Run all unit tests -- all pass
+- [ ] Run all E2E tests -- all pass with mocked auth
+- [ ] Manual test: Google sign-in flow works in browser
+- [ ] Manual test: Phone SMS flow works in browser
+- [ ] Manual test: Admin login works
+- [ ] Manual test: Sign out clears session
+- [ ] Manual test: Protected routes redirect to sign-in when not authenticated
+- [ ] **Do NOT commit -- present for review**
+
+---
+
+## 8. Future Phases (Backend, After Phase 0)
+
+### Phase 1+: Backend Implementation (future)
+
+After Phase 0 is reviewed and approved, the backend implementation begins:
+
+1. ASP.NET Core solution scaffold (Clean Architecture)
+2. PostgreSQL schema with EF Core (ISoftDeletable global filters)
+3. Auth: Google OAuth validation + Azure ACS SMS
+4. Accounts API
+5. File upload API (Azure Blob Storage)
+6. Hiring API
+7. Hard delete approval workflow
+8. Infrastructure as Code (Bicep)
+9. Production CI/CD with green/blue swaps
+
+At that point, the `MockAuthProvider` is replaced by `HttpAuthProvider`, and the `environment.useBackend` flag is flipped. All components and tests remain the same -- only the provider implementation changes.
+
+---
+
+### Critical Files for Implementation (Phase 0)
+
+- `/Users/katemac/Documents/Codex/2026-07-14/can/clinicx-talent/src/app/core/store/app.reducer.ts` -- Remove hardcoded auth logic (TEST_CREDENTIALS, admin/admin, credentialMatches)
+- `/Users/katemac/Documents/Codex/2026-07-14/can/clinicx-talent/src/app/features/registration/registration.ts` -- Replace with new Google + phone sign-in flow (or create new signin component)
+- `/Users/katemac/Documents/Codex/2026-07-14/can/clinicx-talent/src/app/app.config.ts` -- Register AuthProvider, AuthService, interceptors
+- `/Users/katemac/Documents/Codex/2026-07-14/can/clinicx-talent/src/app/core/account.ts` -- Reference for domain types when building auth service
+- `/Users/katemac/Documents/Codex/2026-07-14/can/clinicx-talent/playwright.config.ts` -- Add test directory and mock config
