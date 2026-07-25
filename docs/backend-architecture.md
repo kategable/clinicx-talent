@@ -9,17 +9,35 @@ The current application is entirely client-side: domain logic lives in NgRx redu
 - ASP.NET Core 9 with minimal API controllers
 - Entity Framework Core with PostgreSQL (via Npgsql)
 - JWT bearer tokens for authentication
-- Twilio Verify API for phone verification
-- Azure Key Vault for secrets
-- Azure App Service for hosting
-- Azure Database for PostgreSQL Flexible Server
-- Azure Storage Blobs for media uploads
+- Twilio Verify API for phone verification (with local SMS mock during development)
+- Azure (production) / Docker Compose (development)
 
-**Why PostgreSQL over SQL Server for this app:**
-- Native JSONB columns for `CertificateNames` and `GalleryNames` arrays, avoiding string serialization overhead and enabling real JSON queries at the database level if needed later
-- Better free/developer-tier options (Neon, Supabase) during early development
-- Azure Database for PostgreSQL Flexible Server is a mature, fully managed Azure service
-- EF Core support via Npgsql is first-class with the same code-first approach, migrations, and LINQ support
+**Database choice: PostgreSQL over SQL Server:**
+- Native JSONB columns for `CertificateNames` and `GalleryNames` arrays, avoiding string serialization and enabling real JSON queries at the database level if needed later
+- Better free/developer-tier options (Neon, Supabase, Railway) during early development
+- Azure Database for PostgreSQL Flexible Server is a fully managed Azure service for production
+- EF Core support via Npgsql is first-class with code-first approach, migrations, LINQ
+
+**Development approach: local-first, free until production:**
+- Development uses Docker Compose to run PostgreSQL locally + the API + the Angular app
+- SMS verification uses a local mock (logs code to console / writes to file) during dev, Twilio in production
+- No Azure deployment until Phase 9 when the system is proven and ready
+- Free managed Postgres (Neon, Supabase) can substitute for the Docker Postgres if a shared dev DB is needed
+- Azure Free Trial covers production deployment costs for the first 12 months
+
+**Deployment approach: green/blue swap:**
+- Two App Service slots (green and blue) -- one active, one staging
+- Deploy to the inactive slot, run smoke tests, then swap
+- Database migrations are additive-only (no destructive changes) to support backward compatibility during swap
+- Rollback = swap back to the previous slot
+
+**Environments:**
+| Environment | Postgres Host | API Host | Purpose |
+|------------|--------------|----------|---------|
+| Local dev | Docker Compose (localhost:5432) | localhost:5000 | Daily development |
+| Dev | Neon/Supabase free tier | Optional cloud host | Shared integration testing |
+| UAT (blue) | Azure PostgreSQL Flexible Server | Azure App Service slot | Pre-production validation |
+| Production (green) | Azure PostgreSQL Flexible Server | Azure App Service slot | Live traffic |
 
 ---
 
@@ -27,23 +45,28 @@ The current application is entirely client-side: domain logic lives in NgRx redu
 
 ```
 ClinicX/
+  docker-compose.yml               # Postgres + API + pgadmin (local dev)
+  docker-compose.prod.yml          # Production overrides
   ClinicX.sln
   src/
-    ClinicX.Api/                     # ASP.NET Core Web API
+    ClinicX.Api/
       Controllers/
-        AuthController.cs            # Phone verification, JWT, admin login
-        AccountsController.cs        # Account CRUD, profile management
-        HiringController.cs          # Opportunities, invites, applications
-        PassportsController.cs       # Talent passport shares
-        AdminController.cs           # Admin operations
-        PublicController.cs          # Anonymous public endpoints
+        AuthController.cs
+        AccountsController.cs
+        HiringController.cs
+        PassportsController.cs
+        AdminController.cs
+        PublicController.cs
       Middleware/
-        ExceptionMiddleware.cs       # Global error handling
+        ExceptionMiddleware.cs
         RequestLoggingMiddleware.cs
       Program.cs
       appsettings.json
+      appsettings.Development.json  # Local PostgreSQL connection
+      appsettings.Uat.json         # UAT PostgreSQL connection
+      appsettings.Production.json  # Production PostgreSQL connection
 
-    ClinicX.Application/             # Use-case layer
+    ClinicX.Application/
       Common/
         Interfaces/
           ICurrentUserService.cs
@@ -51,25 +74,25 @@ ClinicX/
           ISmsService.cs
           IFileStorageService.cs
       Auth/
-        Commands/                    # SendVerificationCodeCommand, VerifyCodeCommand, etc.
-        Dtos/                        # AuthResultDto, TokenResponseDto
-        Services/                    # JwtService.cs, SmsService.cs, AdminService.cs
+        Commands/
+        Dtos/
+        Services/
       Accounts/
-        Commands/                    # CreateAccountCommand, UpdateProfileCommand, etc.
-        Queries/                     # GetAccountQuery, ListAccountsQuery
-        Dtos/                        # AccountDto, ClinicDetailsDto, TalentDetailsDto
+        Commands/
+        Queries/
+        Dtos/
       Hiring/
-        Commands/                    # CreateOpportunityCommand, etc.
-        Queries/                     # GetOpportunitiesQuery, GetInviteByTokenQuery
-        Dtos/                        # OpportunityDto, InviteDto, ApplicationDto
+        Commands/
+        Queries/
+        Dtos/
       Founder/
-        Queries/                     # GetFounderStatusQuery
-        Dtos/                        # FounderStatusDto
+        Queries/
+        Dtos/
       Admin/
-        Commands/                    # SetReviewStatusCommand, ResetVerificationCommand
-        Queries/                     # GetVerificationSecurityQuery
+        Commands/
+        Queries/
 
-    ClinicX.Domain/                   # Core entities (no dependencies)
+    ClinicX.Domain/
       Entities/
         Account.cs
         ClinicDetails.cs
@@ -83,49 +106,62 @@ ClinicX/
         AdminUser.cs
         RefreshToken.cs
       Enums/
-        AccountType.cs               # clinic, talent
-        ReviewStatus.cs              # UnderReview, Approved, OnHold
-        OpportunityStatus.cs         # Active, Paused, Closed
-        ApplicationSource.cs         # ClinicHiringLink, TalentPassport, ClinicxMatch
-        ApplicationStatus.cs         # Invited, Interested, ... Closed
-        ThemePreference.cs           # Auto, Light, Dark
+        AccountType.cs
+        ReviewStatus.cs
+        OpportunityStatus.cs
+        ApplicationSource.cs
+        ApplicationStatus.cs
+        ThemePreference.cs
       ValueObjects/
-        PhoneNumber.cs               # Normalized phone + display formatting
+        PhoneNumber.cs
       Exceptions/
         DomainException.cs
         NotFoundException.cs
         UnauthorizedException.cs
 
-    ClinicX.Infrastructure/           # EF Core, external services
+    ClinicX.Infrastructure/
       Persistence/
         ClinicXDbContext.cs
         Migrations/
-        Configurations/              # Entity type configurations
+        Configurations/
         Repositories/
+        Seed/
+          SeedData.cs               # Test/dev seed data (runs via config switch)
       Services/
-        SmsService.cs                # Twilio implementation
-        JwtService.cs                # JWT generation/validation
-        FileStorageService.cs        # Azure Blob implementation
-        CurrentUserService.cs        # Extracts user from HttpContext
+        SmsService.cs               # Twilio implementation
+        SmsServiceMock.cs           # Local dev mock (logs to console)
+        JwtService.cs
+        FileStorageService.cs
+        CurrentUserService.cs
 
   tests/
     ClinicX.UnitTests/
+      Auth/
+      Accounts/
+      Hiring/
+      Founder/
     ClinicX.IntegrationTests/
+      DatabaseFixture.cs            # Spin up test Postgres via Testcontainers
+      AuthTests/
+      AccountsTests/
+      HiringTests/
     ClinicX.Api.Tests/
+      AuthControllerTests.cs
+      AccountsControllerTests.cs
 ```
 
 ---
 
 ## 3. Database Schema (EF Core with PostgreSQL)
 
-### Type mapping notes (SQL Server -> PostgreSQL):
+### Type mapping (SQL Server -> PostgreSQL):
 
 | SQL Server | PostgreSQL | Reason |
 |-----------|-----------|--------|
 | UNIQUEIDENTIFIER | UUID | Guid in .NET maps natively to PostgreSQL uuid |
 | NEWSEQUENTIALID() | gen_random_uuid() | Built-in UUID v4 generation (no extension needed) |
 | NVARCHAR(n) | VARCHAR(n) | Same semantics; PostgreSQL is UTF-8 natively |
-| NVARCHAR(MAX) for JSON | JSONB | Allows JSON queries and indexing; no string parsing |
+| NVARCHAR(MAX) for JSON | JSONB | Allows JSON queries and indexing |
 | DATETIME2 | TIMESTAMPTZ | Timezone-aware timestamp (always UTC) |
 | BIT | BOOLEAN | Cleaner semantics |
 | INT | INTEGER | Identical |
@@ -337,22 +373,57 @@ CREATE INDEX IX_RefreshTokens_AccountId ON RefreshTokens(AccountId);
 CREATE UNIQUE INDEX IX_RefreshTokens_Token ON RefreshTokens(Token);
 ```
 
-### 3.11 EF Core Configuration Notes
+### 3.11 Bulletproof Database -- Movable Data
 
-- Use `Npgsql.EntityFrameworkCore.PostgreSQL` NuGet package.
-- JSONB columns (`CertificateNames`, `GalleryNames`) use EF Core's `OwnsOne` or value conversion with `Npgsql`'s built-in JSON support:
-  ```csharp
-  .Property(e => e.CertificateNames)
-  .HasColumnType("jsonb")
-  .HasConversion(
-      v => JsonSerializer.Serialize(v, JsonSerializerOptions.Default),
-      v => JsonSerializer.Deserialize<List<string>>(v, JsonSerializerOptions.Default) ?? new()
-  );
-  ```
-  Alternatively, use Npgsql's built-in `NpgsqlDataSource` with `List<string>` mapping which handles JSONB natively without manual serialization.
-- All `DateTime` properties use `DateTime.UtcNow` in C# and `TIMESTAMPTZ` in PostgreSQL.
-- Seed the initial migration with `HasData()` matching the frontend `SEEDED_ACCOUNTS`, `SEEDED_OPPORTUNITIES`, `SEEDED_INVITES`, `SEEDED_PASSPORTS`.
-- Enable `app.UseNpgsql()` for connection resilience (automatic retry on transient failures).
+The database is designed so data can be moved between environments safely. Key principles:
+
+1. **All schema changes are additive migrations.** No destructive DDL (DROP, ALTER COLUMN that removes data). New columns are nullable or have defaults. Old columns are deprecated via code, not removed. This enables safe green/blue swap: the old slot continues to work with the new schema.
+
+2. **Seed data is a configurable concern.** Three seed data profiles:
+   - `Development`: loads `SEEDED_ACCOUNTS`, `SEEDED_OPPORTUNITIES`, etc. from the frontend -- mirrors what localStorage currently has, so developers have a known baseline.
+   - `Test`: minimal essential seeds (admin user, one clinic, one talent).
+   - `Production`: production admin user only. No demo accounts.
+
+   The seed profile is controlled by `appsettings.{Environment}.json`:
+   ```json
+   {
+     "SeedData": {
+       "Profile": "Development" // or "Test" or "Production"
+     }
+   }
+   ```
+
+3. **Database snapshots for testing.** A CLI dotnet tool (or a simple script in `scripts/`) can dump and restore a full database snapshot:
+   ```bash
+   # Save state before a risky migration test
+   ./scripts/db-snapshot.sh save pre-migration-test
+   
+   # Run migration
+   dotnet ef database update
+   
+   # Test...
+   
+   # Restore clean state
+   ./scripts/db-snapshot.sh restore pre-migration-test
+   ```
+   This uses `pg_dump` / `pg_restore` under the hood.
+
+4. **Testcontainers for integration tests.** Unit tests against a real PostgreSQL spun up in Docker:
+   ```csharp
+   public class DatabaseFixture : IAsyncLifetime
+   {
+       private readonly PostgreSqlContainer _container = 
+           new PostgreSqlBuilder()
+               .WithImage("postgres:16-alpine")
+               .Build();
+       
+       public string ConnectionString => _container.GetConnectionString();
+       
+       public async Task InitializeAsync() => await _container.StartAsync();
+       public async Task DisposeAsync() => await _container.DisposeAsync();
+   }
+   ```
+   Each test run starts fresh, no shared state, no cleanup needed.
 
 ---
 
@@ -361,7 +432,9 @@ CREATE UNIQUE INDEX IX_RefreshTokens_Token ON RefreshTokens(Token);
 ### 4.1 Base URL
 
 ```
-https://api.clinicx-talent.com/api/v1/
+Dev:   http://localhost:5000/api/v1/
+Prod:  https://api.clinicx-talent.com/api/v1/
+UAT:   https://uat-api.clinicx-talent.com/api/v1/
 ```
 
 ### 4.2 Authentication Endpoints
@@ -370,7 +443,7 @@ https://api.clinicx-talent.com/api/v1/
 POST /api/v1/auth/send-code
   Request:  { phone: string }
   Response: { success: boolean, message: string }
-  Notes:    Normalizes phone, calls Twilio Verify. Returns 429 if rate-limited.
+  Notes:    Normalizes phone, sends code via Twilio (or mock). Returns 429 if rate-limited.
 
 POST /api/v1/auth/verify-code
   Request:  { phone: string, code: string }
@@ -475,7 +548,7 @@ Error codes: `PHONE_LOCKED`, `INVALID_CODE`, `RATE_LIMITED`, `DUPLICATE_APPLICAT
    b. Checks VerificationSecurityRecords for lockout
    c. Generates 6-digit code
    d. Stores bcrypt hash in PhoneVerifications
-   e. Sends code via Twilio Verify API
+   e. Sends code via Twilio (production) or logs to console (dev mock)
    f. Increments attempt counter in VerificationSecurityRecords
    g. If >3 attempts, locks phone for 15 minutes
    h. If >5 distinct phones in last hour, sets flagged=true
@@ -490,7 +563,34 @@ Error codes: `PHONE_LOCKED`, `INVALID_CODE`, `RATE_LIMITED`, `DUPLICATE_APPLICAT
    e. On failure: increments attempt count
 ```
 
-### 5.2 JWT Claims
+### 5.2 SMS Mock for Local Development
+
+Instead of calling Twilio, the mock SMS service logs the verification code:
+
+```csharp
+public class SmsServiceMock : ISmsService
+{
+    public Task SendVerificationCodeAsync(string phone, string code)
+    {
+        Console.WriteLine($"[SMS MOCK] Code for {phone}: {code}");
+        // Also write to a file the Angular dev server can poll
+        File.AppendAllText("sms-codes.log", $"{phone}:{code}{Environment.NewLine}");
+        return Task.CompletedTask;
+    }
+}
+```
+
+The DI registration switches based on environment:
+```csharp
+if (builder.Environment.IsDevelopment())
+    builder.Services.AddScoped<ISmsService, SmsServiceMock>();
+else
+    builder.Services.AddScoped<ISmsService, SmsService>();
+```
+
+In development, the Angular app can display the code from the mock log on screen (useful for manual testing). In UAT/production, the real Twilio API is used.
+
+### 5.3 JWT Claims
 
 ```json
 {
@@ -508,9 +608,9 @@ Error codes: `PHONE_LOCKED`, `INVALID_CODE`, `RATE_LIMITED`, `DUPLICATE_APPLICAT
 - Access token TTL: 15 minutes
 - Refresh token TTL: 7 days
 - Admin tokens include `"role": "admin"`
-- Signing key in Azure Key Vault
+- Signing key in Azure Key Vault (production) / appsettings.Development.json (local dev)
 
-### 5.3 Authorization Policies
+### 5.4 Authorization Policies
 
 ```csharp
 builder.Services.AddAuthorization(options =>
@@ -527,7 +627,7 @@ builder.Services.AddAuthorization(options =>
 });
 ```
 
-### 5.4 Rate Limiting
+### 5.5 Rate Limiting
 
 - 3 failed verification attempts per phone -> 15-minute lockout
 - 5 distinct phones in 60 minutes -> admin flag
@@ -536,26 +636,82 @@ builder.Services.AddAuthorization(options =>
 
 ---
 
-## 6. Azure Services
+## 6. Azure Services (Production / UAT)
+
+### 6.1 Resource Table
 
 | Resource | SKU / Tier | Purpose |
 |----------|-----------|---------|
-| App Service | B1 (Linux) | Host ASP.NET Core API |
+| App Service | B1 (Linux) -- 2 slots (green + blue) | Host ASP.NET Core API |
 | PostgreSQL Flexible Server | Burstable B1ms (1 vCore, 2 GB) | Primary data store |
 | Key Vault | Standard | JWT signing key, Twilio creds, connection strings |
 | Storage Account | Standard LRS (Blob) | Certificates, photos, videos |
 | App Insights | Per-GB | Logging, exceptions, perf monitoring |
-| Front Door | Standard (optional MVP) | CDN, SSL, WAF |
 
-**PostgreSQL hosting note:** Azure Database for PostgreSQL Flexible Server is the recommended Azure-native option. For earlier development stages (before production), a managed Postgres service like Neon, Supabase, or Railway can be used for faster iteration -- the EF Core provider (`Npgsql`) is identical regardless. The connection string is the only thing that changes.
+All resources fit within the Azure Free Trial (12 months) except PostgreSQL Flexible Server which has a free tier of its own (Burstable B1ms, 32 GB storage, 12 months).
 
-### Deployment Pipeline
+### 6.2 Green/Blue Deployment Architecture
+
+```
+[Azure Front Door / DNS]
+        |
+        v
+   [App Service]
+   /            \
+  Slot: green    Slot: blue
+  (production)   (staging)
+       |              |
+       +---- DB ------+
+       (single PostgreSQL instance, same schema)
+```
+
+**Deployment flow:**
+1. Deploy new build to the inactive slot (e.g., blue while green serves traffic)
+2. Run smoke tests against the inactive slot
+3. Run EF Core migrations (additive only -- no column drops or destructive changes)
+4. Swap the slots: blue becomes production, green becomes staging
+5. Monitor the new production slot
+6. If rollback needed: swap back (immediate, no schema issues because migrations were additive)
+
+The single PostgreSQL instance is shared. Both slots connect to the same database. This is safe because:
+- Migrations are always additive (new columns nullable or defaulted)
+- Old code ignores new columns it doesn't know about
+- New code handles null/empty states for old data
+- Breaking schema changes are two-phase: (1) add column + write dual code, (2) next deploy removes old column
+
+### 6.3 Environment Configuration
+
+```
+appsettings.json                  # Shared defaults
+appsettings.Development.json      # Local Docker PostgreSQL
+appsettings.Uat.json              # UAT Azure PostgreSQL
+appsettings.Production.json       # Production Azure PostgreSQL + Key Vault refs
+```
+
+Environment variable `ASPNETCORE_ENVIRONMENT` controls which config is loaded:
+```bash
+# Local
+ASPNETCORE_ENVIRONMENT=Development
+
+# UAT slot
+ASPNETCORE_ENVIRONMENT=Uat
+
+# Production slot
+ASPNETCORE_ENVIRONMENT=Production
+```
+
+### 6.4 Deployment Pipeline
 
 ```
 GitHub main branch
-  -> GitHub Actions: dotnet restore, build, test, publish
-  -> Deploy to Azure App Service
-  -> Run EF Core migrations (dotnet ef database update)
+  -> GitHub Actions:
+     1. dotnet restore, build, test
+     2. dotnet publish
+     3. Deploy to Azure App Service (inactive slot)
+     4. Run smoke tests
+     5. Run EF Core migrations (idempotent, additive)
+     6. Swap slots (green <-> blue)
+     7. Run post-deploy validation
 ```
 
 ---
@@ -597,14 +753,55 @@ During phases 2-6, both systems coexist:
 ```typescript
 // src/environments/environment.ts
 export const environment = {
-  apiUrl: 'https://api.clinicx-talent.com/api/v1',
+  apiUrl: 'http://localhost:5000/api/v1',
   useBackend: false,  // flip to true when API is ready
 };
 ```
 
 ### 7.3 Seed Data Strategy
 
-Existing `SEEDED_ACCOUNTS`, `SEEDED_OPPORTUNITIES`, etc. become EF Core migration seed data. On the frontend, the hydration meta-reducer no longer carries seeds -- the API is the single source of truth.
+Existing `SEEDED_ACCOUNTS`, `SEEDED_OPPORTUNITIES`, etc. from the frontend become EF Core seed data, loaded only in development environment. On the frontend, the hydration meta-reducer no longer carries seeds -- the API is the single source of truth.
+
+### 7.4 Local Development Setup
+
+```yaml
+# docker-compose.yml
+version: '3.8'
+services:
+  postgres:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_DB: clinicx
+      POSTGRES_USER: clinicx
+      POSTGRES_PASSWORD: clinicx_dev
+    ports:
+      - "5432:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+
+  api:
+    build: .
+    ports:
+      - "5000:5000"
+    environment:
+      ASPNETCORE_ENVIRONMENT: Development
+      ConnectionStrings__ClinicXDb: "Host=postgres;Database=clinicx;Username=clinicx;Password=clinicx_dev"
+    depends_on:
+      - postgres
+
+volumes:
+  pgdata:
+```
+
+Start everything with `docker compose up`. The Angular app runs locally via `ng serve` on :4200, proxying API calls to localhost:5000. This keeps the frontend hot-reload cycle fast while the backend runs in Docker.
+
+For those who prefer running Postgres natively without Docker:
+```bash
+# macOS
+brew install postgresql@16
+brew services start postgresql@16
+createdb clinicx
+```
 
 ---
 
@@ -711,6 +908,29 @@ export const appConfig: ApplicationConfig = {
 };
 ```
 
+### 8.9 Proxy Config for Local Dev
+
+To avoid CORS issues during local development, use an Angular proxy:
+
+```json
+// src/proxy.conf.json
+{
+  "/api": {
+    "target": "http://localhost:5000",
+    "secure": false
+  }
+}
+```
+
+```json
+// angular.json snippet
+"serve": {
+  "options": {
+    "proxyConfig": "src/proxy.conf.json"
+  }
+}
+```
+
 ---
 
 ## 9. Implementation Phases
@@ -719,18 +939,21 @@ export const appConfig: ApplicationConfig = {
 - Scaffold solution with 4 projects (Api, Application, Domain, Infrastructure)
 - Define domain entities and enums matching frontend types
 - Add NuGet packages: `Npgsql.EntityFrameworkCore.PostgreSQL`, `Microsoft.AspNetCore.Authentication.JwtBearer`, `Twilio`, `Azure.Identity`, `Azure.Security.KeyVault.Secrets`, `Azure.Storage.Blobs`, `MediatR`, `FluentValidation`
-- Configure EF Core with PostgreSQL (Npgsql)
-- Enable connection resilience (`EnableRetryOnFailure`)
-- Create initial migration with seed data
+- Configure EF Core with PostgreSQL (Npgsql), enable connection resilience
+- Write `docker-compose.yml` for local PostgreSQL
+- Create `SmsServiceMock` that logs codes to console/file
+- Create initial migration with development seed data
 - Implement ExceptionMiddleware
-- Verify /health endpoint works
+- Verify /health endpoint works on localhost:5000
+- Write integration test fixture using Testcontainers
 
 ### Phase 2: Auth System (Week 2)
-- Phone verification with Twilio
+- Phone verification: mock for dev, Twilio interface for production
 - JWT issuance with 15-min access + 7-day refresh tokens
 - Rate limiting (3 attempts locks phone, 5 phones flags system)
 - Admin login against AdminUsers table
-- Swagger documentation for auth endpoints
+- SMS mock for local development (visible in console)
+- Swagger / OpenAPI documentation for auth endpoints
 
 ### Phase 3: Accounts API (Week 2-3)
 - Account CRUD endpoints
@@ -756,8 +979,10 @@ export const appConfig: ApplicationConfig = {
 - AuthService, JwtInterceptor, ErrorInterceptor
 - HttpAccountDataSource and HttpHiringDataSource
 - Feature flag in environment config
+- Angular proxy config for local development
 - Replace TEST_CREDENTIALS and hardcoded admin
 - Update registration/sign-in flows
+- Full end-to-end testing against local Docker backend
 
 ### Phase 7: Frontend Full Integration (Week 5-6)
 - Remove localStorage persistence effects
@@ -765,37 +990,131 @@ export const appConfig: ApplicationConfig = {
 - Remove local data source implementations
 - Add loading states for API calls
 - Convert date formatting (ISO 8601 -> display)
-- End-to-end testing of all flows
+- End-to-end testing against local Docker backend
 
 ### Phase 8: Media Storage (Week 6)
-- Azure Blob storage for file uploads
+- Azure Blob storage for file uploads (use local filesystem mock in dev)
 - Upload endpoints in AccountsController
 - File type/size validation
 
-### Phase 9: Deployment (Week 6-7)
-- Azure resources via Bicep/ARM (App Service + PostgreSQL Flexible Server)
-- GitHub Actions CI/CD
-- Application Insights
+### Phase 9: Production Deployment (Week 6-7)
+- Set up Azure resources via Bicep/ARM:
+  - App Service with green and blue deployment slots
+  - PostgreSQL Flexible Server (free tier)
+  - Key Vault with secrets
+  - Storage Account
+  - Application Insights
+- Configure `appsettings.Uat.json` and `appsettings.Production.json`
+- Set up GitHub Actions CI/CD with slot swap
+- Implement additive-only migration strategy
+- Deploy to UAT slot first, test, then deploy and swap to production
 - Performance and security testing
-- Production cutover
 
 ---
 
-## 10. Potential Challenges
+## 10. Bulletproof Database -- Data Mobility
+
+The database is designed to be moved, reset, and tested freely across environments.
+
+### 10.1 Migration Philosophy
+
+Every migration is **additive only** -- this is what makes green/blue swaps safe:
+
+```
+Good:    ADD COLUMN ... NULL                  -- old code ignores it
+Good:    CREATE INDEX ...                     -- read perf improvement, no breaking change
+Good:    CREATE TABLE ...                     -- new entity, no one touches it yet
+
+Bad:     DROP COLUMN ...                      -- old code crashes
+Bad:     ALTER COLUMN ... NOT NULL            -- old inserts fail
+Bad:     RENAME TABLE ...                     -- old code can't find it
+Bad:     ALTER COLUMN ... TYPE                -- data conversion risk
+```
+
+Breaking changes are done in **two deployments**:
+1. First deploy: add new column/table, write dual code (writes to both old and new, reads from new)
+2. Second deploy: remove old column/table reference from code, then drop from schema
+
+### 10.2 Scripts for Data Mobility
+
+```bash
+# Save a snapshot of the current database state (dev only)
+scripts/db-snapshot.sh save my-feature-test
+
+# Load demo seed data into any environment
+scripts/db-seed.sh demo --env=uat
+
+# Reset development database to clean state (drops and recreates)
+scripts/db-reset.sh
+
+# Copy database from UAT to local for debugging
+scripts/db-copy.sh uat local
+
+# Dump schema only (no data) from any environment
+scripts/db-schema.sh dump uat > schema.sql
+```
+
+### 10.3 Seed Data Profiles
+
+| Profile | Contents | When |
+|---------|----------|------|
+| `Development` | Full demo set (6 accounts, 1 opportunity, 1 invite, 1 passport, 0 apps) | Local dev, first migration apply |
+| `Test` | Admin user + 2 accounts (1 clinic, 1 talent) | Integration tests, CI |
+| `Production` | Admin user only | First production migration, then live data |
+| `Demo` | Full demo set (like dev, but used for UAT/demo environments) | UAT slot, demo servers |
+
+### 10.4 Testcontainers Integration Tests
+
+Every integration test starts with a fresh, disposable PostgreSQL:
+
+```csharp
+public class AccountRepositoryTests : IClassFixture<DatabaseFixture>
+{
+    private readonly DatabaseFixture _fixture;
+    
+    public AccountRepositoryTests(DatabaseFixture fixture) => _fixture = fixture;
+    
+    [Fact]
+    public async Task Create_Account_Persists()
+    {
+        // Arrange -- fresh DB, fresh migration, fresh seed
+        await using var ctx = _fixture.CreateDbContext();
+        await ctx.Database.MigrateAsync();
+        await SeedData.ApplyAsync(ctx, SeedProfile.Test);
+        
+        // Act
+        var account = new Account { Type = AccountType.Clinic, Phone = "3125550101", ... };
+        ctx.Accounts.Add(account);
+        await ctx.SaveChangesAsync();
+        
+        // Assert
+        var saved = await ctx.Accounts.FindAsync(account.Id);
+        Assert.NotNull(saved);
+    }
+}
+```
+
+No shared state, no cleanup, no ordering problems. Each test method is fully isolated.
+
+---
+
+## 11. Potential Challenges
 
 | Challenge | Mitigation |
 |-----------|-----------|
-| Data loss during migration | Keep localStorage fallback; seed database with exact copy of seed data |
-| Twilio SMS costs | Free tier: 10,000 verifications/month; email fallback for MVP |
+| Data loss during migration | Keep localStorage fallback; seed database with exact copy of seed data; migration rollback plan |
+| Twilio SMS costs | Twilio Verify free tier: 10,000 verifications/month; local mock during dev |
 | JWT expiration UX | Auto-refresh via interceptor; toast on session expiry |
 | Date format mismatch | API returns ISO 8601 UTC; frontend formats via DatePipe |
-| Concurrent founder assignment | Serializable transaction; only first 1000 accounts get it |
+| Concurrent founder assignment | Serializable transaction; only first 1000 accounts ever get it |
 | File upload limits | ASP.NET Core request size limits; chunked upload for video |
-| PostgreSQL connection pooling | Use Npgsql built-in pooling (default 100 connections); adjust for Flexible Server limits |
+| Green/blue DB compatibility | Additive-only migrations; dual-write during transition periods; old code ignores new columns |
+| PostgreSQL connection pooling | Npgsql built-in pooling (default 100); adjust for Flexible Server limits |
+| Cross-slot CORS in dev | Angular proxy config on :4200 -> :5000; no CORS needed in development |
 
 ---
 
-## 11. Files That Change
+## 12. Files That Change
 
 ### Files to Modify (Frontend):
 - `src/app/app.config.ts` -- swap data source providers, add interceptors
@@ -813,13 +1132,21 @@ export const appConfig: ApplicationConfig = {
 - `src/app/core/auth.service.ts`
 - `src/app/core/jwt.interceptor.ts`
 - `src/app/core/error.interceptor.ts`
+- `src/proxy.conf.json` -- Angular dev server proxy
 
 ### Files to Create (Backend):
 - Entire solution structure in `ClinicX/` directory (see Section 2)
+- `docker-compose.yml` -- local PostgreSQL + API containers
+
+### Files to Create (Operations):
+- `scripts/db-snapshot.sh` -- database snapshot/restore
+- `scripts/db-seed.sh` -- seed data loading
+- `scripts/db-reset.sh` -- development database reset
+- `.github/workflows/deploy.yml` -- CI/CD with green/blue swap
 
 ---
 
-## 12. Key Architectural Notes
+## 13. Key Architectural Notes
 
 ### Domain Logic Migration
 
