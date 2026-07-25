@@ -46,3 +46,5 @@ Thumbs.db
 lighthouse-production-report.html
 lighthouse-production-dark.html
 lighthouse-production-light.html
+playwright-report/
+test-results/

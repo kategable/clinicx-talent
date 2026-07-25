@@ -10,6 +10,8 @@ npm run build          # Production build
 npm test               # Run all Vitest unit tests
 npm run test:coverage  # Run tests with coverage (vitest/coverage-v8)
 npm run audit:lighthouse  # Lighthouse audit (requires dev server on :4200)
+npm run test:e2e        # Playwright E2E tests (requires dev server on :4200)
+npm run test:e2e:ui     # Playwright E2E tests with interactive UI
 npm run watch          # Dev build with watch mode
 ```
 
