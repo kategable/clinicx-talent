@@ -62,6 +62,17 @@ export const AppActions = createActionGroup({
       sharePhone: boolean;
     }>(),
     'Add Talent To My Clinic': props<{ talentAccountId: string }>(),
+    'Set Active Account': props<{ accountId: string }>(),
     'Clear Pending Invite': emptyProps(),
+
+    // -- Soft delete ----------------------------------------------------------
+    'Soft Delete Account': props<{ id: string }>(),
+    'Restore Account': props<{ id: string }>(),
+    'Soft Delete Opportunity': props<{ id: string }>(),
+    'Restore Opportunity': props<{ id: string }>(),
+    'Soft Delete Passport': props<{ id: string }>(),
+    'Restore Passport': props<{ id: string }>(),
+    'Soft Delete Invite': props<{ id: string }>(),
+    'Restore Invite': props<{ id: string }>(),
   },
 });

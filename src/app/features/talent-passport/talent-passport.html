@@ -2,23 +2,48 @@
   <h1>Talent Passport</h1>
   <p class="subtitle">
     Your Talent Passport is a public profile page that clinics can visit to learn
-    about you. Share it anywhere — text, email, Instagram, or QR code. Only your
-    professional name, role, skills, and introduction are visible. Private details
-    stay private.
+    about you. Share it anywhere — text, email, Instagram, or QR code.
   </p>
 
-  @if (!passportCreated()) {
+  @if (!passportCreated() && activeShares().length === 0) {
     <button mat-flat-button (click)="sharePassport()">
       Generate your Talent Passport link
     </button>
   } @else {
-    <div class="link-box">
-      <code>{{ passportLink() }}</code>
-      <button mat-stroked-button (click)="copyPassportLink()">Copy link</button>
-    </div>
+    <!-- Active shares -->
+    @for (share of activeShares(); track share.id) {
+      <div class="link-box">
+        <code>{{ passportLink() }}?invite={{ share.token }}</code>
+        <div class="link-actions">
+          <button mat-stroked-button (click)="copyPassportLink()">Copy link</button>
+          <button mat-button class="delete-btn" (click)="softDelete(share.id)">
+            Delete
+          </button>
+        </div>
+      </div>
+    }
+    @if (activeShares().length === 0 && passportCreated()) {
+      <p class="empty-msg">No active passport links. Generate one below.</p>
+      <button mat-flat-button (click)="sharePassport()">
+        Generate your Talent Passport link
+      </button>
+    }
     <p class="share-hint">
       Share this link with clinics. When they visit, they'll see your professional
       profile and can add you to their talent list.
     </p>
+
+    <!-- Deleted shares -->
+    @if (deletedShares().length) {
+      <div class="deleted-section">
+        <h2>Deleted links</h2>
+        @for (share of deletedShares(); track share.id) {
+          <div class="link-box deleted">
+            <code>Deleted {{ share.deletedAt }}</code>
+            <button mat-button (click)="restore(share.id)">Restore</button>
+          </div>
+        }
+      </div>
+    }
   }
 </div>

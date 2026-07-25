@@ -63,6 +63,10 @@ export async function signInViaUI(
   code: string,
 ): Promise<void> {
   await page.goto('/signin');
+
+  // New sign-in page shows Google first — click phone option
+  await page.locator('button:has-text("Sign in with phone instead")').click();
+
   await page.waitForSelector('#phone');
 
   // Enter phone

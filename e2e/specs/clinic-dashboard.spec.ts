@@ -4,7 +4,7 @@ import { clearState, signInViaUI } from '../seed';
 test.describe('Clinic dashboard', () => {
   test.beforeEach(async ({ page }) => {
     await clearState(page);
-    await signInViaUI(page, '(312) 555-0101', '246810');
+    await signInViaUI(page, '(312) 555-0101', '123456');
   });
 
   test('renders sidenav with all navigation tabs', async ({ page }) => {

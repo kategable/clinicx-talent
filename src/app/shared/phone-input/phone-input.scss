@@ -1,0 +1,17 @@
+.continue {
+  width: 100%;
+  justify-content: center;
+  padding: 0.75rem;
+  font-size: 1rem;
+}
+
+.field-error {
+  color: var(--mat-sys-error);
+  font-size: 0.875rem;
+  margin: 0 0 0.5rem;
+}
+
+mat-form-field {
+  width: 100%;
+  margin-bottom: 0.5rem;
+}

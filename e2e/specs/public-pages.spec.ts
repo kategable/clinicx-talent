@@ -60,12 +60,14 @@ test.describe('Public pages (unauthenticated)', () => {
     await expect(page.getByText(/Aesthetic NP/i).first()).toBeVisible();
   });
 
-  test('sign-in page renders test credentials', async ({ page }) => {
+  test('sign-in page renders Google sign-in button', async ({ page }) => {
     await page.goto('/signin');
 
-    await expect(page.locator('#phone')).toBeVisible({ timeout: 5000 });
-    // Test credentials should be shown
-    await expect(page.locator('.test-access')).toBeVisible();
+    // New sign-in page shows Google button prominently
+    await expect(page.getByTestId('google-signin-button')).toBeVisible({
+      timeout: 5000,
+    });
+    await expect(page.getByText('Sign in with Google')).toBeVisible();
   });
 
   test('contact page renders with mailto CTA', async ({ page }) => {

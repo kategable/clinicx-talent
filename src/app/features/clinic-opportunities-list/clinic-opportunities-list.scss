@@ -115,6 +115,33 @@ h1 {
   font-size: 0.8125rem;
 }
 
+.delete-btn {
+  font-size: 0.8125rem;
+  color: var(--cx-muted);
+}
+
+.card.deleted {
+  opacity: 0.55;
+  background: var(--cx-surface-container);
+}
+
+.deleted-status {
+  background: color-mix(in srgb, var(--cx-accent) 12%, transparent) !important;
+  color: var(--cx-accent) !important;
+}
+
+.toolbar {
+  margin-bottom: 1rem;
+}
+
+.deleted-toggle {
+  font-size: 0.8125rem;
+
+  &.active {
+    background: var(--cx-surface-container);
+  }
+}
+
 .empty {
   text-align: center;
   padding-top: 3rem;

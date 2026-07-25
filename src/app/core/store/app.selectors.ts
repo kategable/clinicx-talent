@@ -6,11 +6,20 @@ export const selectAccounts = createSelector(selectAppState, (state) => state.ac
 export const selectAccountValues = createSelector(selectAccounts, (accounts) =>
   Object.values(accounts),
 );
+/** Active (non-deleted) accounts only. */
+export const selectActiveAccounts = createSelector(selectAccountValues, (accounts) =>
+  accounts.filter((a) => !a.deletedAt),
+);
+/** Deleted accounts (for admin view toggle). */
+export const selectDeletedAccounts = createSelector(selectAccountValues, (accounts) =>
+  accounts.filter((a) => a.deletedAt),
+);
 export const selectCurrentAccount = createSelector(selectAppState, (state) =>
   state.activeAccountId ? state.accounts[state.activeAccountId] : undefined,
 );
+/** Active accounts only for admin counts. */
 export const selectPendingCount = createSelector(
-  selectAccountValues,
+  selectActiveAccounts,
   (accounts) => accounts.filter((a) => a.status === 'under-review').length,
 );
 export const selectRegistration = createSelector(selectAppState, (state) => state.registration);
@@ -46,9 +55,20 @@ export const selectThemePreference = createSelector(
 // -- Hiring selectors --------------------------------------------------------
 
 export const selectHiring = createSelector(selectAppState, (state) => state.hiring);
-export const selectOpportunities = createSelector(selectHiring, (h) => h.opportunities);
-export const selectInvites = createSelector(selectHiring, (h) => h.invites);
-export const selectPassportShares = createSelector(selectHiring, (h) => h.passportShares);
+/** Active (non-deleted) opportunities. */
+export const selectOpportunities = createSelector(selectHiring, (h) =>
+  h.opportunities.filter((o) => !o.deletedAt),
+);
+/** Active (non-deleted) invites. */
+export const selectInvites = createSelector(selectHiring, (h) =>
+  h.invites.filter((i) => !i.deletedAt),
+);
+/** Active (non-deleted) passport shares. */
+export const selectPassportShares = createSelector(selectHiring, (h) =>
+  h.passportShares.filter((p) => !p.deletedAt),
+);
+/** All passport shares including deleted (for management page). */
+export const selectAllPassportShares = createSelector(selectHiring, (h) => h.passportShares);
 export const selectApplications = createSelector(selectHiring, (h) => h.applications);
 export const selectPendingInvite = createSelector(selectHiring, (h) => h.pendingInvite);
 
@@ -126,17 +146,17 @@ export const selectApplicationsForMyTalent = createSelector(
 );
 
 export const selectFounderCount = createSelector(
-  selectAccountValues,
+  selectActiveAccounts,
   (accounts) => accounts.filter((a) => a.founder).length,
 );
 
 export const selectFounderSpotsRemaining = createSelector(
-  selectAccountValues,
+  selectActiveAccounts,
   (accounts) =>
     Math.max(0, 1000 - accounts.length),
 );
 
 export const selectAccountCount = createSelector(
-  selectAccounts,
-  (accounts) => Object.keys(accounts).length,
+  selectActiveAccounts,
+  (accounts) => accounts.length,
 );

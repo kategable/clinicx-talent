@@ -35,6 +35,8 @@ export interface HiringOpportunity {
   idealHire: string;
   status: OpportunityStatus;
   createdAt: string;
+  /** ISO date string when soft-deleted by the clinic owner. */
+  deletedAt?: string;
 }
 
 export interface HiringInvite {
@@ -44,6 +46,8 @@ export interface HiringInvite {
   createdAt: string;
   expiresAt: string;
   active: boolean;
+  /** ISO date string when soft-deleted by the clinic owner. */
+  deletedAt?: string;
 }
 
 export interface TalentPassportShare {
@@ -52,6 +56,8 @@ export interface TalentPassportShare {
   token: string;
   createdAt: string;
   active: boolean;
+  /** ISO date string when soft-deleted by the talent owner. */
+  deletedAt?: string;
 }
 
 export interface TalentApplication {

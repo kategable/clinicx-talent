@@ -121,9 +121,32 @@
   color: #7d766f;
   border-color: #c7c3bc;
 }
+.sort-spacer {
+  flex: 1;
+}
+.deleted-toggle {
+  font-size: 9px;
+  padding: 6px 10px;
+  border-color: #d1a99d;
+  color: #8b7770;
+}
+.deleted-toggle.active {
+  background: #f5f0ed;
+  border-color: #a08078;
+  color: #5e4a45;
+}
+.account-list article.deleted {
+  opacity: 0.55;
+  background: #faf7f5;
+}
+.deleted-date {
+  color: #c08070 !important;
+  font-style: italic;
+}
 .actions {
   display: flex;
   gap: 6px;
+  flex-wrap: wrap;
 }
 .actions button {
   border: 1px solid #18312c;
@@ -135,6 +158,14 @@
 .actions button:first-child {
   background: #18312c;
   color: white;
+}
+.actions .delete-btn {
+  border-color: #d1a99d;
+  color: #8b7770;
+}
+.actions .delete-btn:hover {
+  background: #fdf0ed;
+  color: #c04040;
 }
 .security-note {
   color: #8b7770;

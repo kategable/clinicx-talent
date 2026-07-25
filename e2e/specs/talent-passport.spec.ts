@@ -10,7 +10,7 @@ test.describe('Talent Passport', () => {
     page,
   }) => {
     // Sign in as an approved talent
-    await signInViaUI(page, '(312) 555-0102', '135790');
+    await signInViaUI(page, '(312) 555-0102', '123456');
 
     // Navigate to Talent Passport tab
     await page.locator('a[routerlink="/talent/passport"]').first().click();
@@ -45,7 +45,7 @@ test.describe('Talent Passport', () => {
     page,
   }) => {
     // First sign in as a clinic
-    await signInViaUI(page, '(312) 555-0101', '246810');
+    await signInViaUI(page, '(312) 555-0101', '123456');
 
     // Navigate to the public talent passport
     await page.goto('/talent/alex-morgan-rn');

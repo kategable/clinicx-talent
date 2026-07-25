@@ -14,14 +14,13 @@ export const routes: Routes = [
   },
   {
     path: 'register',
-    loadComponent: () => import('./features/registration/registration').then((m) => m.Registration),
+    loadComponent: () => import('./features/register-phone/register-phone').then((m) => m.RegisterPhone),
     title: 'Create an account | ClinicX Talent',
   },
   {
     path: 'signin',
-    loadComponent: () => import('./features/registration/registration').then((m) => m.Registration),
+    loadComponent: () => import('./features/signin/signin').then((m) => m.Signin),
     title: 'Sign in | ClinicX Talent',
-    data: { mode: 'signin' },
   },
   {
     path: 'onboarding',

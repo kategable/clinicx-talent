@@ -1,0 +1,37 @@
+<form (submit)="$event.preventDefault(); submitPhone()">
+  <mat-form-field appearance="outline">
+    <mat-label>Mobile number</mat-label>
+    <input
+      matInput
+      id="phone"
+      type="tel"
+      autocomplete="tel"
+      inputmode="tel"
+      autofocus
+      placeholder="(312) 555-0101"
+      [formField]="phoneForm.phone"
+      (input)="maskPhone($event)"
+    />
+    <mat-hint>10-digit US mobile number</mat-hint>
+    @if (phoneForm.phone().touched() && phoneForm.phone().errors().length) {
+      <mat-error>{{ phoneForm.phone().errors()[0].message }}</mat-error>
+    }
+  </mat-form-field>
+
+  @if (errorMessage()) {
+    <p class="field-error" role="alert">{{ errorMessage() }}</p>
+  }
+
+  <button
+    mat-flat-button
+    class="continue"
+    type="submit"
+    [disabled]="loading()"
+  >
+    @if (loading()) {
+      Sending code...
+    } @else {
+      Send verification code <span>&rarr;</span>
+    }
+  </button>
+</form>

@@ -39,8 +39,45 @@ h1 {
   }
 }
 
+.link-actions {
+  display: flex;
+  gap: 0.5rem;
+}
+
+.delete-btn {
+  font-size: 0.8125rem;
+  color: var(--cx-muted);
+}
+
 .share-hint {
   font-size: 0.8125rem;
   color: var(--cx-muted);
   margin: 0;
+}
+
+.empty-msg {
+  color: var(--cx-muted);
+  font-size: 0.9375rem;
+  margin: 0 0 1rem;
+}
+
+.deleted-section {
+  margin-top: 2rem;
+  padding-top: 1.5rem;
+  border-top: 1px solid var(--cx-border);
+
+  h2 {
+    font-size: 1rem;
+    font-weight: 600;
+    margin: 0 0 0.75rem;
+    color: var(--cx-muted);
+  }
+}
+
+.link-box.deleted {
+  opacity: 0.55;
+
+  code {
+    background: var(--cx-surface-container);
+  }
 }

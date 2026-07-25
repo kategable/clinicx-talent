@@ -5,7 +5,8 @@ import { Store } from '@ngrx/store';
 import { AccountType, ReviewStatus } from '../../core/account';
 import { AppActions } from '../../core/store/app.actions';
 import {
-  selectAccountValues,
+  selectActiveAccounts,
+  selectDeletedAccounts,
   selectPendingCount,
   selectVerificationLockedPhones,
   selectVerificationFlagged,
@@ -37,8 +38,8 @@ export class AdminAccounts {
     this.store.dispatch(AppActions.loadAllAccounts());
   }
 
-  // Reactive — re-computes when the store changes (e.g. admin approves an account).
-  private readonly storeAccounts = this.store.selectSignal(selectAccountValues);
+  private readonly activeAccounts = this.store.selectSignal(selectActiveAccounts);
+  private readonly deletedAccounts = this.store.selectSignal(selectDeletedAccounts);
 
   protected readonly pendingCount = this.store.selectSignal(selectPendingCount);
   protected readonly verificationFlagged = this.store.selectSignal(selectVerificationFlagged);
@@ -46,16 +47,17 @@ export class AdminAccounts {
 
   protected readonly sortKey = signal<SortKey>('status');
   protected readonly sortAsc = signal(false);
+  protected readonly showDeleted = signal(false);
 
   protected readonly accounts = computed(() => {
-    let list = this.storeAccounts();
-    if (this.typeFilter) {
-      list = list.filter((a) => a.type === this.typeFilter);
-    }
+    const list = this.showDeleted() ? this.deletedAccounts() : this.activeAccounts();
+    const filtered = this.typeFilter
+      ? list.filter((a) => a.type === this.typeFilter)
+      : list;
     const key = this.sortKey();
     const asc = this.sortAsc();
 
-    const sorted = [...list];
+    const sorted = [...filtered];
     sorted.sort((a, b) => {
       let cmp = 0;
       if (key === 'status') {
@@ -92,5 +94,16 @@ export class AdminAccounts {
   }
   protected statusLabel(status: ReviewStatus): string {
     return status.replace('-', ' ');
+  }
+
+  protected toggleDeleted(): void {
+    this.showDeleted.update((v) => !v);
+  }
+
+  protected softDeleteAccount(id: string): void {
+    this.store.dispatch(AppActions.softDeleteAccount({ id }));
+  }
+  protected restoreAccount(id: string): void {
+    this.store.dispatch(AppActions.restoreAccount({ id }));
   }
 }

@@ -4,7 +4,7 @@ import { clearState, signInViaUI } from '../seed';
 test.describe('Hiring links', () => {
   test.beforeEach(async ({ page }) => {
     await clearState(page);
-    await signInViaUI(page, '(312) 555-0101', '246810');
+    await signInViaUI(page, '(312) 555-0101', '123456');
   });
 
   test('creates a new hiring opportunity and shows success page', async ({

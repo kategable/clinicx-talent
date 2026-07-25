@@ -1,11 +1,11 @@
-import { Component, inject, signal } from '@angular/core';
+import { Component, computed, inject, signal } from '@angular/core';
 import { MatButtonModule } from '@angular/material/button';
 import { Store } from '@ngrx/store';
 import { generateSlug } from '../../core/hiring';
 import { AppActions } from '../../core/store/app.actions';
 import {
+  selectAllPassportShares,
   selectCurrentAccount,
-  selectPassportShares,
 } from '../../core/store/app.selectors';
 
 @Component({
@@ -17,9 +17,29 @@ import {
 export class TalentPassport {
   private readonly store = inject(Store);
   protected readonly account = this.store.selectSignal(selectCurrentAccount);
-  protected readonly passportShares = this.store.selectSignal(selectPassportShares);
+  /** All passport shares for the current talent (including deleted). */
+  private readonly allShares = this.store.selectSignal(selectAllPassportShares);
+
   protected readonly passportCreated = signal(false);
   protected readonly passportLink = signal('');
+
+  /** Active shares only. */
+  protected readonly activeShares = computed(() => {
+    const acct = this.account();
+    if (!acct) return [];
+    return this.allShares().filter(
+      (p) => p.talentAccountId === acct.id && !p.deletedAt,
+    );
+  });
+
+  /** Deleted shares for management. */
+  protected readonly deletedShares = computed(() => {
+    const acct = this.account();
+    if (!acct) return [];
+    return this.allShares().filter(
+      (p) => p.talentAccountId === acct.id && p.deletedAt,
+    );
+  });
 
   protected sharePassport(): void {
     const acct = this.account();
@@ -31,11 +51,18 @@ export class TalentPassport {
   }
 
   protected copyPassportLink(): void {
-    const shares = this.passportShares();
+    const shares = this.activeShares();
     const latest = shares[0];
     const link = latest
       ? `${this.passportLink()}?invite=${latest.token}`
       : this.passportLink();
     void navigator.clipboard.writeText(link);
+  }
+
+  protected softDelete(id: string): void {
+    this.store.dispatch(AppActions.softDeletePassport({ id }));
+  }
+  protected restore(id: string): void {
+    this.store.dispatch(AppActions.restorePassport({ id }));
   }
 }

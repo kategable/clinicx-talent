@@ -1,0 +1,72 @@
+name: CD - Deploy to Production
+
+on:
+  push:
+    branches: [main]
+
+jobs:
+  lint-build-test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+          cache: 'npm'
+
+      - run: npm ci
+      - run: npx prettier --check .
+      - run: npm run build
+      - run: npm run test:coverage
+
+      - name: Install Playwright browsers
+        run: npx playwright install chromium --with-deps
+
+      - name: Start dev server for E2E tests
+        run: npm start & npx wait-on http://localhost:4200
+
+      - run: npx playwright test
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: dist
+          path: dist/clinicx-talent
+
+  deploy-uat:
+    needs: lint-build-test
+    environment:
+      name: uat
+      url: https://uat.clinicx-talent.com
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          name: dist
+          path: dist
+      - name: Deploy to Azure App Service (UAT slot)
+        run: |
+          echo "Deploying to UAT..."
+          # az webapp deploy --resource-group clinicx --name clinicx-talent \
+          #   --slot uat --src-path dist
+
+  deploy-production:
+    needs: deploy-uat
+    environment:
+      name: production
+      url: https://clinicx-talent.com
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          name: dist
+          path: dist
+      - name: Deploy to production green slot
+        run: |
+          echo "Deploying to production green slot..."
+          # az webapp deploy --resource-group clinicx --name clinicx-talent \
+          #   --slot green --src-path dist
+      - name: Post-deploy smoke tests
+        run: |
+          echo "Running smoke tests..."
+          # ./scripts/smoke-test.sh https://clinicx-talent.com

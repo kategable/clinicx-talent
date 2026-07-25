@@ -540,4 +540,79 @@ export const appReducer = createReducer(
     ...state,
     hiring: { ...state.hiring, pendingInvite: null },
   })),
+  on(AppActions.setActiveAccount, (state, { accountId }) => ({
+    ...state,
+    activeAccountId: accountId,
+  })),
+
+  // -- Soft delete -----------------------------------------------------------
+  on(AppActions.softDeleteAccount, (state, { id }) => {
+    if (!state.accounts[id]) return state;
+    const deletedAt = new Date().toLocaleDateString('en-US', {
+      month: 'short', day: 'numeric', year: 'numeric',
+    });
+    return {
+      ...state,
+      accounts: { ...state.accounts, [id]: { ...state.accounts[id], deletedAt } },
+    };
+  }),
+  on(AppActions.restoreAccount, (state, { id }) => {
+    if (!state.accounts[id]) return state;
+    const { deletedAt: _, ...restored } = state.accounts[id];
+    return { ...state, accounts: { ...state.accounts, [id]: restored as typeof state.accounts[string] } };
+  }),
+  on(AppActions.softDeleteOpportunity, (state, { id }) => {
+    const idx = state.hiring.opportunities.findIndex((o) => o.id === id);
+    if (idx === -1) return state;
+    const deletedAt = new Date().toLocaleDateString('en-US', {
+      month: 'short', day: 'numeric', year: 'numeric',
+    });
+    const updated = [...state.hiring.opportunities];
+    updated[idx] = { ...updated[idx], deletedAt };
+    return { ...state, hiring: { ...state.hiring, opportunities: updated } };
+  }),
+  on(AppActions.restoreOpportunity, (state, { id }) => {
+    const idx = state.hiring.opportunities.findIndex((o) => o.id === id);
+    if (idx === -1) return state;
+    const updated = [...state.hiring.opportunities];
+    const { deletedAt: _, ...restored } = updated[idx];
+    updated[idx] = restored as typeof updated[number];
+    return { ...state, hiring: { ...state.hiring, opportunities: updated } };
+  }),
+  on(AppActions.softDeletePassport, (state, { id }) => {
+    const idx = state.hiring.passportShares.findIndex((p) => p.id === id);
+    if (idx === -1) return state;
+    const deletedAt = new Date().toLocaleDateString('en-US', {
+      month: 'short', day: 'numeric', year: 'numeric',
+    });
+    const updated = [...state.hiring.passportShares];
+    updated[idx] = { ...updated[idx], deletedAt };
+    return { ...state, hiring: { ...state.hiring, passportShares: updated } };
+  }),
+  on(AppActions.restorePassport, (state, { id }) => {
+    const idx = state.hiring.passportShares.findIndex((p) => p.id === id);
+    if (idx === -1) return state;
+    const updated = [...state.hiring.passportShares];
+    const { deletedAt: _, ...restored } = updated[idx];
+    updated[idx] = restored as typeof updated[number];
+    return { ...state, hiring: { ...state.hiring, passportShares: updated } };
+  }),
+  on(AppActions.softDeleteInvite, (state, { id }) => {
+    const idx = state.hiring.invites.findIndex((i) => i.id === id);
+    if (idx === -1) return state;
+    const deletedAt = new Date().toLocaleDateString('en-US', {
+      month: 'short', day: 'numeric', year: 'numeric',
+    });
+    const updated = [...state.hiring.invites];
+    updated[idx] = { ...updated[idx], deletedAt };
+    return { ...state, hiring: { ...state.hiring, invites: updated } };
+  }),
+  on(AppActions.restoreInvite, (state, { id }) => {
+    const idx = state.hiring.invites.findIndex((i) => i.id === id);
+    if (idx === -1) return state;
+    const updated = [...state.hiring.invites];
+    const { deletedAt: _, ...restored } = updated[idx];
+    updated[idx] = restored as typeof updated[number];
+    return { ...state, hiring: { ...state.hiring, invites: updated } };
+  }),
 );

@@ -18,6 +18,8 @@ export interface AccountRecord {
   talentDetails?: TalentDetails;
   themePreference?: ThemePreference;
   founder: boolean;
+  /** ISO date string when soft-deleted. Absent means the account is active. */
+  deletedAt?: string;
 }
 
 export interface ClinicDetails {

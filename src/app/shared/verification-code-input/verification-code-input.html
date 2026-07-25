@@ -1,0 +1,49 @@
+<form (submit)="$event.preventDefault(); submitCode()">
+  <mat-form-field appearance="outline">
+    <mat-label>Verification code</mat-label>
+    <input
+      matInput
+      id="code"
+      class="code-input"
+      inputmode="numeric"
+      autocomplete="one-time-code"
+      placeholder="000000"
+      [formField]="codeForm.code"
+    />
+    <mat-hint>Enter the 6-digit code sent to {{ phone() }}</mat-hint>
+    @if (codeForm.code().touched() && codeForm.code().errors().length) {
+      <mat-error>{{ codeForm.code().errors()[0].message }}</mat-error>
+    }
+  </mat-form-field>
+
+  @if (errorMessage()) {
+    <p class="field-error" role="alert">{{ errorMessage() }}</p>
+  }
+
+  <button
+    mat-flat-button
+    class="continue"
+    type="submit"
+    [disabled]="loading()"
+  >
+    @if (loading()) {
+      Verifying...
+    } @else {
+      Verify and continue <span>&rarr;</span>
+    }
+  </button>
+</form>
+
+<button
+  mat-button
+  class="resend-link"
+  type="button"
+  [disabled]="resendCooldown() > 0 || loading()"
+  (click)="requestResend()"
+>
+  @if (resendCooldown() > 0) {
+    Resend code in {{ resendCooldown() }}s
+  } @else {
+    Resend code
+  }
+</button>
