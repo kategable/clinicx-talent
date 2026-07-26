@@ -4,7 +4,7 @@ namespace ClinicX.Domain.Entities;
 
 public class TalentApplication
 {
-    public Guid Id { get; init; } = Guid.CreateVersion7();
+    public Guid Id { get; init; } = Guid.NewGuid();
     public Guid? OpportunityId { get; set; }
     public Guid TalentAccountId { get; set; }
     public Guid ClinicAccountId { get; set; }

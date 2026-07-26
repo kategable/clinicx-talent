@@ -8,7 +8,7 @@ namespace ClinicX.Domain.Entities;
 /// </summary>
 public class Account
 {
-    public Guid Id { get; init; } = Guid.CreateVersion7();
+    public Guid Id { get; init; } = Guid.NewGuid();
     public AccountType Type { get; set; }
     public string Phone { get; set; } = string.Empty;
     public string DisplayPhone { get; set; } = string.Empty;

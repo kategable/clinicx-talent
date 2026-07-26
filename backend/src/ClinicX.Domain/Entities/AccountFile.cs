@@ -7,7 +7,7 @@ namespace ClinicX.Domain.Entities;
 /// </summary>
 public class AccountFile
 {
-    public Guid Id { get; init; } = Guid.CreateVersion7();
+    public Guid Id { get; init; } = Guid.NewGuid();
     public Guid AccountId { get; set; }
     public string BlobPath { get; set; } = string.Empty;
     public string Url { get; set; } = string.Empty;

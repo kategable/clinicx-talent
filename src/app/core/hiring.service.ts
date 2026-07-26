@@ -20,7 +20,8 @@ export class HiringService {
 
   /** Returns invite status: active, expired, or none. */
   inviteStatus(token: string): 'active' | 'expired' | 'none' {
-    const invite = this.source.getInvites().find((i) => i.token === token);
+    const invites = this.source.getInvites();
+    const invite = invites.find((i) => i.token === token);
     if (!invite) return 'none';
     return isInviteValid(invite) ? 'active' : 'expired';
   }

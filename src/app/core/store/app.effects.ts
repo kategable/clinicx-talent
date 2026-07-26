@@ -7,11 +7,7 @@ import { AccountService } from '../account.service';
 import { HiringService } from '../hiring.service';
 import { AppActions } from './app.actions';
 import { existingAccountDestination } from './app.navigation';
-import {
-  selectAppState,
-  selectHiring,
-  selectVerificationFlagged,
-} from './app.selectors';
+import { selectAppState, selectHiring, selectVerificationFlagged } from './app.selectors';
 
 export const APP_STORAGE_KEY = 'clinicx.state.v1';
 export const REVIEW_REMINDER_SESSION_KEY = 'clinicx.review-reminders';
@@ -118,9 +114,7 @@ export class AppEffects {
         ofType(AppActions.requestSMSCode),
         withLatestFrom(this.store.select(selectVerificationFlagged)),
         filter(([, flagged]) => flagged),
-        tap(() =>
-          void this.router.navigateByUrl('/contact?reason=verification-limit'),
-        ),
+        tap(() => void this.router.navigateByUrl('/contact?reason=verification-limit')),
       ),
     { dispatch: false },
   );
@@ -193,18 +187,11 @@ export class AppEffects {
     this.actions$.pipe(
       ofType(AppActions.verifyRegistrationCode, AppActions.verifySignInCode),
       withLatestFrom(this.store.select(selectAppState)),
-      filter(
-        ([, state]) =>
-          Boolean(
-            state.activeAccountId &&
-              !state.error &&
-              state.hiring.pendingInvite,
-          ),
+      filter(([, state]) =>
+        Boolean(state.activeAccountId && !state.error && state.hiring.pendingInvite),
       ),
       map(([, state]) => {
-        const account = state.activeAccountId
-          ? state.accounts[state.activeAccountId]
-          : undefined;
+        const account = state.activeAccountId ? state.accounts[state.activeAccountId] : undefined;
         const invite = state.hiring.pendingInvite!;
 
         // Hiring links are for talent applicants — don't create an

@@ -2,7 +2,7 @@ namespace ClinicX.Domain.Entities;
 
 public class HiringInvite
 {
-    public Guid Id { get; init; } = Guid.CreateVersion7();
+    public Guid Id { get; init; } = Guid.NewGuid();
     public Guid OpportunityId { get; set; }
     public string Token { get; set; } = string.Empty;
     public DateTime CreatedAtUtc { get; init; } = DateTime.UtcNow;

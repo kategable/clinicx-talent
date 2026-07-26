@@ -63,7 +63,8 @@
               "buildTarget": "clinicx-talent:build:production"
             },
             "development": {
-              "buildTarget": "clinicx-talent:build:development"
+              "buildTarget": "clinicx-talent:build:development",
+              "proxyConfig": "proxy.conf.json"
             }
           },
           "defaultConfiguration": "development"

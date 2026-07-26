@@ -19,7 +19,7 @@ export class AccountService {
 
   /** Returns accounts filtered by type. */
   getByType(type: AccountType) {
-    return Object.values(this.source.getAll()).filter((a) => a.type === type);
+    return Object.values(this.getAll()).filter((a) => a.type === type);
   }
 
   /** Returns a single account by ID, or undefined. */

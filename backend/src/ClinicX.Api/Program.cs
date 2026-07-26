@@ -28,11 +28,12 @@ builder.Services.AddOpenApi();
 
 var app = builder.Build();
 
-// -- Auto-migrate on startup (dev only) ------------------------------------
+// -- Auto-create schema + seed data (dev only) ------------------------------
 using (var scope = app.Services.CreateScope())
 {
     var db = scope.ServiceProvider.GetRequiredService<ClinicXDbContext>();
-    await db.Database.MigrateAsync();
+    await db.Database.EnsureCreatedAsync();
+    await SeedData.InitializeAsync(db);
 }
 
 // -- Middleware pipeline ----------------------------------------------------

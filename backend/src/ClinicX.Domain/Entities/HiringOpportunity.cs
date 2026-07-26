@@ -4,7 +4,7 @@ namespace ClinicX.Domain.Entities;
 
 public class HiringOpportunity
 {
-    public Guid Id { get; init; } = Guid.CreateVersion7();
+    public Guid Id { get; init; } = Guid.NewGuid();
     public Guid ClinicAccountId { get; set; }
     public string Slug { get; set; } = string.Empty;
     public string PositionSlug { get; set; } = string.Empty;

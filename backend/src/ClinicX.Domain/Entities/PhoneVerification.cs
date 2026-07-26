@@ -7,7 +7,7 @@ namespace ClinicX.Domain.Entities;
 /// </summary>
 public class PhoneVerification
 {
-    public Guid Id { get; init; } = Guid.CreateVersion7();
+    public Guid Id { get; init; } = Guid.NewGuid();
     public string Phone { get; set; } = string.Empty;
     public string CodeHash { get; set; } = string.Empty;
     public DateTime ExpiresAtUtc { get; set; }

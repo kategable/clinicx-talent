@@ -6,7 +6,7 @@ namespace ClinicX.Domain.Entities;
 /// </summary>
 public class ExternalLogin
 {
-    public Guid Id { get; init; } = Guid.CreateVersion7();
+    public Guid Id { get; init; } = Guid.NewGuid();
     public Guid AccountId { get; set; }
     public string Provider { get; set; } = "Google";
     public string ProviderKey { get; set; } = string.Empty;
