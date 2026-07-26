@@ -11,9 +11,34 @@ export class HttpAuthProvider implements AuthProvider {
   private readonly http = inject(HttpClient);
   private readonly base = `${environment.apiUrl}/auth`;
 
-  async exchangeGoogleToken(_idToken: string): Promise<AuthResult> {
-    // TODO: POST /auth/google when backend implements it
-    throw new AuthError('UNKNOWN', 'Google sign-in is not yet available via API.');
+  async exchangeGoogleToken(idToken: string): Promise<AuthResult> {
+    const res = await firstValueFrom(
+      this.http.post<ApiGoogleResponse>(`${this.base}/google`, {
+        idToken,
+      }),
+    );
+
+    if (!res.token) {
+      throw new AuthError('GOOGLE_TOKEN_INVALID', 'Google sign-in failed.');
+    }
+
+    if (res.isNewAccount) {
+      return {
+        token: res.token,
+        refreshToken: '',
+        account: toAccountRecord(res.account!),
+        isNewAccount: true,
+        phoneRequired: res.phoneRequired ?? false,
+      };
+    }
+
+    return {
+      token: res.token,
+      refreshToken: '',
+      account: toAccountRecord(res.account!),
+      isNewAccount: false,
+      phoneRequired: false,
+    };
   }
 
   async sendSmsCode(phone: string): Promise<void> {
@@ -118,6 +143,14 @@ export class HttpAuthProvider implements AuthProvider {
 }
 
 /** Shape the API returns from POST /auth/verify-code. */
+interface ApiGoogleResponse {
+  token?: string;
+  isNewAccount?: boolean;
+  phoneRequired?: boolean;
+  account?: ApiAccount;
+  error?: string;
+}
+
 interface ApiVerifyResponse {
   token?: string;
   isNewAccount?: boolean;

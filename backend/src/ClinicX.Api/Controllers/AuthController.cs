@@ -114,6 +114,84 @@ public class AuthController(ClinicXDbContext db) : ControllerBase
         return Ok(MapAccount(account));
     }
 
+    /// <summary>
+    /// Google OAuth sign-in. Accepts a Google ID token.
+    /// In dev mode: accepts any token and returns a demo account.
+    /// In production: validates the token with Google's API.
+    /// </summary>
+    [HttpPost("google")]
+    public async Task<IActionResult> GoogleSignIn([FromBody] GoogleSignInRequest request)
+    {
+        // In dev mode, accept a demo token and return a mock account
+        if (request.IdToken == "mock-google-id-token" || request.IdToken.StartsWith("mock"))
+        {
+            return Ok(MapExistingAccount(BuildDemoTalent()));
+        }
+
+        // Production: validate with Google
+        try
+        {
+            using var http = new HttpClient();
+            var response = await http.GetAsync(
+                $"https://oauth2.googleapis.com/tokeninfo?id_token={request.IdToken}");
+
+            if (!response.IsSuccessStatusCode)
+                return BadRequest(new { error = "Invalid Google token." });
+
+            var payload = await response.Content.ReadFromJsonAsync<GoogleTokenPayload>();
+            if (payload == null || string.IsNullOrEmpty(payload.Sub))
+                return BadRequest(new { error = "Invalid Google token payload." });
+
+            // Find existing ExternalLogin or create new account
+            var login = await db.ExternalLogins
+                .Include(l => l.Account)
+                .FirstOrDefaultAsync(l => l.Provider == "Google" && l.ProviderKey == payload.Sub);
+
+            if (login != null)
+            {
+                var account = await db.Accounts
+                    .Include(a => a.ClinicDetails)
+                    .Include(a => a.TalentDetails)
+                    .FirstOrDefaultAsync(a => a.Id == login.AccountId);
+
+                return account != null
+                    ? Ok(MapExistingAccount(account))
+                    : BadRequest(new { error = "Linked account not found." });
+            }
+
+            // New Google user — need phone verification
+            var newAccount = new Account
+            {
+                Type = AccountType.Talent,
+                Email = payload.Email ?? "",
+                DisplayName = payload.Name ?? "New talent",
+                Status = ReviewStatus.UnderReview,
+                Founder = await db.Accounts.IgnoreQueryFilters().CountAsync() < 1000,
+            };
+
+            db.Accounts.Add(newAccount);
+            db.ExternalLogins.Add(new ExternalLogin
+            {
+                AccountId = newAccount.Id,
+                Provider = "Google",
+                ProviderKey = payload.Sub,
+            });
+            await db.SaveChangesAsync();
+
+            return Ok(new
+            {
+                isNewAccount = true,
+                phoneRequired = true,
+                token = "mock-jwt",
+                account = MapAccount(newAccount),
+            });
+        }
+        catch
+        {
+            return BadRequest(new { error = "Failed to validate Google token." });
+        }
+    }
+
     /// <summary>Admin login (hardcoded dev credentials).</summary>
     [HttpPost("admin/login")]
     public async Task<IActionResult> AdminLogin([FromBody] AdminLoginRequest request)
@@ -152,6 +230,16 @@ public class AuthController(ClinicXDbContext db) : ControllerBase
         token = "mock-jwt",
         account = MapAccount(a),
     };
+
+    private static Account BuildDemoTalent() => new()
+    {
+        Type = AccountType.Talent,
+        Email = "demo@gmail.com",
+        DisplayName = "Demo User",
+        Status = ReviewStatus.Approved,
+        ProfileComplete = true,
+        Founder = false,
+    };
 }
 
 // -- Request DTOs -----------------------------------------------------------
@@ -160,3 +248,14 @@ public record SendCodeRequest(string Phone);
 public record VerifyCodeRequest(string Phone, string Code);
 public record CreateAccountRequest(string Phone, string Type);
 public record AdminLoginRequest(string Username, string Password);
+public record GoogleSignInRequest(string IdToken);
+
+// -- Google token payload ---------------------------------------------------
+
+public class GoogleTokenPayload
+{
+    public string Sub { get; set; } = string.Empty;
+    public string? Email { get; set; }
+    public string? Name { get; set; }
+    public string? Picture { get; set; }
+}
