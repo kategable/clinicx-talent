@@ -30,9 +30,7 @@ export class AdminAccounts {
   private readonly store = inject(Store);
   private readonly route = inject(ActivatedRoute);
 
-  private readonly typeFilter = this.route.snapshot.data['typeFilter'] as
-    | AccountType
-    | undefined;
+  private readonly typeFilter = this.route.snapshot.data['typeFilter'] as AccountType | undefined;
 
   constructor() {
     this.store.dispatch(AppActions.loadAllAccounts());
@@ -51,15 +49,13 @@ export class AdminAccounts {
 
   protected readonly accounts = computed(() => {
     const list = this.showDeleted() ? this.deletedAccounts() : this.activeAccounts();
-    const filtered = this.typeFilter
-      ? list.filter((a) => a.type === this.typeFilter)
-      : list;
+    const filtered = this.typeFilter ? list.filter((a) => a.type === this.typeFilter) : list;
     const key = this.sortKey();
     const asc = this.sortAsc();
 
     const sorted = [...filtered];
     sorted.sort((a, b) => {
-      let cmp = 0;
+      let cmp: number;
       if (key === 'status') {
         cmp = (STATUS_ORDER[a.status] ?? 99) - (STATUS_ORDER[b.status] ?? 99);
       } else if (key === 'type') {

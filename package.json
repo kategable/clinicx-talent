@@ -10,7 +10,30 @@
     "test:coverage": "ng test --coverage",
     "audit:lighthouse": "lighthouse http://localhost:4200 --output=html --output-path=./lighthouse-report.html --chrome-flags=\"--headless=new\"",
     "test:e2e": "playwright test",
-    "test:e2e:ui": "playwright test --ui"
+    "test:e2e:ui": "playwright test --ui",
+    "lint": "eslint 'src/**/*.ts' 'e2e/**/*.ts'",
+    "lint:fix": "eslint 'src/**/*.ts' 'e2e/**/*.ts' --fix",
+    "format": "prettier --write .",
+    "format:check": "prettier --check .",
+    "prepare": "husky"
+  },
+  "lint-staged": {
+    "*.ts": [
+      "eslint --fix --max-warnings 0",
+      "prettier --write"
+    ],
+    "*.html": [
+      "prettier --write"
+    ],
+    "*.scss": [
+      "prettier --write"
+    ],
+    "*.json": [
+      "prettier --write"
+    ],
+    "*.md": [
+      "prettier --write"
+    ]
   },
   "private": true,
   "engines": {
@@ -33,15 +56,24 @@
     "tslib": "^2.3.0"
   },
   "devDependencies": {
+    "@angular-eslint/builder": "^22.1.0",
+    "@angular-eslint/eslint-plugin": "^22.1.0",
+    "@angular-eslint/eslint-plugin-template": "^22.1.0",
+    "@angular-eslint/template-parser": "^22.1.0",
     "@angular/build": "^22.0.6",
     "@angular/cli": "^22.0.6",
     "@angular/compiler-cli": "^22.0.6",
+    "@eslint/js": "^10.0.1",
     "@playwright/test": "^1.62.0",
     "@vitest/coverage-v8": "^4.1.10",
+    "eslint": "^10.8.0",
+    "husky": "^9.1.7",
     "jsdom": "^28.0.0",
     "lighthouse": "^13.4.0",
+    "lint-staged": "^17.2.0",
     "prettier": "^3.8.1",
     "typescript": "~6.0.3",
+    "typescript-eslint": "^8.65.0",
     "vitest": "^4.0.8"
   }
 }

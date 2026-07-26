@@ -22,12 +22,7 @@
     <p class="field-error" role="alert">{{ errorMessage() }}</p>
   }
 
-  <button
-    mat-flat-button
-    class="continue"
-    type="submit"
-    [disabled]="loading()"
-  >
+  <button mat-flat-button class="continue" type="submit" [disabled]="loading()">
     @if (loading()) {
       Sending code...
     } @else {

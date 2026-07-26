@@ -3,7 +3,7 @@ import { formatPhone, normalizePhone, TEST_CREDENTIALS } from '../account';
 import { canBecomeFounder } from '../founder';
 import { defaultExpiresAt, generateInviteToken, generateSlug } from '../hiring';
 import { AppActions } from './app.actions';
-import { AppState, initialAppState } from './app.state';
+import { initialAppState } from './app.state';
 
 function credentialMatches(phone: string, code?: string): boolean {
   return TEST_CREDENTIALS.some(
@@ -254,13 +254,10 @@ export const appReducer = createReducer(
     verificationSecurity: { phoneAttempts: {}, lockedPhones: [], flagged: false },
     error: '',
   })),
-  on(
-    AppActions.loadHiringData,
-    (state, { opportunities, invites, applications }) => ({
-      ...state,
-      hiring: { ...state.hiring, opportunities, invites, applications },
-    }),
-  ),
+  on(AppActions.loadHiringData, (state, { opportunities, invites, applications }) => ({
+    ...state,
+    hiring: { ...state.hiring, opportunities, invites, applications },
+  })),
   on(AppActions.loadAccounts, (state, { accounts }) => ({
     ...state,
     accounts: { ...accounts, ...state.accounts }, // merge, don't replace
@@ -281,7 +278,7 @@ export const appReducer = createReducer(
       const inviteId = `invite-${Date.now()}`;
       const token = generateInviteToken();
 
-      const opportunity: typeof state.hiring.opportunities[number] = {
+      const opportunity: (typeof state.hiring.opportunities)[number] = {
         id: opportunityId,
         clinicAccountId: state.activeAccountId,
         slug,
@@ -301,7 +298,7 @@ export const appReducer = createReducer(
         }),
       };
 
-      const invite: typeof state.hiring.invites[number] = {
+      const invite: (typeof state.hiring.invites)[number] = {
         id: inviteId,
         opportunityId,
         token,
@@ -324,7 +321,7 @@ export const appReducer = createReducer(
   // -- Hiring: talent passport share ----------------------------------------
   on(AppActions.shareTalentPassport, (state, { talentAccountId }) => {
     const token = generateInviteToken();
-    const passport: typeof state.hiring.passportShares[number] = {
+    const passport: (typeof state.hiring.passportShares)[number] = {
       id: `passport-${Date.now()}`,
       talentAccountId,
       token,
@@ -346,9 +343,7 @@ export const appReducer = createReducer(
 
   // -- Hiring: accept invite (both directions) -------------------------------
   on(AppActions.acceptHiringInvite, (state, { token }) => {
-    const invite = state.hiring.invites.find(
-      (i) => i.token === token && i.active,
-    );
+    const invite = state.hiring.invites.find((i) => i.token === token && i.active);
     if (!invite) {
       return {
         ...state,
@@ -370,9 +365,7 @@ export const appReducer = createReducer(
   }),
 
   on(AppActions.acceptPassportInvite, (state, { token }) => {
-    const passport = state.hiring.passportShares.find(
-      (p) => p.token === token && p.active,
-    );
+    const passport = state.hiring.passportShares.find((p) => p.token === token && p.active);
     if (!passport) {
       return {
         ...state,
@@ -415,14 +408,13 @@ export const appReducer = createReducer(
         return { ...state, hiring: { ...state.hiring, pendingInvite: null } };
       }
 
-      const app: typeof state.hiring.applications[number] = {
+      const app: (typeof state.hiring.applications)[number] = {
         id: applicationId,
         opportunityId: pendingInvite.opportunityId,
         talentAccountId: state.activeAccountId,
         clinicAccountId:
-          state.hiring.opportunities.find(
-            (o) => o.id === pendingInvite.opportunityId,
-          )?.clinicAccountId ?? '',
+          state.hiring.opportunities.find((o) => o.id === pendingInvite.opportunityId)
+            ?.clinicAccountId ?? '',
         source: 'clinic-hiring-link',
         status: 'invited',
         acceptedAt: today,
@@ -448,7 +440,7 @@ export const appReducer = createReducer(
       return { ...state, hiring: { ...state.hiring, pendingInvite: null } };
     }
 
-    const app: typeof state.hiring.applications[number] = {
+    const app: (typeof state.hiring.applications)[number] = {
       id: applicationId,
       talentAccountId: pendingInvite.talentAccountId!,
       clinicAccountId: state.activeAccountId,
@@ -479,37 +471,32 @@ export const appReducer = createReducer(
   })),
 
   // -- Account: save contact preferences ------------------------------------
-  on(
-    AppActions.saveAccountContact,
-    (state, { email, displayPhone, shareEmail, sharePhone }) => ({
-      ...state,
-      accounts:
-        state.activeAccountId && state.accounts[state.activeAccountId]
-          ? {
-              ...state.accounts,
-              [state.activeAccountId]: {
-                ...state.accounts[state.activeAccountId],
-                email,
-                displayPhone,
-                shareEmail,
-                sharePhone,
-              },
-            }
-          : state.accounts,
-    }),
-  ),
+  on(AppActions.saveAccountContact, (state, { email, displayPhone, shareEmail, sharePhone }) => ({
+    ...state,
+    accounts:
+      state.activeAccountId && state.accounts[state.activeAccountId]
+        ? {
+            ...state.accounts,
+            [state.activeAccountId]: {
+              ...state.accounts[state.activeAccountId],
+              email,
+              displayPhone,
+              shareEmail,
+              sharePhone,
+            },
+          }
+        : state.accounts,
+  })),
 
   // -- Hiring: add talent directly (no token needed) -------------------------
   on(AppActions.addTalentToMyClinic, (state, { talentAccountId }) => {
     if (!state.activeAccountId) return state;
     const existing = state.hiring.applications.find(
-      (a) =>
-        a.clinicAccountId === state.activeAccountId &&
-        a.talentAccountId === talentAccountId,
+      (a) => a.clinicAccountId === state.activeAccountId && a.talentAccountId === talentAccountId,
     );
     if (existing) return state;
 
-    const app: typeof state.hiring.applications[number] = {
+    const app: (typeof state.hiring.applications)[number] = {
       id: `app-${Date.now()}`,
       talentAccountId,
       clinicAccountId: state.activeAccountId,
@@ -549,7 +536,9 @@ export const appReducer = createReducer(
   on(AppActions.softDeleteAccount, (state, { id }) => {
     if (!state.accounts[id]) return state;
     const deletedAt = new Date().toLocaleDateString('en-US', {
-      month: 'short', day: 'numeric', year: 'numeric',
+      month: 'short',
+      day: 'numeric',
+      year: 'numeric',
     });
     return {
       ...state,
@@ -558,14 +547,20 @@ export const appReducer = createReducer(
   }),
   on(AppActions.restoreAccount, (state, { id }) => {
     if (!state.accounts[id]) return state;
-    const { deletedAt: _, ...restored } = state.accounts[id];
-    return { ...state, accounts: { ...state.accounts, [id]: restored as typeof state.accounts[string] } };
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+    const { deletedAt: _deletedAt, ...restored } = state.accounts[id];
+    return {
+      ...state,
+      accounts: { ...state.accounts, [id]: restored as (typeof state.accounts)[string] },
+    };
   }),
   on(AppActions.softDeleteOpportunity, (state, { id }) => {
     const idx = state.hiring.opportunities.findIndex((o) => o.id === id);
     if (idx === -1) return state;
     const deletedAt = new Date().toLocaleDateString('en-US', {
-      month: 'short', day: 'numeric', year: 'numeric',
+      month: 'short',
+      day: 'numeric',
+      year: 'numeric',
     });
     const updated = [...state.hiring.opportunities];
     updated[idx] = { ...updated[idx], deletedAt };
@@ -575,15 +570,18 @@ export const appReducer = createReducer(
     const idx = state.hiring.opportunities.findIndex((o) => o.id === id);
     if (idx === -1) return state;
     const updated = [...state.hiring.opportunities];
-    const { deletedAt: _, ...restored } = updated[idx];
-    updated[idx] = restored as typeof updated[number];
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+    const { deletedAt: _deletedAt, ...restored } = updated[idx];
+    updated[idx] = restored as (typeof updated)[number];
     return { ...state, hiring: { ...state.hiring, opportunities: updated } };
   }),
   on(AppActions.softDeletePassport, (state, { id }) => {
     const idx = state.hiring.passportShares.findIndex((p) => p.id === id);
     if (idx === -1) return state;
     const deletedAt = new Date().toLocaleDateString('en-US', {
-      month: 'short', day: 'numeric', year: 'numeric',
+      month: 'short',
+      day: 'numeric',
+      year: 'numeric',
     });
     const updated = [...state.hiring.passportShares];
     updated[idx] = { ...updated[idx], deletedAt };
@@ -593,15 +591,18 @@ export const appReducer = createReducer(
     const idx = state.hiring.passportShares.findIndex((p) => p.id === id);
     if (idx === -1) return state;
     const updated = [...state.hiring.passportShares];
-    const { deletedAt: _, ...restored } = updated[idx];
-    updated[idx] = restored as typeof updated[number];
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+    const { deletedAt: _deletedAt, ...restored } = updated[idx];
+    updated[idx] = restored as (typeof updated)[number];
     return { ...state, hiring: { ...state.hiring, passportShares: updated } };
   }),
   on(AppActions.softDeleteInvite, (state, { id }) => {
     const idx = state.hiring.invites.findIndex((i) => i.id === id);
     if (idx === -1) return state;
     const deletedAt = new Date().toLocaleDateString('en-US', {
-      month: 'short', day: 'numeric', year: 'numeric',
+      month: 'short',
+      day: 'numeric',
+      year: 'numeric',
     });
     const updated = [...state.hiring.invites];
     updated[idx] = { ...updated[idx], deletedAt };
@@ -611,8 +612,9 @@ export const appReducer = createReducer(
     const idx = state.hiring.invites.findIndex((i) => i.id === id);
     if (idx === -1) return state;
     const updated = [...state.hiring.invites];
-    const { deletedAt: _, ...restored } = updated[idx];
-    updated[idx] = restored as typeof updated[number];
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+    const { deletedAt: _deletedAt, ...restored } = updated[idx];
+    updated[idx] = restored as (typeof updated)[number];
     return { ...state, hiring: { ...state.hiring, invites: updated } };
   }),
 );

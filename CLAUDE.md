@@ -10,6 +10,10 @@ npm run build          # Production build
 npm test               # Run all Vitest unit tests
 npm run test:coverage  # Run tests with coverage (vitest/coverage-v8)
 npm run audit:lighthouse  # Lighthouse audit (requires dev server on :4200)
+npm run lint            # ESLint for TS + HTML templates (zero-error policy)
+npm run lint:fix        # ESLint with auto-fix
+npm run format          # Prettier on all files
+npm run format:check    # Prettier dry-run check
 npm run test:e2e        # Playwright E2E tests (requires dev server on :4200)
 npm run test:e2e:ui     # Playwright E2E tests with interactive UI
 npm run watch          # Dev build with watch mode
@@ -17,7 +21,7 @@ npm run watch          # Dev build with watch mode
 
 Node 24.15.0 is pinned in `.nvmrc`. Angular 22 requires Node ^22.22.3, ^24.15.0, or >=26.0.0.
 
-No linter is configured — formatting uses Prettier (`npx prettier --check .`).
+ESLint 10 with typescript-eslint + angular-eslint-template. Prettier for formatting. Husky enforces lint-staged on commit (ESLint + Prettier auto-fix) and `ng lint` + `npm test` + `npm run build` on push. Claude Code hooks auto-format and lint-check TS/HTML/SCSS files on every Edit/Write.
 
 ## Architecture
 
@@ -26,6 +30,7 @@ No linter is configured — formatting uses Prettier (`npx prettier --check .`).
 ### State management (NgRx)
 
 A single `app` feature store manages all global state:
+
 - `src/app/core/store/app.state.ts` — `AppState` interface and `initialAppState`
 - `src/app/core/store/app.actions.ts` — `createActionGroup` with all actions under source `'ClinicX App'`
 - `src/app/core/store/app.reducer.ts` — `createReducer` with pure state transitions; the reducer IS the backend for MVP (credential matching, account creation, review-status updates, verification-abuse limits)

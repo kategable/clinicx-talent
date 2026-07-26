@@ -31,13 +31,9 @@ export class AuthService {
     phoneRequired: false,
   });
 
-  readonly isAuthenticated = computed(
-    () => this.authState().status === 'authenticated',
-  );
+  readonly isAuthenticated = computed(() => this.authState().status === 'authenticated');
 
-  readonly isLoading = computed(
-    () => this.authState().status === 'loading',
-  );
+  readonly isLoading = computed(() => this.authState().status === 'loading');
 
   readonly currentAccount = computed(() => this.authState().account);
   readonly authError = computed(() => this.authState().error);
@@ -115,7 +111,7 @@ export class AuthService {
   // -- Registration (new account type selection) ----------------------------
 
   /** Complete new-account registration by choosing clinic or talent. */
-  async createAccount(type: AccountType, phone: string): Promise<void> {
+  async createAccount(type: AccountType): Promise<void> {
     const account = this.authState().account;
     if (!account) {
       this.setState({
@@ -149,9 +145,7 @@ export class AuthService {
       const result = await this.provider.adminLogin(username, password);
       this.persistTokens(result);
       this.setState({ status: 'authenticated', account: result.account, error: null });
-      this.store.dispatch(
-        AppActions.adminLogin({ username, password }),
-      );
+      this.store.dispatch(AppActions.adminLogin({ username, password }));
       void this.router.navigateByUrl('/admin/accounts').catch(() => {});
     } catch (err) {
       this.handleAuthError(err);
@@ -196,15 +190,11 @@ export class AuthService {
       phoneRequired: result.phoneRequired,
     });
     // Set the active account in the NgRx store so existing guards work
-    this.store.dispatch(
-      AppActions.setActiveAccount({ accountId: activeAccountId }),
-    );
+    this.store.dispatch(AppActions.setActiveAccount({ accountId: activeAccountId }));
 
     // Navigate to the appropriate dashboard
     if (!result.isNewAccount) {
-      void this.router.navigateByUrl(
-        this.destinationForAccount(result.account),
-      ).catch(() => {});
+      void this.router.navigateByUrl(this.destinationForAccount(result.account)).catch(() => {});
     } else {
       // New accounts go to onboarding
       void this.router.navigateByUrl('/onboarding').catch(() => {});
@@ -223,8 +213,7 @@ export class AuthService {
       this.setState({ status: 'error', error: err.message });
       return;
     }
-    const message =
-      err instanceof Error ? err.message : 'An unexpected error occurred.';
+    const message = err instanceof Error ? err.message : 'An unexpected error occurred.';
     this.setState({ status: 'error', error: message });
   }
 

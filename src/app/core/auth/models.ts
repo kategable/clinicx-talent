@@ -1,4 +1,4 @@
-import { AccountRecord, AccountType } from '../account';
+import { AccountRecord } from '../account';
 
 /** Result returned after any successful authentication. */
 export interface AuthResult {

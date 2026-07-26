@@ -1,0 +1,3 @@
+npx ng lint
+npm test
+npm run build

@@ -35,10 +35,7 @@ export class MockAuthProvider implements AuthProvider {
     await delay(500);
     const normalized = normalizePhone(phone);
     const mockCode = '123456';
-    console.log(
-      `%c[MOCK SMS] Code for ${formatPhone(phone)}: ${mockCode}`,
-      'color: #4caf50; font-weight: bold;',
-    );
+    console.warn(`[MOCK SMS] Code for ${formatPhone(phone)}: ${mockCode}`);
     sessionStorage.setItem(MOCK_CODE_KEY, mockCode);
 
     // Simulate per-phone rate limiting in memory
@@ -55,7 +52,6 @@ export class MockAuthProvider implements AuthProvider {
 
   async verifySmsCode(phone: string, code: string): Promise<AuthResult> {
     await delay(500);
-    const normalized = normalizePhone(phone);
     const expectedCode = sessionStorage.getItem(MOCK_CODE_KEY) ?? '123456';
 
     if (code !== expectedCode) {
@@ -125,10 +121,7 @@ export class MockAuthProvider implements AuthProvider {
         phoneRequired: false,
       };
     }
-    throw new AuthError(
-      'INVALID_CREDENTIALS',
-      'Incorrect admin username or password.',
-    );
+    throw new AuthError('INVALID_CREDENTIALS', 'Incorrect admin username or password.');
   }
 
   private findSeedAccount(phone: string): AccountRecord | undefined {

@@ -16,13 +16,7 @@ type Step = 'choose' | 'choose-type' | 'phone' | 'code';
  */
 @Component({
   selector: 'app-register-phone',
-  imports: [
-    GoogleSigninButton,
-    PhoneInput,
-    VerificationCodeInput,
-    RouterLink,
-    MatButtonModule,
-  ],
+  imports: [GoogleSigninButton, PhoneInput, VerificationCodeInput, RouterLink, MatButtonModule],
   templateUrl: './register-phone.html',
   styleUrl: './register-phone.scss',
 })
@@ -71,7 +65,7 @@ export class RegisterPhone {
     await this.auth.verifySmsCode(this.phone(), code);
 
     if (this.auth.authState().phoneRequired) {
-      await this.auth.createAccount(type, this.phone());
+      await this.auth.createAccount(type);
     }
   }
 

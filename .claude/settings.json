@@ -1,0 +1,51 @@
+{
+  "hooks": {
+    "PostToolUse": [
+      {
+        "matcher": "Edit|Write",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "path=$(jq -r '.tool_input.file_path'); echo \"$path\" | grep -qE '\\.(ts|html|scss|css)$' || exit 0; npx prettier --write \"$path\"",
+            "timeout": 15,
+            "statusMessage": "Formatting..."
+          },
+          {
+            "type": "command",
+            "command": "path=$(jq -r '.tool_input.file_path'); echo \"$path\" | grep -qE '\\.ts$' || exit 0; npx ng lint --fix 2>&1 || true",
+            "timeout": 30,
+            "statusMessage": "Running ng lint..."
+          },
+          {
+            "type": "command",
+            "command": "path=$(jq -r '.tool_input.file_path'); echo \"$path\" | grep -qE '\\.ts$' || exit 0; npx tsc -p tsconfig.app.json --noEmit || (echo 'Type errors found — Claude should fix these' && exit 1)",
+            "timeout": 30,
+            "statusMessage": "Type-checking..."
+          }
+        ]
+      },
+      {
+        "matcher": "Edit|Write",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "path=$(jq -r '.tool_input.file_path'); echo \"$path\" | grep -qE '\\.spec\\.ts$' || exit 0; npx ng test --watch=false --test-path-pattern=\"$path\" || true",
+            "timeout": 60,
+            "statusMessage": "Running related specs..."
+          }
+        ]
+      }
+    ],
+    "PreToolUse": [
+      {
+        "matcher": "Edit|Write",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "path=$(jq -r '.tool_input.file_path'); [ \"$path\" != *\"environment.prod.ts\"* ] || { echo '{\"block\": true, \"message\": \"Do not edit prod environment file directly\"}' >&2; exit 2; }"
+          }
+        ]
+      }
+    ]
+  }
+}
