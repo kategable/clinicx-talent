@@ -33,11 +33,8 @@ export class RegisterPhone {
 
   // -- Google ---------------------------------------------------------------
 
-  protected async signInWithGoogle(): Promise<void> {
-    await this.auth.signInWithGoogle();
-    // After Google auth, AuthService navigates existing accounts to dashboard.
-    // If phoneRequired is set, the user needs phone verification — handled
-    // by the template showing the phone step.
+  protected async signInWithGoogle(idToken: string): Promise<void> {
+    await this.auth.handleGoogleCallback(idToken);
   }
 
   // -- Phone ----------------------------------------------------------------

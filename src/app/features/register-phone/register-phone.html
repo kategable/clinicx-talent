@@ -9,14 +9,14 @@
       <div class="eyebrow">Join the ClinicX network</div>
       <h1>One thoughtful introduction.</h1>
       <p>
-        Sign up with Google or your phone. Every clinic and talent begins under
-        review before entering the network.
+        Sign up with Google or your phone. Every clinic and talent begins under review before
+        entering the network.
       </p>
       <div class="review-note">
         <span>Review first</span>
         <p>
-          Creating an account lets you build your profile immediately. Matching
-          access begins after ClinicX approval.
+          Creating an account lets you build your profile immediately. Matching access begins after
+          ClinicX approval.
         </p>
       </div>
     </div>
@@ -31,7 +31,7 @@
 
           <app-google-signin-button
             [loading]="isLoading()"
-            (googleSignIn)="signInWithGoogle()"
+            (googleSignIn)="signInWithGoogle($event)"
           />
 
           @if (!showPhoneOption()) {
@@ -56,7 +56,12 @@
             <p>Choose the profile you want to create first.</p>
           </div>
           <div class="type-options">
-            <button mat-stroked-button class="type-choice" type="button" (click)="selectType('clinic')">
+            <button
+              mat-stroked-button
+              class="type-choice"
+              type="button"
+              (click)="selectType('clinic')"
+            >
               <span class="type-choice-content">
                 <span class="type-icon">CX</span>
                 <span class="type-copy">
@@ -66,7 +71,12 @@
                 <span class="type-arrow" aria-hidden="true">&rarr;</span>
               </span>
             </button>
-            <button mat-stroked-button class="type-choice" type="button" (click)="selectType('talent')">
+            <button
+              mat-stroked-button
+              class="type-choice"
+              type="button"
+              (click)="selectType('talent')"
+            >
               <span class="type-choice-content">
                 <span class="type-icon">ME</span>
                 <span class="type-copy">
@@ -101,12 +111,16 @@
         }
         @case ('code') {
           <div class="steps" aria-label="Registration progress">
-            <span class="active">1</span><i></i><span class="active">2</span><i></i><span class="active">3</span>
+            <span class="active">1</span><i></i><span class="active">2</span><i></i
+            ><span class="active">3</span>
           </div>
           <div class="card-heading">
             <span>Step 3 of 3</span>
             <h2>Enter your code.</h2>
-            <p>We sent a six-digit code to <strong>{{ phone() }}</strong>.</p>
+            <p>
+              We sent a six-digit code to <strong>{{ phone() }}</strong
+              >.
+            </p>
           </div>
           <app-verification-code-input
             [loading]="isLoading()"

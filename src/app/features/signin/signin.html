@@ -8,10 +8,7 @@
     <div class="auth-intro">
       <div class="eyebrow">Welcome back</div>
       <h1>Sign in to your ClinicX account.</h1>
-      <p>
-        Choose how you'd like to sign in. Google is the fastest — no codes,
-        no waiting.
-      </p>
+      <p>Choose how you'd like to sign in. Google is the fastest — no codes, no waiting.</p>
     </div>
 
     <div class="auth-card">
@@ -24,7 +21,7 @@
 
           <app-google-signin-button
             [loading]="isSigningIn()"
-            (googleSignIn)="signInWithGoogle()"
+            (googleSignIn)="signInWithGoogle($event)"
           />
 
           @if (!showPhoneOption()) {
@@ -59,14 +56,22 @@
             (phoneSubmitted)="handlePhoneSubmit($event)"
           />
 
-          <button mat-button class="back-link" type="button" (click)="showPhoneOption.set(false); step.set('choose')">
+          <button
+            mat-button
+            class="back-link"
+            type="button"
+            (click)="showPhoneOption.set(false); step.set('choose')"
+          >
             &larr; Back to sign-in options
           </button>
         }
         @case ('code') {
           <div class="card-heading">
             <h2>Enter your code.</h2>
-            <p>We sent a six-digit code to <strong>{{ phone() }}</strong>.</p>
+            <p>
+              We sent a six-digit code to <strong>{{ phone() }}</strong
+              >.
+            </p>
           </div>
 
           <app-verification-code-input
@@ -83,9 +88,7 @@
         }
       }
 
-      <p class="account-note">
-        New to ClinicX? <a routerLink="/register">Create an account</a>.
-      </p>
+      <p class="account-note">New to ClinicX? <a routerLink="/register">Create an account</a>.</p>
     </div>
   </section>
 </main>

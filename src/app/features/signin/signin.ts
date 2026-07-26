@@ -8,13 +8,7 @@ import { AuthService } from '../../core/auth.service';
 
 @Component({
   selector: 'app-signin',
-  imports: [
-    GoogleSigninButton,
-    PhoneInput,
-    VerificationCodeInput,
-    RouterLink,
-    MatButtonModule,
-  ],
+  imports: [GoogleSigninButton, PhoneInput, VerificationCodeInput, RouterLink, MatButtonModule],
   templateUrl: './signin.html',
   styleUrl: './signin.scss',
 })
@@ -30,8 +24,8 @@ export class Signin {
 
   // -- Google ---------------------------------------------------------------
 
-  protected async signInWithGoogle(): Promise<void> {
-    await this.auth.signInWithGoogle();
+  protected async signInWithGoogle(idToken: string): Promise<void> {
+    await this.auth.handleGoogleCallback(idToken);
   }
 
   // -- Phone ----------------------------------------------------------------
