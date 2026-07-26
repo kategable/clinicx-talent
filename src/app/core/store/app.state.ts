@@ -1,4 +1,10 @@
-import { AccountRecord, AccountType, SEEDED_ACCOUNTS, ThemePreference, toAccountsRecord } from '../account';
+import {
+  AccountRecord,
+  AccountType,
+  SEEDED_ACCOUNTS,
+  ThemePreference,
+  toAccountsRecord,
+} from '../account';
 import {
   HiringInvite,
   HiringOpportunity,
@@ -36,6 +42,14 @@ export interface AppState {
   };
   guestThemePreference: ThemePreference;
   error: string;
+  auth: {
+    token: string | null;
+    refreshToken: string | null;
+    status: 'idle' | 'loading' | 'authenticated' | 'error';
+    error: string | null;
+    isNewAccount: boolean;
+    phoneRequired: boolean;
+  };
   hiring: {
     opportunities: HiringOpportunity[];
     invites: HiringInvite[];
@@ -59,6 +73,14 @@ export const initialAppState: AppState = {
   reviewReminder: { pingedAccountIds: [] },
   guestThemePreference: 'auto',
   error: '',
+  auth: {
+    token: null,
+    refreshToken: null,
+    status: 'idle',
+    error: null,
+    isNewAccount: false,
+    phoneRequired: false,
+  },
   hiring: {
     opportunities: SEEDED_OPPORTUNITIES,
     invites: SEEDED_INVITES,

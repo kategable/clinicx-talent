@@ -617,4 +617,34 @@ export const appReducer = createReducer(
     updated[idx] = restored as (typeof updated)[number];
     return { ...state, hiring: { ...state.hiring, invites: updated } };
   }),
+
+  // -- Auth -----------------------------------------------------------------
+  on(AppActions.setAuthStatus, (state, { status, error, isNewAccount, phoneRequired }) => ({
+    ...state,
+    auth: {
+      ...state.auth,
+      status,
+      error: error ?? null,
+      isNewAccount: isNewAccount ?? state.auth.isNewAccount,
+      phoneRequired: phoneRequired ?? state.auth.phoneRequired,
+    },
+  })),
+  on(AppActions.setAuthTokens, (state, { token, refreshToken }) => ({
+    ...state,
+    auth: { ...state.auth, token, refreshToken },
+  })),
+  on(AppActions.clearAuthError, (state) => ({
+    ...state,
+    auth: { ...state.auth, error: null },
+  })),
+  on(AppActions.authSignOut, (state) => ({
+    ...state,
+    activeAccountId: null,
+    auth: { ...initialAppState.auth },
+  })),
+  on(AppActions.authAdminLogout, (state) => ({
+    ...state,
+    adminAuthenticated: false,
+    auth: { ...initialAppState.auth },
+  })),
 );

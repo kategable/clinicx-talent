@@ -2,9 +2,11 @@ import { inject, Injectable } from '@angular/core';
 import { Router } from '@angular/router';
 import { Actions, createEffect, ofType } from '@ngrx/effects';
 import { Store } from '@ngrx/store';
-import { filter, map, tap, withLatestFrom } from 'rxjs';
+import { catchError, filter, from, map, mergeMap, of, tap, withLatestFrom } from 'rxjs';
 import { AccountService } from '../account.service';
+import { AuthProvider } from '../auth-provider';
 import { HiringService } from '../hiring.service';
+import { TOKEN_STORAGE_KEY, ACTIVE_ACCOUNT_KEY } from '../auth/constants';
 import { AppActions } from './app.actions';
 import { existingAccountDestination } from './app.navigation';
 import { selectAppState, selectHiring, selectVerificationFlagged } from './app.selectors';
@@ -20,6 +22,7 @@ export class AppEffects {
   private readonly router = inject(Router);
   private readonly accountService = inject(AccountService);
   private readonly hiringService = inject(HiringService);
+  private readonly authProvider = inject(AuthProvider);
 
   readonly persistState$ = createEffect(
     () =>
@@ -177,6 +180,159 @@ export class AppEffects {
     ),
   );
 
+  // -- Auth effects ----------------------------------------------------------
+
+  readonly signInWithGoogle$ = createEffect(() =>
+    this.actions$.pipe(
+      ofType(AppActions.signInWithGoogle),
+      tap(() => this.store.dispatch(AppActions.setAuthStatus({ status: 'loading' }))),
+      mergeMap(({ idToken }) =>
+        from(this.authProvider.exchangeGoogleToken(idToken)).pipe(
+          mergeMap((result) => {
+            const actions = [];
+            actions.push(
+              AppActions.setAuthTokens({ token: result.token, refreshToken: result.refreshToken }),
+            );
+            actions.push(AppActions.setActiveAccount({ accountId: result.account.id }));
+            if (result.phoneRequired) {
+              actions.push(
+                AppActions.setAuthStatus({
+                  status: 'idle',
+                  isNewAccount: true,
+                  phoneRequired: true,
+                }),
+              );
+            } else {
+              actions.push(AppActions.setAuthStatus({ status: 'authenticated' }));
+            }
+            return actions;
+          }),
+          catchError((err: Error) =>
+            of(AppActions.setAuthStatus({ status: 'error', error: err.message })),
+          ),
+        ),
+      ),
+    ),
+  );
+
+  readonly sendSmsCode$ = createEffect(() =>
+    this.actions$.pipe(
+      ofType(AppActions.sendSmsCode),
+      tap(() => this.store.dispatch(AppActions.setAuthStatus({ status: 'loading' }))),
+      mergeMap(({ phone }) =>
+        from(this.authProvider.sendSmsCode(phone)).pipe(
+          map(() => AppActions.setAuthStatus({ status: 'idle' })),
+          catchError((err: Error) =>
+            of(AppActions.setAuthStatus({ status: 'error', error: err.message })),
+          ),
+        ),
+      ),
+    ),
+  );
+
+  readonly verifySmsCode$ = createEffect(() =>
+    this.actions$.pipe(
+      ofType(AppActions.verifySmsCode),
+      tap(() => this.store.dispatch(AppActions.setAuthStatus({ status: 'loading' }))),
+      mergeMap(({ phone, code }) =>
+        from(this.authProvider.verifySmsCode(phone, code)).pipe(
+          mergeMap((result) => {
+            const actions = [];
+            actions.push(
+              AppActions.setAuthTokens({ token: result.token, refreshToken: result.refreshToken }),
+            );
+            if (result.isNewAccount) {
+              actions.push(
+                AppActions.setAuthStatus({
+                  status: 'idle',
+                  isNewAccount: true,
+                  phoneRequired: result.phoneRequired,
+                }),
+              );
+            } else {
+              actions.push(AppActions.setActiveAccount({ accountId: result.account.id }));
+              actions.push(AppActions.setAuthStatus({ status: 'authenticated' }));
+            }
+            return actions;
+          }),
+          catchError((err: Error) =>
+            of(AppActions.setAuthStatus({ status: 'error', error: err.message })),
+          ),
+        ),
+      ),
+    ),
+  );
+
+  /** Persist tokens to sessionStorage when they change. */
+  readonly persistAuthTokens$ = createEffect(
+    () =>
+      this.actions$.pipe(
+        ofType(AppActions.setAuthTokens),
+        tap(({ token, refreshToken }) => {
+          try {
+            sessionStorage.setItem(TOKEN_STORAGE_KEY, JSON.stringify({ token, refreshToken }));
+          } catch {
+            /* non-fatal */
+          }
+        }),
+      ),
+    { dispatch: false },
+  );
+
+  /** Clear tokens from sessionStorage on sign out. */
+  readonly clearAuthTokens$ = createEffect(
+    () =>
+      this.actions$.pipe(
+        ofType(AppActions.authSignOut, AppActions.authAdminLogout),
+        tap(() => {
+          try {
+            sessionStorage.removeItem(TOKEN_STORAGE_KEY);
+            sessionStorage.removeItem(ACTIVE_ACCOUNT_KEY);
+          } catch {
+            /* non-fatal */
+          }
+        }),
+      ),
+    { dispatch: false },
+  );
+
+  readonly createAccount$ = createEffect(() =>
+    this.actions$.pipe(
+      ofType(AppActions.createAccount),
+      tap(() => this.store.dispatch(AppActions.setAuthStatus({ status: 'loading' }))),
+      mergeMap(({ accountType }) =>
+        from(this.authProvider.createAccount('', accountType)).pipe(
+          mergeMap((result) => [
+            AppActions.setAuthTokens({ token: result.token, refreshToken: result.refreshToken }),
+            AppActions.setActiveAccount({ accountId: result.account.id }),
+            AppActions.setAuthStatus({ status: 'authenticated' }),
+          ]),
+          catchError((err: Error) =>
+            of(AppActions.setAuthStatus({ status: 'error', error: err.message })),
+          ),
+        ),
+      ),
+    ),
+  );
+
+  /** Navigate when auth status becomes authenticated. */
+  readonly navigateAfterAuth$ = createEffect(
+    () =>
+      this.actions$.pipe(
+        ofType(AppActions.setAuthStatus),
+        filter(({ status }) => status === 'authenticated'),
+        withLatestFrom(this.store.select(selectAppState)),
+        tap(([, state]) => {
+          if (state.auth.isNewAccount) {
+            void this.router.navigateByUrl('/onboarding');
+          } else {
+            this.navigateExistingAccount(state);
+          }
+        }),
+      ),
+    { dispatch: false },
+  );
+
   private navigateExistingAccount(state: Parameters<typeof existingAccountDestination>[0]): void {
     const destination = existingAccountDestination(state);
     if (destination) void this.router.navigateByUrl(destination);
@@ -218,9 +374,7 @@ export class AppEffects {
         withLatestFrom(this.store.select(selectHiring)),
         filter(([, hiring]) => hiring.pendingInvite !== null),
         tap(([, hiring]) => {
-          void this.router.navigateByUrl(
-            `/register?type=talent&invite=${hiring.pendingInvite!.token}`,
-          );
+          void this.router.navigateByUrl(`/register/talent?invite=${hiring.pendingInvite!.token}`);
         }),
       ),
     { dispatch: false },
@@ -234,9 +388,7 @@ export class AppEffects {
         withLatestFrom(this.store.select(selectHiring)),
         filter(([, hiring]) => hiring.pendingInvite !== null),
         tap(([, hiring]) => {
-          void this.router.navigateByUrl(
-            `/register?type=clinic&invite=${hiring.pendingInvite!.token}`,
-          );
+          void this.router.navigateByUrl(`/register/clinic?invite=${hiring.pendingInvite!.token}`);
         }),
       ),
     { dispatch: false },

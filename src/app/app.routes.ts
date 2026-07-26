@@ -14,7 +14,12 @@ export const routes: Routes = [
   },
   {
     path: 'register',
-    loadComponent: () => import('./features/register-phone/register-phone').then((m) => m.RegisterPhone),
+    loadComponent: () => import('./features/registration/registration').then((m) => m.Registration),
+    title: 'Create an account | ClinicX Talent',
+  },
+  {
+    path: 'register/:type',
+    loadComponent: () => import('./features/registration/registration').then((m) => m.Registration),
     title: 'Create an account | ClinicX Talent',
   },
   {
@@ -69,9 +74,7 @@ export const routes: Routes = [
   {
     path: 'join/:clinicSlug/:positionSlug',
     loadComponent: () =>
-      import('./features/public-hiring-page/public-hiring-page').then(
-        (m) => m.PublicHiringPage,
-      ),
+      import('./features/public-hiring-page/public-hiring-page').then((m) => m.PublicHiringPage),
     title: 'Job opportunity | ClinicX Talent',
   },
   {

@@ -97,6 +97,36 @@ export class MockAuthProvider implements AuthProvider {
     };
   }
 
+  async createAccount(phone: string, type: string): Promise<AuthResult> {
+    await delay(300);
+    const isClinic = type === 'clinic';
+    const account: AccountRecord = {
+      id: `account-${Date.now()}`,
+      type: isClinic ? 'clinic' : 'talent',
+      phone: formatPhone(phone),
+      displayPhone: '',
+      email: '',
+      shareEmail: false,
+      sharePhone: false,
+      status: 'under-review',
+      createdAt: new Date().toLocaleDateString('en-US', {
+        month: 'short',
+        day: 'numeric',
+        year: 'numeric',
+      }),
+      profileComplete: false,
+      displayName: isClinic ? 'New clinic' : 'New talent',
+      founder: canBecomeFounder(0),
+    };
+    return {
+      token: `mock-jwt-${Date.now().toString(36)}`,
+      refreshToken: `mock-refresh-${Date.now().toString(36)}`,
+      account,
+      isNewAccount: true,
+      phoneRequired: false,
+    };
+  }
+
   async adminLogin(username: string, password: string): Promise<AuthResult> {
     await delay(500);
     if (username === 'admin' && password === 'admin') {

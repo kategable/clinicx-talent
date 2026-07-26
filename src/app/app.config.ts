@@ -7,7 +7,7 @@ import { MockAuthProvider } from './core/mock-auth.provider';
 import { HttpAuthProvider } from './core/http-auth.provider';
 import { HiringDataSource, LocalHiringDataSource } from './core/hiring-data.source';
 import { HttpHiringDataSource } from './core/http-hiring.data-source';
-import { provideRouter } from '@angular/router';
+import { provideRouter, withComponentInputBinding } from '@angular/router';
 import { provideEffects } from '@ngrx/effects';
 import { provideStore } from '@ngrx/store';
 import { provideStoreDevtools } from '@ngrx/store-devtools';
@@ -42,7 +42,7 @@ export const appConfig: ApplicationConfig = {
     provideHttpClient(withInterceptors([jwtInterceptor, errorInterceptor])),
 
     provideBrowserGlobalErrorListeners(),
-    provideRouter(routes),
+    provideRouter(routes, withComponentInputBinding()),
     provideStore({ app: appReducer }, { metaReducers: [hydrationMetaReducer] }),
     provideEffects(AppEffects),
     provideStoreDevtools({ maxAge: 25, logOnly: false }),

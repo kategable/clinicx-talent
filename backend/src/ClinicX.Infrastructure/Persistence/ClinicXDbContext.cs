@@ -28,7 +28,8 @@ public class ClinicXDbContext : DbContext
         // -- Account ---------------------------------------------------------
         builder.Entity<Account>(e =>
         {
-            e.HasIndex(a => a.Phone).IsUnique();
+            // Unique only for non-empty phones (Google accounts skip phone initially)
+            e.HasIndex(a => a.Phone).IsUnique().HasFilter("\"Phone\" != ''");
             e.HasIndex(a => a.DeletedAtUtc);
             e.HasQueryFilter(a => a.DeletedAtUtc == null);
 

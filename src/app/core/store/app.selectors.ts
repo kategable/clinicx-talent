@@ -24,6 +24,18 @@ export const selectPendingCount = createSelector(
 );
 export const selectRegistration = createSelector(selectAppState, (state) => state.registration);
 export const selectError = createSelector(selectAppState, (state) => state.error);
+
+// -- Auth selectors --------------------------------------------------------
+export const selectAuth = createSelector(selectAppState, (state) => state.auth);
+export const selectAuthStatus = createSelector(selectAuth, (auth) => auth.status);
+export const selectAuthError = createSelector(selectAuth, (auth) => auth.error);
+export const selectIsAuthenticated = createSelector(
+  selectAuth,
+  (auth) => auth.status === 'authenticated',
+);
+export const selectAuthToken = createSelector(selectAuth, (auth) => auth.token);
+export const selectIsNewAccount = createSelector(selectAuth, (auth) => auth.isNewAccount);
+export const selectPhoneRequired = createSelector(selectAuth, (auth) => auth.phoneRequired);
 export const selectAdminAuthenticated = createSelector(
   selectAppState,
   (state) => state.adminAuthenticated,
@@ -77,9 +89,7 @@ export const selectMyActiveOpportunities = createSelector(
   selectCurrentAccount,
   (opportunities, account) =>
     account
-      ? opportunities.filter(
-          (o) => o.clinicAccountId === account.id && o.status === 'active',
-        )
+      ? opportunities.filter((o) => o.clinicAccountId === account.id && o.status === 'active')
       : [],
 );
 
@@ -90,14 +100,9 @@ export const selectMyOpportunities = createSelector(
     account ? opportunities.filter((o) => o.clinicAccountId === account.id) : [],
 );
 
-export const selectOpportunityBySlug = (
-  clinicSlug: string,
-  positionSlug: string,
-) =>
+export const selectOpportunityBySlug = (clinicSlug: string, positionSlug: string) =>
   createSelector(selectOpportunities, (opportunities) =>
-    opportunities.find(
-      (o) => o.slug === clinicSlug && o.positionSlug === positionSlug,
-    ),
+    opportunities.find((o) => o.slug === clinicSlug && o.positionSlug === positionSlug),
   );
 
 export const selectPassportByTalentSlug = (talentSlug: string) =>
@@ -120,29 +125,22 @@ export const selectPassportByTalentSlug = (talentSlug: string) =>
 export const selectApplicationsForMyClinic = createSelector(
   selectApplications,
   selectCurrentAccount,
-  (apps, account) =>
-    account ? apps.filter((a) => a.clinicAccountId === account.id) : [],
+  (apps, account) => (account ? apps.filter((a) => a.clinicAccountId === account.id) : []),
 );
 
-export const selectPendingTalentCount = createSelector(
-  selectApplicationsForMyClinic,
-  (apps) => {
-    const pendingIds = new Set(
-      apps
-        .filter(
-          (a) => a.status === 'invited' || a.status === 'interested',
-        )
-        .map((a) => a.talentAccountId),
-    );
-    return pendingIds.size;
-  },
-);
+export const selectPendingTalentCount = createSelector(selectApplicationsForMyClinic, (apps) => {
+  const pendingIds = new Set(
+    apps
+      .filter((a) => a.status === 'invited' || a.status === 'interested')
+      .map((a) => a.talentAccountId),
+  );
+  return pendingIds.size;
+});
 
 export const selectApplicationsForMyTalent = createSelector(
   selectApplications,
   selectCurrentAccount,
-  (apps, account) =>
-    account ? apps.filter((a) => a.talentAccountId === account.id) : [],
+  (apps, account) => (account ? apps.filter((a) => a.talentAccountId === account.id) : []),
 );
 
 export const selectFounderCount = createSelector(
@@ -150,10 +148,8 @@ export const selectFounderCount = createSelector(
   (accounts) => accounts.filter((a) => a.founder).length,
 );
 
-export const selectFounderSpotsRemaining = createSelector(
-  selectActiveAccounts,
-  (accounts) =>
-    Math.max(0, 1000 - accounts.length),
+export const selectFounderSpotsRemaining = createSelector(selectActiveAccounts, (accounts) =>
+  Math.max(0, 1000 - accounts.length),
 );
 
 export const selectAccountCount = createSelector(

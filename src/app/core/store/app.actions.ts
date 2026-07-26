@@ -65,6 +65,23 @@ export const AppActions = createActionGroup({
     'Set Active Account': props<{ accountId: string }>(),
     'Clear Pending Invite': emptyProps(),
 
+    // -- Auth ----------------------------------------------------------------
+    'Sign In With Google': props<{ idToken: string }>(),
+    'Send Sms Code': props<{ phone: string }>(),
+    'Verify Sms Code': props<{ phone: string; code: string }>(),
+    'Create Account': props<{ accountType: AccountType }>(),
+    'Auth Admin Login': props<{ username: string; password: string }>(),
+    'Auth Admin Logout': emptyProps(),
+    'Auth Sign Out': emptyProps(),
+    'Set Auth Status': props<{
+      status: 'idle' | 'loading' | 'authenticated' | 'error';
+      error?: string;
+      isNewAccount?: boolean;
+      phoneRequired?: boolean;
+    }>(),
+    'Set Auth Tokens': props<{ token: string; refreshToken: string }>(),
+    'Clear Auth Error': emptyProps(),
+
     // -- Soft delete ----------------------------------------------------------
     'Soft Delete Account': props<{ id: string }>(),
     'Restore Account': props<{ id: string }>(),

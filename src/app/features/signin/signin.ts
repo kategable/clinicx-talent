@@ -1,10 +1,12 @@
 import { Component, inject, signal } from '@angular/core';
 import { RouterLink } from '@angular/router';
 import { MatButtonModule } from '@angular/material/button';
+import { Store } from '@ngrx/store';
 import { GoogleSigninButton } from '../../shared/google-signin-button/google-signin-button';
 import { PhoneInput } from '../../shared/phone-input/phone-input';
 import { VerificationCodeInput } from '../../shared/verification-code-input/verification-code-input';
-import { AuthService } from '../../core/auth.service';
+import { AppActions } from '../../core/store/app.actions';
+import { selectAuthStatus, selectAuthError } from '../../core/store/app.selectors';
 
 @Component({
   selector: 'app-signin',
@@ -13,19 +15,20 @@ import { AuthService } from '../../core/auth.service';
   styleUrl: './signin.scss',
 })
 export class Signin {
-  private readonly auth = inject(AuthService);
+  private readonly store = inject(Store);
 
   protected readonly step = signal<'choose' | 'phone' | 'code'>('choose');
   protected readonly phone = signal('');
   protected readonly showPhoneOption = signal(false);
 
-  protected readonly isSigningIn = this.auth.isLoading;
-  protected readonly authError = this.auth.authError;
+  protected readonly authStatus = this.store.selectSignal(selectAuthStatus);
+  protected readonly isSigningIn = () => this.authStatus() === 'loading';
+  protected readonly authError = this.store.selectSignal(selectAuthError);
 
   // -- Google ---------------------------------------------------------------
 
-  protected async signInWithGoogle(idToken: string): Promise<void> {
-    await this.auth.handleGoogleCallback(idToken);
+  protected signInWithGoogle(idToken: string): void {
+    this.store.dispatch(AppActions.signInWithGoogle({ idToken }));
   }
 
   // -- Phone ----------------------------------------------------------------
@@ -35,18 +38,18 @@ export class Signin {
     this.step.set('phone');
   }
 
-  protected async handlePhoneSubmit(phoneNumber: string): Promise<void> {
+  protected handlePhoneSubmit(phoneNumber: string): void {
     this.phone.set(phoneNumber);
-    await this.auth.sendSmsCode(phoneNumber);
+    this.store.dispatch(AppActions.sendSmsCode({ phone: phoneNumber }));
     this.step.set('code');
   }
 
-  protected async handleCodeSubmit(code: string): Promise<void> {
-    await this.auth.verifySmsCode(this.phone(), code);
+  protected handleCodeSubmit(code: string): void {
+    this.store.dispatch(AppActions.verifySmsCode({ phone: this.phone(), code }));
   }
 
   protected handleResend(): void {
-    this.auth.sendSmsCode(this.phone());
+    this.store.dispatch(AppActions.sendSmsCode({ phone: this.phone() }));
   }
 
   protected backToPhone(): void {

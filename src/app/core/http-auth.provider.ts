@@ -107,6 +107,19 @@ export class HttpAuthProvider implements AuthProvider {
     };
   }
 
+  async createAccount(phone: string, type: string): Promise<AuthResult> {
+    const res = await firstValueFrom(
+      this.http.post<ApiAccount>(`${this.base}/create-account`, { phone, type }),
+    );
+    return {
+      token: 'mock-jwt',
+      refreshToken: '',
+      account: toAccountRecord(res),
+      isNewAccount: true,
+      phoneRequired: false,
+    };
+  }
+
   async adminLogin(username: string, password: string): Promise<AuthResult> {
     const res = await firstValueFrom(
       this.http.post<{ token: string; error?: string }>(`${this.base}/admin/login`, {

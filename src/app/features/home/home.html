@@ -29,13 +29,14 @@
       <div class="hero-actions">
         @if (currentAccount(); as account) {
           <a class="button button-primary" [routerLink]="accountLink()"
-            >Go to your {{ account.type === 'clinic' ? 'dashboard' : 'profile' }} <span aria-hidden="true">→</span></a
+            >Go to your {{ account.type === 'clinic' ? 'dashboard' : 'profile' }}
+            <span aria-hidden="true">→</span></a
           >
         } @else {
-          <a class="button button-primary" routerLink="/register" [queryParams]="{ type: 'clinic' }"
+          <a class="button button-primary" routerLink="/register/clinic"
             >Register your clinic <span aria-hidden="true">→</span></a
           >
-          <a class="button button-secondary" routerLink="/register" [queryParams]="{ type: 'talent' }"
+          <a class="button button-secondary" routerLink="/register/talent"
             >Create a talent profile</a
           >
         }
@@ -83,8 +84,8 @@
           <div class="eyebrow">For clinic owners</div>
           <h2>Discover clinics looking for someone like you.</h2>
           <p>
-            Browse clinics that match your skills and values. When you're ready, share your
-            Talent Passport and let them come to you.
+            Browse clinics that match your skills and values. When you're ready, share your Talent
+            Passport and let them come to you.
           </p>
           <ul class="check-list">
             <li>See what clinics are hiring</li>
@@ -99,15 +100,15 @@
         <div class="eyebrow">For clinic owners</div>
         <h2>Stop interviewing people you would never hire.</h2>
         <p>
-          Tell us what excellence looks like inside your clinic. We review the market, vet the people,
-          and present a shortlist shaped around your role and culture.
+          Tell us what excellence looks like inside your clinic. We review the market, vet the
+          people, and present a shortlist shaped around your role and culture.
         </p>
         <ul class="check-list">
           <li>Post your first role in minutes</li>
           <li>Review richer, human profiles</li>
           <li>Request interviews with confidence</li>
         </ul>
-        <a class="button button-dark" routerLink="/register" [queryParams]="{ type: 'clinic' }"
+        <a class="button button-dark" routerLink="/register/clinic"
           >Register your clinic <span aria-hidden="true">→</span></a
         >
       }
@@ -172,7 +173,10 @@
             }
           </div>
           @if (currentAccount(); as account) {
-            <a class="talent-action" [routerLink]="account.type === 'clinic' ? '/clinic/talents' : '/talent/passport'">
+            <a
+              class="talent-action"
+              [routerLink]="account.type === 'clinic' ? '/clinic/talents' : '/talent/passport'"
+            >
               {{ account.type === 'clinic' ? 'Browse vetted talent' : 'Share your profile' }}
             </a>
           } @else {
@@ -275,7 +279,7 @@
             <p>Explore opportunities without becoming another résumé in a crowded inbox.</p>
           </div>
         </div>
-        <a class="button button-dark" routerLink="/register" [queryParams]="{ type: 'talent' }"
+        <a class="button button-dark" routerLink="/register/talent"
           >Create your profile <span aria-hidden="true">→</span></a
         >
       }
@@ -316,34 +320,34 @@
   </section>
 
   @if (!currentAccount()) {
-  <section class="account-gateway" id="account">
-    <div class="gateway-heading">
-      <div class="eyebrow">Your next introduction starts here</div>
-      <h2>Choose your path.</h2>
-    </div>
-    <div class="gateway-options">
-      <a routerLink="/register" [queryParams]="{ type: 'clinic' }" class="gateway-card owner-card">
-        <span class="card-number">01</span>
-        <div>
-          <strong>I’m hiring</strong>
-          <p>Register your clinic and tell us who you need.</p>
-        </div>
-        <span aria-hidden="true">→</span>
-      </a>
-      <a
-        routerLink="/register"
-        [queryParams]="{ type: 'talent' }"
-        class="gateway-card talent-card-link"
-      >
-        <span class="card-number">02</span>
-        <div>
-          <strong>I’m looking</strong>
-          <p>Create your professional profile and get discovered.</p>
-        </div>
-        <span aria-hidden="true">→</span>
-      </a>
-    </div>
-  </section>
+    <section class="account-gateway" id="account">
+      <div class="gateway-heading">
+        <div class="eyebrow">Your next introduction starts here</div>
+        <h2>Choose your path.</h2>
+      </div>
+      <div class="gateway-options">
+        <a routerLink="/register/clinic" class="gateway-card owner-card">
+          <span class="card-number">01</span>
+          <div>
+            <strong>I’m hiring</strong>
+            <p>Register your clinic and tell us who you need.</p>
+          </div>
+          <span aria-hidden="true">→</span>
+        </a>
+        <a
+          routerLink="/register"
+          [queryParams]="{ type: 'talent' }"
+          class="gateway-card talent-card-link"
+        >
+          <span class="card-number">02</span>
+          <div>
+            <strong>I’m looking</strong>
+            <p>Create your professional profile and get discovered.</p>
+          </div>
+          <span aria-hidden="true">→</span>
+        </a>
+      </div>
+    </section>
   }
 </main>
 

@@ -20,5 +20,8 @@ export abstract class AuthProvider {
   abstract verifySmsCode(phone: string, code: string): Promise<AuthResult>;
 
   /** Admin username/password login. */
+  /** Create a new account after phone verification (with chosen type). */
+  abstract createAccount(phone: string, type: string): Promise<AuthResult>;
+
   abstract adminLogin(username: string, password: string): Promise<AuthResult>;
 }

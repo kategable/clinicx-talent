@@ -26,7 +26,11 @@ export class GoogleSigninButton {
   private gisLoaded = false;
 
   get useMock(): boolean {
-    return !environment.googleClientId || environment.googleClientId.startsWith('1234');
+    return (
+      environment.useMockAuth ||
+      !environment.googleClientId ||
+      environment.googleClientId.startsWith('1234')
+    );
   }
 
   constructor() {

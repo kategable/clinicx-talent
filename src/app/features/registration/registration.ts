@@ -1,107 +1,127 @@
-import { Component, inject, OnInit, signal } from '@angular/core';
-import { FormField, form, pattern, required, submit } from '@angular/forms/signals';
-import { ActivatedRoute, RouterLink } from '@angular/router';
-import { MatButtonModule } from '@angular/material/button';
-import { MatFormFieldModule } from '@angular/material/form-field';
-import { MatInputModule } from '@angular/material/input';
+import { Component, effect, inject, input, signal } from '@angular/core';
+import { Router, RouterLink } from '@angular/router';
 import { Store } from '@ngrx/store';
-import { AccountType, TEST_CREDENTIALS } from '../../core/account';
 import { AppActions } from '../../core/store/app.actions';
-import { selectError, selectRegistration } from '../../core/store/app.selectors';
+import { AccountType } from '../../core/account';
+import {
+  selectAuthStatus,
+  selectAuthError,
+  selectPhoneRequired,
+  selectIsNewAccount,
+} from '../../core/store/app.selectors';
+import { RegTypeStep } from './steps/type-step';
+import { RegAuthStep } from './steps/auth-step';
+import { RegPhoneStep } from './steps/phone-step';
+import { RegCodeStep } from './steps/code-step';
+
+type Step = 'choose-type' | 'choose-auth' | 'phone' | 'code';
 
 @Component({
   selector: 'app-registration',
-  imports: [FormField, RouterLink, MatButtonModule, MatFormFieldModule, MatInputModule],
+  imports: [RouterLink, RegTypeStep, RegAuthStep, RegPhoneStep, RegCodeStep],
   templateUrl: './registration.html',
   styleUrl: './registration.scss',
 })
-export class Registration implements OnInit {
+export class Registration {
   private readonly store = inject(Store);
-  private readonly route = inject(ActivatedRoute);
+  private readonly router = inject(Router);
 
-  protected readonly isSignIn = this.route.snapshot.data['mode'] === 'signin';
-  protected readonly registration = this.store.selectSignal(selectRegistration);
-  protected readonly accountType = () => this.registration().accountType;
-  protected readonly step = () => this.registration().step;
-  protected readonly errorMessage = this.store.selectSignal(selectError);
-  protected readonly credentials = TEST_CREDENTIALS;
-  protected readonly phoneModel = signal({ phone: '' });
-  protected readonly phoneForm = form(this.phoneModel, (path) => {
-    required(path.phone, { message: 'Enter your mobile number.' });
-    pattern(path.phone, /^\D*(?:\d\D*){10}$/, { message: 'Enter a 10-digit US phone number.' });
-  });
-  protected readonly codeModel = signal({ code: '' });
-  protected readonly codeForm = form(this.codeModel, (path) => {
-    required(path.code, { message: 'Enter the code from your text message.' });
-    pattern(path.code, /^\d{6}$/, { message: 'The verification code must be 6 digits.' });
-  });
+  /** Bound from /register/:type — 'clinic' or 'talent'. */
+  readonly type = input<AccountType>();
 
-  ngOnInit(): void {
-    const inviteToken = this.route.snapshot.queryParamMap.get('invite');
-    // Belt-and-suspenders: if an invite token is in the URL, persist it to
-    // state so the effect can create the application after verification.
-    if (inviteToken) {
-      if (this.initialType() === 'clinic') {
-        this.store.dispatch(AppActions.acceptPassportInvite({ token: inviteToken }));
-      } else {
-        this.store.dispatch(AppActions.acceptHiringInvite({ token: inviteToken }));
-      }
-    }
+  protected readonly step = signal<Step>('choose-type');
+  protected readonly accountType = signal<AccountType | undefined>(undefined);
+  protected readonly phone = signal('');
+  protected readonly showPhoneOption = signal(false);
+  protected readonly hasPreselectedType = signal(false);
+
+  protected readonly authStatus = this.store.selectSignal(selectAuthStatus);
+  protected readonly authError = this.store.selectSignal(selectAuthError);
+  protected readonly phoneRequired = this.store.selectSignal(selectPhoneRequired);
+  protected readonly isNewAccount = this.store.selectSignal(selectIsNewAccount);
+
+  readonly loading = () => this.authStatus() === 'loading';
+  readonly label = () => (this.accountType() === 'clinic' ? 'Clinic' : 'Talent');
+
+  constructor() {
+    // Reset auth state when entering registration flow
     this.store.dispatch(
-      AppActions.resetRegistration({ accountType: this.initialType(), signIn: this.isSignIn }),
+      AppActions.setAuthStatus({ status: 'idle', isNewAccount: false, phoneRequired: false }),
     );
-  }
 
-  protected chooseType(type: AccountType): void {
-    this.store.dispatch(AppActions.selectAccountType({ accountType: type }));
-  }
-
-  protected sendCode(): void {
-    submit(this.phoneForm, async () => {
-      this.store.dispatch(AppActions.requestSMSCode({ phone: this.phoneModel().phone }));
-    });
-  }
-
-  protected maskPhone(event: Event): void {
-    const input = event.target;
-    if (!(input instanceof HTMLInputElement)) return;
-
-    const digits = input.value.replace(/\D/g, '').slice(0, 10);
-    let formatted = digits;
-    if (digits.length > 6) {
-      formatted = `(${digits.slice(0, 3)}) ${digits.slice(3, 6)}-${digits.slice(6)}`;
-    } else if (digits.length > 3) {
-      formatted = `(${digits.slice(0, 3)}) ${digits.slice(3)}`;
-    } else if (digits.length > 0) {
-      formatted = `(${digits}`;
-    }
-
-    input.value = formatted;
-    this.phoneModel.set({ phone: formatted });
-  }
-
-  protected verifyCode(): void {
-    submit(this.codeForm, async () => {
-      if (this.isSignIn) {
-        this.store.dispatch(AppActions.verifySignInCode({ code: this.codeModel().code }));
-        return;
+    // React to type input changes (e.g. switching from /register/clinic to /register)
+    effect(() => {
+      const t = this.type();
+      if (t === 'clinic' || t === 'talent') {
+        this.accountType.set(t);
+        this.hasPreselectedType.set(true);
+        this.step.set('choose-auth');
+      } else {
+        this.accountType.set(undefined);
+        this.hasPreselectedType.set(false);
+        this.step.set('choose-type');
       }
+    });
 
-      const type = this.accountType();
-      if (!type) return;
-      this.store.dispatch(AppActions.verifyRegistrationCode({ code: this.codeModel().code }));
+    // After Google sign-in: phoneRequired → go to phone step
+    effect(() => {
+      if (this.phoneRequired() && this.step() !== 'code') {
+        this.step.set('phone');
+      }
+    });
+
+    // After SMS verification for new account: isNewAccount → create account
+    effect(() => {
+      if (this.isNewAccount() && this.step() === 'code') {
+        const type = this.accountType();
+        if (type) {
+          this.store.dispatch(AppActions.createAccount({ accountType: type }));
+        }
+      }
     });
   }
 
-  protected changePhone(): void {
-    this.store.dispatch(AppActions.changePhone());
-  }
-  protected changeType(): void {
-    this.store.dispatch(AppActions.changeAccountType());
+  // -- Type selection -------------------------------------------------------
+  protected onTypeSelected(type: AccountType): void {
+    this.accountType.set(type);
+    this.step.set('choose-auth');
+    // Only update URL if coming from a preset type
+    if (this.hasPreselectedType()) {
+      this.router.navigateByUrl(`/register/${type}`, { replaceUrl: true });
+    }
   }
 
-  private initialType(): AccountType | undefined {
-    const type = this.route.snapshot.queryParamMap.get('type');
-    return type === 'clinic' || type === 'talent' ? type : undefined;
+  // -- Auth (Google + phone) ------------------------------------------------
+  protected onGoogleSignIn(idToken: string): void {
+    this.store.dispatch(AppActions.signInWithGoogle({ idToken }));
+  }
+  protected onChoosePhone(): void {
+    this.showPhoneOption.set(true);
+    this.step.set('phone');
+  }
+  protected backToType(): void {
+    this.step.set('choose-type');
+    this.router.navigateByUrl('/register', { replaceUrl: true });
+  }
+
+  // -- Phone ----------------------------------------------------------------
+  protected onPhoneSubmit(phoneNumber: string): void {
+    this.phone.set(phoneNumber);
+    this.store.dispatch(AppActions.sendSmsCode({ phone: phoneNumber }));
+    this.step.set('code');
+  }
+  protected backToAuth(): void {
+    this.step.set('choose-auth');
+  }
+
+  // -- Code ----------------------------------------------------------------
+  protected onCodeSubmit(code: string): void {
+    this.store.dispatch(AppActions.verifySmsCode({ phone: this.phone(), code }));
+  }
+  protected onResend(): void {
+    this.store.dispatch(AppActions.sendSmsCode({ phone: this.phone() }));
+  }
+  protected backToPhone(): void {
+    this.step.set('phone');
   }
 }
