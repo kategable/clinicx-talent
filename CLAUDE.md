@@ -7,6 +7,8 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 ```bash
 npm start              # Dev server at http://localhost:4200
 npm run build          # Production build
+docker compose up               # Full stack: PostgreSQL + API + Angular
+docker compose up postgres api  # Backend only: DB + API
 npm test               # Run all Vitest unit tests
 npm run test:coverage  # Run tests with coverage (vitest/coverage-v8)
 npm run audit:lighthouse  # Lighthouse audit (requires dev server on :4200)
