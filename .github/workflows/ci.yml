@@ -97,7 +97,7 @@ jobs:
       - name: Configure static SPA serving
         run: |
           az webapp config set --name clinicxtalent-dev --resource-group clinicx \
-            --startup-file "pm2-runtime serve /home/site/wwwroot 8080 --spa"
+            --startup-file "node server.js"
       - name: Deploy to Azure (Dev)
         uses: azure/webapps-deploy@v3.0.8
         with:
