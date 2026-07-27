@@ -76,4 +76,4 @@ jobs:
         uses: azure/webapps-deploy@v3.0.8
         with:
           app-name: clinicxtalent-dev
-          package: dist/clinicx-talent/browser
+          package: dist/browser

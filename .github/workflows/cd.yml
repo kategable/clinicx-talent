@@ -65,7 +65,7 @@ jobs:
         uses: azure/webapps-deploy@v3.0.8
         with:
           app-name: clinicxtalent-uat
-          package: dist/clinicx-talent/browser
+          package: dist/browser
 
   promote-green:
     if: github.event_name == 'workflow_dispatch' && github.event.inputs.action == 'promote-to-green'
@@ -87,7 +87,7 @@ jobs:
         with:
           app-name: clinicxtalent
           slot-name: green
-          package: dist/clinicx-talent/browser
+          package: dist/browser
 
   swap-slots:
     if: github.event_name == 'workflow_dispatch' && github.event.inputs.action == 'swap-green-production'
