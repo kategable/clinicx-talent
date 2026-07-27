@@ -94,6 +94,10 @@ jobs:
       - uses: azure/login@v2
         with:
           creds: ${{ secrets.AZURE_CREDENTIALS }}
+      - name: Configure static SPA serving
+        run: |
+          az webapp config set --name clinicxtalent-dev --resource-group clinicx \
+            --startup-file "pm2-runtime serve /home/site/wwwroot 8080 --spa"
       - name: Deploy to Azure (Dev)
         uses: azure/webapps-deploy@v3.0.8
         with:

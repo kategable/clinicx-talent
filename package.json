@@ -6,7 +6,7 @@
     "start": "ng serve",
     "build": "ng build",
     "watch": "ng build --watch --configuration development",
-    "test": "ng test",
+    "test": "ng test --watch=false",
     "test:coverage": "ng test --coverage",
     "audit:lighthouse": "lighthouse http://localhost:4200 --output=html --output-path=./lighthouse-report.html --chrome-flags=\"--headless=new\"",
     "test:e2e": "playwright test",
