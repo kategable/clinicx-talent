@@ -19,9 +19,7 @@ import {
 export class TalentInvitations {
   private readonly store = inject(Store);
   private readonly accounts = this.store.selectSignal(selectAccounts);
-  private readonly myApplications = this.store.selectSignal(
-    selectApplicationsForMyTalent,
-  );
+  private readonly myApplications = this.store.selectSignal(selectApplicationsForMyTalent);
   private readonly opportunities = this.store.selectSignal(selectOpportunities);
 
   protected readonly applicationCards = computed(() => {

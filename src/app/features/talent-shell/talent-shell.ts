@@ -1,11 +1,4 @@
-import {
-  afterNextRender,
-  Component,
-  computed,
-  HostListener,
-  inject,
-  signal,
-} from '@angular/core';
+import { afterNextRender, Component, computed, HostListener, inject, signal } from '@angular/core';
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
 import { MatListModule } from '@angular/material/list';
@@ -14,10 +7,7 @@ import { MatToolbarModule } from '@angular/material/toolbar';
 import { RouterLink, RouterLinkActive, RouterOutlet } from '@angular/router';
 import { Store } from '@ngrx/store';
 import { AppActions } from '../../core/store/app.actions';
-import {
-  selectAccounts,
-  selectCurrentAccount,
-} from '../../core/store/app.selectors';
+import { selectAccounts, selectCurrentAccount } from '../../core/store/app.selectors';
 import { FounderBadge } from '../../shared/founder-badge/founder-badge';
 
 @Component({
@@ -42,9 +32,7 @@ export class TalentShell {
   protected readonly accounts = this.store.selectSignal(selectAccounts);
 
   private readonly isDesktop = (): boolean => window.innerWidth >= 960;
-  protected readonly sidenavMode = signal<'over' | 'side'>(
-    this.isDesktop() ? 'side' : 'over',
-  );
+  protected readonly sidenavMode = signal<'over' | 'side'>(this.isDesktop() ? 'side' : 'over');
   protected readonly opened = signal(this.isDesktop());
 
   constructor() {

@@ -17,8 +17,7 @@ export class PublicClinicProfile {
   private readonly store = inject(Store);
   private readonly accounts = this.store.selectSignal(selectAccounts);
 
-  private readonly clinicSlug =
-    this.route.snapshot.params['clinicSlug'] as string;
+  private readonly clinicSlug = this.route.snapshot.params['clinicSlug'] as string;
 
   protected readonly clinic = computed(() =>
     Object.values(this.accounts()).find((a) => {
@@ -28,9 +27,7 @@ export class PublicClinicProfile {
   );
 
   protected readonly details = computed(() => this.clinic()?.clinicDetails);
-  protected readonly isFounder = computed(
-    () => this.clinic()?.founder === true,
-  );
+  protected readonly isFounder = computed(() => this.clinic()?.founder === true);
 
   protected readonly founderMemberNumber = computed(() => {
     const c = this.clinic();

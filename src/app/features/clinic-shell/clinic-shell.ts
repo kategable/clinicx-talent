@@ -1,11 +1,4 @@
-import {
-  afterNextRender,
-  Component,
-  computed,
-  HostListener,
-  inject,
-  signal,
-} from '@angular/core';
+import { afterNextRender, Component, computed, HostListener, inject, signal } from '@angular/core';
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
 import { MatListModule } from '@angular/material/list';
@@ -41,14 +34,10 @@ export class ClinicShell {
   private readonly store = inject(Store);
   protected readonly account = this.store.selectSignal(selectCurrentAccount);
   protected readonly accounts = this.store.selectSignal(selectAccounts);
-  protected readonly pendingCount = this.store.selectSignal(
-    selectPendingTalentCount,
-  );
+  protected readonly pendingCount = this.store.selectSignal(selectPendingTalentCount);
 
   private readonly isDesktop = (): boolean => window.innerWidth >= 960;
-  protected readonly sidenavMode = signal<'over' | 'side'>(
-    this.isDesktop() ? 'side' : 'over',
-  );
+  protected readonly sidenavMode = signal<'over' | 'side'>(this.isDesktop() ? 'side' : 'over');
   protected readonly opened = signal(this.isDesktop());
 
   constructor() {

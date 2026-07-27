@@ -33,10 +33,7 @@ export async function clearState(page: Page): Promise<void> {
 }
 
 /** Navigate to the app origin then seed signed-in state for a seed account. */
-export async function seedSignedInAccount(
-  page: Page,
-  activeAccountId: string,
-): Promise<void> {
+export async function seedSignedInAccount(page: Page, activeAccountId: string): Promise<void> {
   await page.goto('/');
   await page.evaluate((id) => {
     // Provide a minimal state that survives the hydration meta-reducer.
@@ -57,11 +54,7 @@ export async function seedSignedInAccount(
  * Sign in via the UI by navigating through the sign-in form.
  * Returns once the page has redirected away from /signin.
  */
-export async function signInViaUI(
-  page: Page,
-  phone: string,
-  code: string,
-): Promise<void> {
+export async function signInViaUI(page: Page, phone: string, code: string): Promise<void> {
   await page.goto('/signin');
 
   // New sign-in page shows Google first — click phone option
@@ -71,16 +64,12 @@ export async function signInViaUI(
 
   // Enter phone
   await page.locator('#phone').fill(phone);
-  await page
-    .locator('button:has-text("Send verification code")')
-    .click();
+  await page.locator('button:has-text("Send verification code")').click();
 
   // Wait for code step
   await page.waitForSelector('#code', { timeout: 10000 });
   await page.locator('#code').fill(code);
-  await page
-    .locator('button:has-text("Verify and continue")')
-    .click();
+  await page.locator('button:has-text("Verify and continue")').click();
 
   // Wait for navigation away from sign-in
   await page.waitForURL((url) => !url.pathname.includes('/signin'), {

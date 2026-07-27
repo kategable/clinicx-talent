@@ -16,7 +16,9 @@ import { Component } from '@angular/core';
         text-align: center;
       }
       h2 {
-        font: 500 1.5rem Georgia, serif;
+        font:
+          500 1.5rem Georgia,
+          serif;
         margin: 0 0 0.5rem;
       }
       p {

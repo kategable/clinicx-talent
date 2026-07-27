@@ -17,13 +17,9 @@ test.describe('Clinic dashboard', () => {
     const sidenav = page.locator('mat-sidenav');
     await expect(sidenav.locator('a:has-text("Home")')).toBeVisible();
     await expect(sidenav.locator('a:has-text("Talent search")')).toBeVisible();
-    await expect(
-      sidenav.locator('a:has-text("Create hiring link")'),
-    ).toBeVisible();
+    await expect(sidenav.locator('a:has-text("Create hiring link")')).toBeVisible();
     await expect(sidenav.locator('a:has-text("Appearance")')).toBeVisible();
-    await expect(
-      sidenav.locator('a:has-text("Account status")'),
-    ).toBeVisible();
+    await expect(sidenav.locator('a:has-text("Account status")')).toBeVisible();
   });
 
   test('shows toolbar with clinic name and sign-out', async ({ page }) => {
@@ -34,9 +30,7 @@ test.describe('Clinic dashboard', () => {
     await expect(toolbar.locator('.toolbar-clinic')).toBeVisible();
 
     // Sign out button should be visible
-    await expect(
-      toolbar.locator('button:has-text("Sign out")'),
-    ).toBeVisible();
+    await expect(toolbar.locator('button:has-text("Sign out")')).toBeVisible();
   });
 
   test('navigates between tabs via sidenav links', async ({ page }) => {
@@ -57,9 +51,7 @@ test.describe('Clinic dashboard', () => {
     await expect(page).toHaveURL(/\/clinic\/home/);
   });
 
-  test('hamburger menu toggles sidenav on mobile viewport', async ({
-    page,
-  }) => {
+  test('hamburger menu toggles sidenav on mobile viewport', async ({ page }) => {
     // Set to mobile viewport
     await page.setViewportSize({ width: 390, height: 844 });
 

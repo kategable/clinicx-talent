@@ -120,7 +120,9 @@ mat-nav-list {
     text-decoration: none;
     padding: 0.35rem 0.65rem;
     border-radius: 6px;
-    transition: background 0.15s, color 0.15s;
+    transition:
+      background 0.15s,
+      color 0.15s;
 
     &:hover {
       color: var(--cx-text);

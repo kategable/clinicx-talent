@@ -26,7 +26,10 @@ export const errorInterceptor: HttpInterceptorFn = (req, next) => {
             break;
           case 429:
             // Rate limited — surface the message
-            console.warn('[ClinicX] Rate limited:', err.error?.error?.message ?? 'Too many requests');
+            console.warn(
+              '[ClinicX] Rate limited:',
+              err.error?.error?.message ?? 'Too many requests',
+            );
             break;
         }
       }

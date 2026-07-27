@@ -7,10 +7,7 @@
         <div class="name-row">
           <h1>{{ t.displayName }}</h1>
           @if (isFounder()) {
-            <app-founder-badge
-              [compact]="true"
-              [memberNumber]="founderMemberNumber()"
-            />
+            <app-founder-badge [compact]="true" [memberNumber]="founderMemberNumber()" />
           }
         </div>
         @if (profile(); as p) {
@@ -86,11 +83,7 @@
             </div>
           } @else {
             <div class="actions">
-              <button
-                mat-flat-button
-                class="primary-cta"
-                (click)="addTalent()"
-              >
+              <button mat-flat-button class="primary-cta" (click)="addTalent()">
                 Add this talent to my clinic
               </button>
             </div>
@@ -106,7 +99,10 @@
       } @else {
         <div class="cta-banner">
           <p class="cta-heading">Interested in this talent?</p>
-          <p>Create a free clinic account to connect with {{ t.displayName }} and browse vetted aesthetic professionals.</p>
+          <p>
+            Create a free clinic account to connect with {{ t.displayName }} and browse vetted
+            aesthetic professionals.
+          </p>
           <div class="actions">
             <a
               mat-flat-button

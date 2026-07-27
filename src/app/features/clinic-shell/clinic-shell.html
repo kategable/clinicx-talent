@@ -11,22 +11,12 @@
     </div>
 
     <mat-nav-list>
-      <a
-        mat-list-item
-        routerLink="/clinic/home"
-        routerLinkActive="active"
-        (click)="close()"
-      >
+      <a mat-list-item routerLink="/clinic/home" routerLinkActive="active" (click)="close()">
         <mat-icon matListItemIcon>home</mat-icon>
         <span matListItemTitle>Home</span>
       </a>
 
-      <a
-        mat-list-item
-        routerLink="/clinic/talents"
-        routerLinkActive="active"
-        (click)="close()"
-      >
+      <a mat-list-item routerLink="/clinic/talents" routerLinkActive="active" (click)="close()">
         <mat-icon matListItemIcon>search</mat-icon>
         <span matListItemTitle>Talent search</span>
         @if (pendingCount(); as count) {
@@ -44,22 +34,12 @@
         <span matListItemTitle>Create hiring link</span>
       </a>
 
-      <a
-        mat-list-item
-        routerLink="/clinic/appearance"
-        routerLinkActive="active"
-        (click)="close()"
-      >
+      <a mat-list-item routerLink="/clinic/appearance" routerLinkActive="active" (click)="close()">
         <mat-icon matListItemIcon>palette</mat-icon>
         <span matListItemTitle>Appearance</span>
       </a>
 
-      <a
-        mat-list-item
-        routerLink="/clinic/status"
-        routerLinkActive="active"
-        (click)="close()"
-      >
+      <a mat-list-item routerLink="/clinic/status" routerLinkActive="active" (click)="close()">
         <mat-icon matListItemIcon>verified</mat-icon>
         <span matListItemTitle>Account status</span>
       </a>
@@ -74,12 +54,7 @@
 
   <mat-sidenav-content>
     <mat-toolbar class="toolbar" color="primary">
-      <button
-        mat-icon-button
-        class="menu-btn"
-        aria-label="Toggle navigation"
-        (click)="toggle()"
-      >
+      <button mat-icon-button class="menu-btn" aria-label="Toggle navigation" (click)="toggle()">
         <mat-icon>menu</mat-icon>
       </button>
 
@@ -110,9 +85,7 @@
         <span class="toolbar-clinic" [routerLink]="'/clinic/home'" tabindex="0" role="link">
           {{ clinic.displayName }}
         </span>
-        <button mat-button class="sign-out-btn" (click)="signOut()" routerLink="/">
-          Sign out
-        </button>
+        <button mat-button class="sign-out-btn" (click)="signOut()" routerLink="/">Sign out</button>
       }
     </mat-toolbar>
 

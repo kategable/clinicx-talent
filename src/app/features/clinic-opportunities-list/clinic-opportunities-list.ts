@@ -3,10 +3,7 @@ import { MatButtonModule } from '@angular/material/button';
 import { RouterLink } from '@angular/router';
 import { Store } from '@ngrx/store';
 import { AppActions } from '../../core/store/app.actions';
-import {
-  selectCurrentAccount,
-  selectHiring,
-} from '../../core/store/app.selectors';
+import { selectCurrentAccount, selectHiring } from '../../core/store/app.selectors';
 import { ThemePicker } from '../../shared/theme-picker/theme-picker';
 
 @Component({
@@ -24,9 +21,7 @@ export class ClinicOpportunitiesList {
   protected readonly myOpportunities = computed(() => {
     const acc = this.account();
     if (!acc) return [];
-    return this.hiring().opportunities.filter(
-      (o) => o.clinicAccountId === acc.id,
-    );
+    return this.hiring().opportunities.filter((o) => o.clinicAccountId === acc.id);
   });
 
   protected readonly showDeleted = signal(false);

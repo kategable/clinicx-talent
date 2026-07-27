@@ -27,9 +27,7 @@ test.describe('Sign out', () => {
     await expect(page.locator('.hero')).toBeVisible({ timeout: 5000 });
   });
 
-  test('protected route redirects to sign-in when not authenticated', async ({
-    page,
-  }) => {
+  test('protected route redirects to sign-in when not authenticated', async ({ page }) => {
     await page.goto('/clinic/home');
     // Should redirect to sign-in since not authenticated
     await expect(page).toHaveURL(/\/signin/, { timeout: 10000 });

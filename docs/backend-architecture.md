@@ -31,6 +31,7 @@ Replace the current hardcoded test credential login with a real two-path authent
 ### 2.2 Current Auth Flow (to be replaced)
 
 The existing login lives in `src/app/features/registration/registration.ts` and is driven by NgRx actions in the reducer:
+
 - `AppActions.selectAccountType` -- picks clinic or talent
 - `AppActions.requestSMSCode` -- enters phone, matched against `TEST_CREDENTIALS`
 - `AppActions.verifyRegistrationCode` -- enters code, matched against `TEST_CREDENTIALS`
@@ -42,7 +43,7 @@ These all use hardcoded test data (`TEST_CREDENTIALS`, `SEEDED_ACCOUNTS`). We re
 ### 2.3 New Auth Service Architecture
 
 ```
-[Registration Component] 
+[Registration Component]
     |
     +--- [AuthService] ---------> [IAuthProvider] ---------> [MockAuthProvider]  (dev)
     |       (orchestrator)        (abstract)                  [HttpAuthProvider]  (future)
@@ -53,6 +54,7 @@ These all use hardcoded test data (`TEST_CREDENTIALS`, `SEEDED_ACCOUNTS`). We re
 ```
 
 The `AuthService` replaces the direct NgRx action dispatches for auth. It:
+
 - Orchestrates the Google sign-in flow
 - Manages phone SMS entry and code verification
 - Stores/retrieves JWT tokens in memory (or sessionStorage for MVP)
@@ -125,7 +127,7 @@ export class AuthService {
   private readonly router = inject(Router);
 
   // State
-  readonly authState = signal<AuthState>({ 
+  readonly authState = signal<AuthState>({
     status: 'idle',           // idle | loading | authenticated | error
     account: null,
     error: null,
@@ -172,7 +174,7 @@ export class MockAuthProvider implements AuthProvider {
   async exchangeGoogleToken(idToken: string): Promise<AuthResult> {
     // Simulate network delay
     await delay(800);
-    
+
     // Mock response -- returns a simulated account
     return {
       token: 'mock-jwt-token-' + Date.now(),
@@ -243,6 +245,7 @@ The Google button is prominent and primary. The phone option is below as a text 
 ### 2.8 NgRx Changes (minimal -- all auth logic moves to AuthService)
 
 The reducer loses these handlers:
+
 - `selectAccountType` -- replaced by AuthService + Google flow
 - `requestSMSCode` -- replaced by AuthService mock/real
 - `verifyRegistrationCode` -- replaced by AuthService
@@ -251,6 +254,7 @@ The reducer loses these handlers:
 - `adminLogout` -- replaced by AuthService clearSession
 
 What remains:
+
 - `saveClinicDetails` -- profile editing (not auth)
 - `saveTalentDetails` -- profile editing (not auth)
 - `setThemePreference` -- UI preference
@@ -267,17 +271,19 @@ The store keeps `activeAccountId` but it is set by the AuthService after success
 export const appConfig: ApplicationConfig = {
   providers: [
     // Auth -- mock until backend is ready
-    { provide: AuthProvider, useClass: environment.useBackend 
-        ? HttpAuthProvider : MockAuthProvider },
+    {
+      provide: AuthProvider,
+      useClass: environment.useBackend ? HttpAuthProvider : MockAuthProvider,
+    },
     AuthService,
-    
+
     // Existing data sources (still local until backend)
     { provide: AccountDataSource, useClass: LocalAccountDataSource },
     { provide: HiringDataSource, useClass: LocalHiringDataSource },
-    
+
     // Interceptors (for future HTTP auth)
     provideHttpClient(withInterceptors([jwtInterceptor, errorInterceptor])),
-    
+
     // Routing + store
     provideRouter(routes),
     provideStore({ app: appReducer }),
@@ -306,18 +312,18 @@ export const environment = {
 
 All new and modified files must have corresponding unit tests. The existing reducer tests in `src/app/core/store/app.reducer.spec.ts` should be updated to reflect the removal of auth logic.
 
-| File | Test File | What to Test |
-|------|-----------|-------------|
-| `auth.service.ts` | `auth.service.spec.ts` | Google sign-in flow; phone send + verify; token persistence; error states; session clear |
-| `auth-provider.ts` | — (interface, no tests needed) | — |
-| `mock-auth.provider.ts` | Included in auth.service.spec.ts | Mock returns correct shapes; mock delay simulates network |
-| `jwt-interceptor.ts` | `jwt-interceptor.spec.ts` | Token attached to outgoing requests; no token skips header; 401 triggers redirect |
-| `error-interceptor.ts` | `error-interceptor.spec.ts` | 401 -> redirect to sign-in; 403 -> forbidden toast; 429 -> rate limit message |
-| `signin.ts` | `signin.spec.ts` | Google button renders; phone input renders; form validation; loading state; error display; navigation on success |
-| `register-phone.ts` | `register-phone.spec.ts` | Phone input validation; code input; retry sends new code; error handling |
-| `google-signin-button.ts` | `google-signin-button.spec.ts` | Button renders; click triggers Google flow; loading state; disabled when authenticating |
-| `phone-input.ts` | `phone-input.spec.ts` | Input formatting ( (312) 555-0101 ); validation (10 digits); disabled state |
-| `verification-code-input.ts` | `verification-code-input.spec.ts` | 6-digit input; auto-submit on full code; paste support; error display; resend timer |
+| File                         | Test File                         | What to Test                                                                                                     |
+| ---------------------------- | --------------------------------- | ---------------------------------------------------------------------------------------------------------------- |
+| `auth.service.ts`            | `auth.service.spec.ts`            | Google sign-in flow; phone send + verify; token persistence; error states; session clear                         |
+| `auth-provider.ts`           | — (interface, no tests needed)    | —                                                                                                                |
+| `mock-auth.provider.ts`      | Included in auth.service.spec.ts  | Mock returns correct shapes; mock delay simulates network                                                        |
+| `jwt-interceptor.ts`         | `jwt-interceptor.spec.ts`         | Token attached to outgoing requests; no token skips header; 401 triggers redirect                                |
+| `error-interceptor.ts`       | `error-interceptor.spec.ts`       | 401 -> redirect to sign-in; 403 -> forbidden toast; 429 -> rate limit message                                    |
+| `signin.ts`                  | `signin.spec.ts`                  | Google button renders; phone input renders; form validation; loading state; error display; navigation on success |
+| `register-phone.ts`          | `register-phone.spec.ts`          | Phone input validation; code input; retry sends new code; error handling                                         |
+| `google-signin-button.ts`    | `google-signin-button.spec.ts`    | Button renders; click triggers Google flow; loading state; disabled when authenticating                          |
+| `phone-input.ts`             | `phone-input.spec.ts`             | Input formatting ( (312) 555-0101 ); validation (10 digits); disabled state                                      |
+| `verification-code-input.ts` | `verification-code-input.spec.ts` | 6-digit input; auto-submit on full code; paste support; error display; resend timer                              |
 
 ### 3.2 AuthService Unit Tests (Detailed)
 
@@ -400,15 +406,15 @@ npm test -- --include src/app/core/auth.service.spec.ts  # Single file
 
 ### 4.1 Test Plan
 
-| Test File | Scenario | Steps |
-|-----------|----------|-------|
-| `e2e/auth/google-signin.spec.ts` | Google sign-in button visible and clickable | 1. Navigate to /register 2. Assert Google button renders 3. Click button 4. Assert loading state 5. Assert Google popup opens (or mock intercepts) |
-| `e2e/auth/phone-signin.spec.ts` | Sign in with phone SMS | 1. Navigate to /signin 2. Click "Sign in with phone" 3. Enter phone number 4. Click "Send Code" 5. Enter mock code from sessionStorage 6. Assert redirected to dashboard |
-| `e2e/auth/phone-signin-wrong-code.spec.ts` | Wrong code shows error | 1. Same as above through step 5 2. Enter wrong code 3. Assert error message displayed 4. Assert able to retry |
-| `e2e/auth/registration.spec.ts` | New account registration | 1. Navigate to /register 2. Click Google sign-in (mock) 3. Assert navigated to account type selection 4. Select "talent" 5. Assert navigated to phone verification 6. Enter phone + code 7. Assert navigated to onboarding |
-| `e2e/auth/admin-login.spec.ts` | Admin login | 1. Navigate to /admin/login 2. Enter username/password 3. Click login 4. Assert navigated to admin dashboard 5. Assert admin controls visible |
-| `e2e/auth/admin-login-wrong.spec.ts` | Bad admin login shows error | 1. Navigate to /admin/login 2. Enter wrong credentials 3. Assert error message |
-| `e2e/auth/signout.spec.ts` | Sign out clears session | 1. Sign in 2. Navigate to settings 3. Click sign out 4. Assert redirected to home 5. Assert dashboard not accessible |
+| Test File                                  | Scenario                                    | Steps                                                                                                                                                                                                                      |
+| ------------------------------------------ | ------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `e2e/auth/google-signin.spec.ts`           | Google sign-in button visible and clickable | 1. Navigate to /register 2. Assert Google button renders 3. Click button 4. Assert loading state 5. Assert Google popup opens (or mock intercepts)                                                                         |
+| `e2e/auth/phone-signin.spec.ts`            | Sign in with phone SMS                      | 1. Navigate to /signin 2. Click "Sign in with phone" 3. Enter phone number 4. Click "Send Code" 5. Enter mock code from sessionStorage 6. Assert redirected to dashboard                                                   |
+| `e2e/auth/phone-signin-wrong-code.spec.ts` | Wrong code shows error                      | 1. Same as above through step 5 2. Enter wrong code 3. Assert error message displayed 4. Assert able to retry                                                                                                              |
+| `e2e/auth/registration.spec.ts`            | New account registration                    | 1. Navigate to /register 2. Click Google sign-in (mock) 3. Assert navigated to account type selection 4. Select "talent" 5. Assert navigated to phone verification 6. Enter phone + code 7. Assert navigated to onboarding |
+| `e2e/auth/admin-login.spec.ts`             | Admin login                                 | 1. Navigate to /admin/login 2. Enter username/password 3. Click login 4. Assert navigated to admin dashboard 5. Assert admin controls visible                                                                              |
+| `e2e/auth/admin-login-wrong.spec.ts`       | Bad admin login shows error                 | 1. Navigate to /admin/login 2. Enter wrong credentials 3. Assert error message                                                                                                                                             |
+| `e2e/auth/signout.spec.ts`                 | Sign out clears session                     | 1. Sign in 2. Navigate to settings 3. Click sign out 4. Assert redirected to home 5. Assert dashboard not accessible                                                                                                       |
 
 ### 4.2 Mock Setup for E2E Tests
 
@@ -421,7 +427,7 @@ import { test, expect } from '@playwright/test';
 test.describe('Google sign-in', () => {
   test('shows Google sign-in button on registration page', async ({ page }) => {
     await page.goto('/register');
-    
+
     // The Google Sign-In button renders even without the real GIS library
     // because the mock provider simulates the button UI
     const googleButton = page.getByTestId('google-signin-button');
@@ -438,10 +444,10 @@ test.describe('Google sign-in', () => {
         credential: 'mock-google-id-token',
       });
     });
-    
+
     // Assert loading state
     await expect(page.getByText('Signing in...')).toBeVisible();
-    
+
     // Assert redirected to dashboard (mock returns approved account)
     await page.waitForURL('**/talent/home');
   });
@@ -500,39 +506,39 @@ on:
 jobs:
   build-and-test:
     runs-on: ubuntu-latest
-    
+
     steps:
       - uses: actions/checkout@v4
-      
+
       - uses: actions/setup-node@v4
         with:
           node-version: '24'
           cache: 'npm'
-      
+
       - name: Install dependencies
         run: npm ci
-      
+
       - name: Lint check
         run: npx prettier --check .
-      
+
       - name: Build
         run: npm run build
-        
+
       - name: Run unit tests with coverage
         run: npm run test:coverage
-      
+
       - name: Upload coverage report
         uses: actions/upload-artifact@v4
         with:
           name: coverage-report
           path: coverage/
-      
+
       - name: Start dev server for E2E tests
         run: npm start & npx wait-on http://localhost:4200
-      
+
       - name: Run Playwright E2E tests
         run: npx playwright test e2e/auth/
-      
+
       - name: Upload Playwright report
         if: failure()
         uses: actions/upload-artifact@v4
@@ -562,11 +568,11 @@ jobs:
       - run: npx prettier --check .
       - run: npm run build
       - run: npm run test:coverage
-      
+
       # Playwright E2E tests must pass before deployment can proceed
       - run: npm start & npx wait-on http://localhost:4200
       - run: npx playwright test e2e/
-      
+
       # Upload built artifact for downstream jobs
       - uses: actions/upload-pages-artifact@v3
         with:
@@ -592,25 +598,25 @@ jobs:
     environment:
       name: production
       url: https://clinicx-talent.com
-      
+
       # *** APPROVAL GATE ***
       # Deployment to production requires manual approval
       # Configured in GitHub repo: Settings > Environments > production
       # Approvers must be added in the environment configuration
       required_approvers: 1
-      
+
     runs-on: ubuntu-latest
     steps:
       - uses: actions/download-pages-artifact@v3
-      
+
       - name: Deploy to production green slot
         run: |
           az webapp deploy ... --slot green
-      
+
       - name: Swap green slot to production
         run: |
           az webapp deployment slot swap ...
-      
+
       - name: Post-deploy smoke tests
         run: |
           ./scripts/smoke-test.sh https://clinicx-talent.com
@@ -627,6 +633,7 @@ The `deploy-production` job uses GitHub Environments with a manual approval gate
 5. The `cd.yml` workflow will pause at `deploy-production` until an approver clicks "Approve"
 
 **Approval workflow:**
+
 1. CI passes all checks on `main` branch
 2. Developer creates a PR, gets it reviewed and merged
 3. `cd.yml` triggers on push to `main`
@@ -644,7 +651,7 @@ The `deploy-production` job uses GitHub Environments with a manual approval gate
 
 Branch: main
   - Require pull request reviews (1 reviewer)
-  - Require status checks: 
+  - Require status checks:
       - "build-and-test" from CI workflow must pass
       - "deploy-uat" from CD workflow must pass
   - Require branches to be up to date
@@ -672,11 +679,13 @@ The following are NOT part of Phase 0 -- they remain exactly as they are now:
 ## 7. Phase 0 Implementation Checklist
 
 ### Step 1: Define auth models and interfaces
+
 - [ ] Create `src/app/core/auth/models.ts` -- AuthResult, TokenPair, AuthState, AuthError
 - [ ] Create `src/app/core/auth/constants.ts` -- token keys
 - [ ] Create `src/app/core/auth-provider.ts` -- abstract IAuthProvider interface
 
 ### Step 2: Build mock auth provider
+
 - [ ] Create `src/app/core/mock-auth.provider.ts`
 - [ ] Mock Google token exchange
 - [ ] Mock phone SMS send/verify
@@ -684,6 +693,7 @@ The following are NOT part of Phase 0 -- they remain exactly as they are now:
 - [ ] Mock rate limiting and error states
 
 ### Step 3: Build AuthService
+
 - [ ] Create `src/app/core/auth.service.ts`
 - [ ] Implement Google sign-in flow
 - [ ] Implement phone SMS send/verify
@@ -693,22 +703,26 @@ The following are NOT part of Phase 0 -- they remain exactly as they are now:
 - [ ] Wire up to NgRx store for activeAccountId
 
 ### Step 4: Update DI configuration
+
 - [ ] Update `src/app/environments/environment.ts` with googleClientId and useMockAuth
 - [ ] Update `src/app/app.config.ts` to register AuthProvider and AuthService
 - [ ] Add JwtInterceptor and ErrorInterceptor
 
 ### Step 5: Build shared UI components
+
 - [ ] Create `google-signin-button` component
 - [ ] Create `phone-input` component with formatting
 - [ ] Create `verification-code-input` component (6-digit, auto-submit)
 
 ### Step 6: Build sign-in and registration pages
+
 - [ ] Create `signin` feature component (Google + phone options)
 - [ ] Create `register-phone` feature component (phone + code for new accounts)
 - [ ] Update routing for new pages
 - [ ] Remove old `registration` component or repurpose
 
 ### Step 7: Update NgRx reducer
+
 - [ ] Remove `credentialMatches()` function
 - [ ] Remove `TEST_CREDENTIALS` reference
 - [ ] Remove hardcoded `admin`/`admin` login
@@ -717,12 +731,14 @@ The following are NOT part of Phase 0 -- they remain exactly as they are now:
 - [ ] Keep `activeAccountId` but set it from AuthService
 
 ### Step 8: Guard updates
+
 - [ ] Update `clinicAccountGuard` to check AuthService.isAuthenticated()
 - [ ] Update `talentAccountGuard` to check AuthService.isAuthenticated()
 - [ ] Update `adminGuard` to check AuthService for admin role
 - [ ] Update `approvedClinicGuard` to check auth + status
 
 ### Step 9: Write unit tests
+
 - [ ] `auth.service.spec.ts` (15+ tests)
 - [ ] `jwt-interceptor.spec.ts` (5+ tests)
 - [ ] `error-interceptor.spec.ts` (5+ tests)
@@ -733,6 +749,7 @@ The following are NOT part of Phase 0 -- they remain exactly as they are now:
 - [ ] `verification-code-input.spec.ts` (6+ tests)
 
 ### Step 10: Write Playwright E2E tests
+
 - [ ] `e2e/auth/google-signin.spec.ts` (2+ scenarios)
 - [ ] `e2e/auth/phone-signin.spec.ts` (happy path)
 - [ ] `e2e/auth/phone-signin-wrong-code.spec.ts` (error path)
@@ -742,12 +759,14 @@ The following are NOT part of Phase 0 -- they remain exactly as they are now:
 - [ ] `e2e/auth/signout.spec.ts` (session clear)
 
 ### Step 11: CI/CD pipeline
+
 - [ ] Create `.github/workflows/ci.yml` (PR validation)
 - [ ] Create `.github/workflows/cd.yml` (UAT + production with approval)
 - [ ] Configure GitHub Environments with approval gate
 - [ ] Configure branch protection rules
 
 ### Step 12: Final review
+
 - [ ] Run all unit tests -- all pass
 - [ ] Run all E2E tests -- all pass with mocked auth
 - [ ] Manual test: Google sign-in flow works in browser

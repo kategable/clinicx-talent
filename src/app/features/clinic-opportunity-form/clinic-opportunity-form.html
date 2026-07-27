@@ -8,8 +8,8 @@
     @if (account(); as clinic) {
       <h1>Create hiring link</h1>
       <p class="subtitle">
-        Share this opportunity with talented professionals. We'll generate a public
-        link you can send by text, email, or post anywhere.
+        Share this opportunity with talented professionals. We'll generate a public link you can
+        send by text, email, or post anywhere.
       </p>
 
       <p class="clinic-name">
@@ -27,10 +27,7 @@
             placeholder="RN Injector"
             autocomplete="off"
           />
-          @if (
-            opportunityForm.position().touched() &&
-            opportunityForm.position().invalid()
-          ) {
+          @if (opportunityForm.position().touched() && opportunityForm.position().invalid()) {
             <mat-error>
               {{ opportunityForm.position().errors()[0].message }}
             </mat-error>
@@ -45,10 +42,7 @@
             placeholder="River North, Chicago, IL"
             autocomplete="off"
           />
-          @if (
-            opportunityForm.location().touched() &&
-            opportunityForm.location().invalid()
-          ) {
+          @if (opportunityForm.location().touched() && opportunityForm.location().invalid()) {
             <mat-error>
               {{ opportunityForm.location().errors()[0].message }}
             </mat-error>
@@ -126,13 +120,14 @@
     <div class="success-card">
       <span class="check" aria-hidden="true">✓</span>
       <h1>Your hiring link is ready</h1>
-      <p>Share it anywhere — text, email, Instagram, or QR code. When a talent opens this link, they'll see your opportunity and can apply directly.</p>
+      <p>
+        Share it anywhere — text, email, Instagram, or QR code. When a talent opens this link,
+        they'll see your opportunity and can apply directly.
+      </p>
 
       <div class="link-display">
         <code class="generated-link">{{ shareLink() }}</code>
-        <button mat-flat-button class="copy-btn" (click)="copyLink()">
-          Copy link
-        </button>
+        <button mat-flat-button class="copy-btn" (click)="copyLink()">Copy link</button>
       </div>
 
       <p class="copied-hint" role="status" aria-live="polite">
@@ -140,12 +135,8 @@
       </p>
 
       <nav class="success-nav">
-        <a mat-stroked-button routerLink="/clinic/opportunities/new">
-          Create another link
-        </a>
-        <a mat-stroked-button routerLink="/clinic/opportunities">
-          View all hiring links
-        </a>
+        <a mat-stroked-button routerLink="/clinic/opportunities/new"> Create another link </a>
+        <a mat-stroked-button routerLink="/clinic/opportunities"> View all hiring links </a>
       </nav>
     </div>
   </main>

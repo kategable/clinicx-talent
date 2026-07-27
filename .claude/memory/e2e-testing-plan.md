@@ -1,7 +1,7 @@
 ---
 name: e2e-testing-plan
 description: Playwright E2E testing setup plan — deferred for later implementation
-metadata: 
+metadata:
   node_type: memory
   type: project
   originSessionId: e5940a67-42da-4467-b179-bbd67d2d7374

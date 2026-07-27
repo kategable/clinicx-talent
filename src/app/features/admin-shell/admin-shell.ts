@@ -8,13 +8,7 @@ import { selectPendingCount } from '../../core/store/app.selectors';
 
 @Component({
   selector: 'app-admin-shell',
-  imports: [
-    RouterLink,
-    RouterLinkActive,
-    RouterOutlet,
-    MatButtonModule,
-    MatIconModule,
-  ],
+  imports: [RouterLink, RouterLinkActive, RouterOutlet, MatButtonModule, MatIconModule],
   templateUrl: './admin-shell.html',
   styleUrl: './admin-shell.scss',
 })

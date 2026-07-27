@@ -152,7 +152,7 @@ export const SEEDED_ACCOUNTS: AccountRecord[] = [
       state: 'IL',
       website: 'https://luxaesthetics.example',
       specialties: 'Injectables, laser, body contouring',
-      about: 'A premier aesthetics lounge in Chicago\'s Gold Coast.',
+      about: "A premier aesthetics lounge in Chicago's Gold Coast.",
       position: 'Aesthetic NP',
       mustHaveSkills: 'Injectables, client consultations, treatment planning',
       payRange: '$100,000–$130,000',
@@ -235,9 +235,7 @@ export function formatPhone(phone: string): string {
   return `(${digits.slice(0, 3)}) ${digits.slice(3, 6)}-${digits.slice(6)}`;
 }
 
-export function toAccountsRecord(
-  accounts: AccountRecord[],
-): Record<string, AccountRecord> {
+export function toAccountsRecord(accounts: AccountRecord[]): Record<string, AccountRecord> {
   const record: Record<string, AccountRecord> = {};
   for (const a of accounts) {
     record[a.id] = a;

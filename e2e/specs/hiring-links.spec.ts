@@ -7,9 +7,7 @@ test.describe('Hiring links', () => {
     await signInViaUI(page, '(312) 555-0101', '123456');
   });
 
-  test('creates a new hiring opportunity and shows success page', async ({
-    page,
-  }) => {
+  test('creates a new hiring opportunity and shows success page', async ({ page }) => {
     // Navigate to Create hiring link
     await page.locator('a[routerlink="/clinic/opportunities/new"]').first().click();
     await expect(page).toHaveURL(/\/clinic\/opportunities\/new/);
@@ -28,19 +26,13 @@ test.describe('Hiring links', () => {
     await page.locator('select').selectOption('Within 30 days');
 
     // Fill hiring brief fields
-    const skillsInput = page.locator(
-      'textarea[placeholder*="Injectables" i]',
-    );
+    const skillsInput = page.locator('textarea[placeholder*="Injectables" i]');
     await skillsInput.fill('Injectables, laser, PRP, patient education');
 
-    const benefitsInput = page.locator(
-      'textarea[placeholder*="Health insurance" i]',
-    );
+    const benefitsInput = page.locator('textarea[placeholder*="Health insurance" i]');
     await benefitsInput.fill('Health, dental, 401k, CE allowance');
 
-    const idealHireInput = page.locator(
-      'textarea[placeholder*="Warm" i]',
-    );
+    const idealHireInput = page.locator('textarea[placeholder*="Warm" i]');
     await idealHireInput.fill(
       'Experienced RN with a passion for natural results and client education.',
     );

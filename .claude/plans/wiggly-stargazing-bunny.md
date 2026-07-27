@@ -23,11 +23,11 @@ Currently business logic is scattered across the reducer, effects, and component
 
 Follow the existing `src/app/core/account.ts` pattern — types + constants + pure utility functions in one file per domain:
 
-| Module | Purpose |
-|---|---|
-| `src/app/core/account.ts` | Account types, phone formatting, test credentials, seed data (exists — enhance) |
-| `src/app/core/hiring.ts` | Hiring types, slug/token generation, application lifecycle, seed data (NEW — see Part B) |
-| `src/app/core/founder.ts` | Founder types, count threshold, qualification logic (NEW — see Part D) |
+| Module                    | Purpose                                                                                  |
+| ------------------------- | ---------------------------------------------------------------------------------------- |
+| `src/app/core/account.ts` | Account types, phone formatting, test credentials, seed data (exists — enhance)          |
+| `src/app/core/hiring.ts`  | Hiring types, slug/token generation, application lifecycle, seed data (NEW — see Part B) |
+| `src/app/core/founder.ts` | Founder types, count threshold, qualification logic (NEW — see Part D)                   |
 
 ### Rules for business logic modules
 
@@ -140,6 +140,7 @@ Add to existing `createActionGroup`:
 ### Step B8: New Components
 
 **`PublicHiringPage`** — `src/app/features/public-hiring-page/` (3 files)
+
 - Read slug params from ActivatedRoute, token from queryParamMap
 - Show opportunity details (title, location, pay, benefits, skills, ideal hire) and clinic name
 - CTA for talent: "Accept invitation and create profile" → dispatch `acceptHiringInvite({ token })`
@@ -147,6 +148,7 @@ Add to existing `createActionGroup`:
 - Edge cases: expired/missing opportunity (empty state), missing token (show details but change CTA to "Browse ClinicX")
 
 **`PublicTalentPassport`** — `src/app/features/public-talent-passport/` (3 files)
+
 - Read `:talentSlug` from ActivatedRoute, token from queryParamMap
 - Show talent professional profile: name, role, location, experience, skills, availability, languages, introduction. Hide private details (phone, certificates, portfolio files).
 - CTA for clinic: "Add this talent to my clinic" → dispatch `acceptPassportInvite({ token })`, effect navigates to `/register?type=clinic&invite=TOKEN`
@@ -154,6 +156,7 @@ Add to existing `createActionGroup`:
 - Edge cases: expired/missing passport, private details hidden per privacy spec
 
 **`ClinicOpportunityForm`** — `src/app/features/clinic-opportunity-form/` (3 files)
+
 - Signal Forms pattern matching `ClinicHome` exactly
 - Pre-fill from current clinic's ClinicDetails (position, location, payRange, etc.)
 - On save: dispatch `createOpportunity(...)`, show generated share link with copy-to-clipboard
@@ -161,11 +164,13 @@ Add to existing `createActionGroup`:
 - Required validation on position and location
 
 **`ClinicOpportunitiesList`** — `src/app/features/clinic-opportunities-list/` (3 files)
+
 - List all opportunities for current clinic with status, copy-link, toggle active/paused/closed
 
 ### Step B9: Modified Components
 
 **`ClinicTalents`** (`clinic-talents.ts`, `.html`, `.scss`)
+
 - Add `selectApplicationsForMyClinic` selector
 - Show talent cards with application status badges and source attribution:
   - `'clinic-hiring-link'` → "Invited by you" badge
@@ -175,17 +180,20 @@ Add to existing `createActionGroup`:
 - Add "Create hiring link" button in nav area
 
 **`TalentHome`** (`talent-home.ts`, `.html`, `.scss`)
+
 - Add "Share your Talent Passport" section/button below the profile form
 - On click: dispatch `shareTalentPassport({ talentAccountId })`
 - Show generated passport link: `clinicxtalent.com/talent/:talentSlug?invite=TOKEN` with copy-to-clipboard
 - Show a small summary of what clinics will see (public fields only)
 
 **`Registration`** (`registration.ts`)
+
 - In `ngOnInit()`: read `invite` query param, also check route data/snapshot for invite context
 - If invite present: dispatch `acceptHiringInvite({ token })` or `acceptPassportInvite({ token })` — determined by the `type` query param (talent=from hiring link, clinic=from passport)
 - Pre-select account type based on invite direction (belt-and-suspenders with the redirect URL)
 
 **`ClinicHome`** (`clinic-home.html`)
+
 - Add "Create hiring link" link → `/clinic/opportunities/new`, visible only when `account().status === 'approved'`
 
 ### Step B10: Seeded data update — `src/app/core/account.ts` (MODIFY)
@@ -221,7 +229,7 @@ export function canBecomeFounder(totalAccounts: number): boolean { return totalA
 ```typescript
 export interface AccountRecord {
   // ... existing fields ...
-  founder: boolean;              // true if joined before 1,000-user limit
+  founder: boolean; // true if joined before 1,000-user limit
 }
 ```
 
@@ -250,6 +258,7 @@ export class FounderBadge {
 ```
 
 Two modes:
+
 - **Full**: Shows "Founder 1000" text + member number + small icon. Used on profile pages.
 - **Compact**: Shows just the icon with tooltip. Used on cards in lists.
 
@@ -270,14 +279,14 @@ Route: `/founders` — public, no guard. Explains the Founder 1000 Club:
 
 Show the `FounderBadge` component (compact mode) in these locations:
 
-| Location | File to modify |
-|---|---|
-| Clinic talent list cards | `clinic-talents.html` — next to talent name (if talent is founder) |
-| Clinic workspace header | `clinic-home.html` — next to clinic display name (if clinic is founder) |
-| Talent workspace header | `talent-home.html` — next to talent display name (if talent is founder) |
-| Public hiring page | `public-hiring-page.html` — next to clinic name (if clinic is founder) |
-| Public talent passport | `public-talent-passport.html` — next to talent name (if talent is founder) |
-| Account status page | `account-status.html` — next to account name |
+| Location                 | File to modify                                                             |
+| ------------------------ | -------------------------------------------------------------------------- |
+| Clinic talent list cards | `clinic-talents.html` — next to talent name (if talent is founder)         |
+| Clinic workspace header  | `clinic-home.html` — next to clinic display name (if clinic is founder)    |
+| Talent workspace header  | `talent-home.html` — next to talent display name (if talent is founder)    |
+| Public hiring page       | `public-hiring-page.html` — next to clinic name (if clinic is founder)     |
+| Public talent passport   | `public-talent-passport.html` — next to talent name (if talent is founder) |
+| Account status page      | `account-status.html` — next to account name                               |
 
 ### Step C7: Route
 
@@ -339,31 +348,31 @@ Token survives page refreshes via hydration but is **excluded from localStorage 
 
 ## Files Summary
 
-| File | Action |
-|---|---|
-| `src/app/core/hiring.ts` | **NEW** — hiring domain types, utils, business logic, seed data |
-| `src/app/core/founder.ts` | **NEW** — founder business logic, threshold, status functions |
-| `src/app/core/store/app.state.ts` | MODIFY — add `hiring` slice |
-| `src/app/core/store/app.actions.ts` | MODIFY — add 7 actions |
-| `src/app/core/store/app.reducer.ts` | MODIFY — add 6 hiring handlers + founder auto-assignment |
-| `src/app/core/store/app.selectors.ts` | MODIFY — add ~10 selectors |
-| `src/app/core/store/app.effects.ts` | MODIFY — add 3 effects, update persistState$ |
-| `src/app/core/store/storage.ts` | MODIFY — exclude `pendingInvite` from localStorage |
-| `src/app/core/account.ts` | MODIFY — add `founder` field, approved clinic seed account + test cred |
-| `src/app/app.routes.ts` | MODIFY — add 3 public routes (`/join/`, `/talent/`, `/founders`) |
-| `src/app/features/clinic.routes.ts` | MODIFY — add 2 protected routes |
-| `src/app/features/public-hiring-page/` | **NEW** (3 files) |
-| `src/app/features/public-talent-passport/` | **NEW** (3 files) |
-| `src/app/features/founders/` | **NEW** (3 files) — static Founder 1000 Club page |
-| `src/app/features/clinic-opportunity-form/` | **NEW** (3 files) |
-| `src/app/features/clinic-opportunities-list/` | **NEW** (3 files) |
-| `src/app/shared/founder-badge/` | **NEW** (3 files) — shared badge component |
-| `src/app/features/clinic-talents/` | MODIFY (3 files) — application badges + status + founder badge |
-| `src/app/features/clinic-home/` | MODIFY (1 file) — "Create hiring link" nav + founder badge |
-| `src/app/features/talent-home/` | MODIFY (3 files) — passport share section + founder badge |
-| `src/app/features/registration/` | MODIFY (1 file) — invite param handling |
-| `src/app/features/account-status/` | MODIFY (1 file) — founder badge |
-| `src/app/core/store/app.reducer.spec.ts` | MODIFY — new tests for hiring + founder actions
+| File                                          | Action                                                                 |
+| --------------------------------------------- | ---------------------------------------------------------------------- |
+| `src/app/core/hiring.ts`                      | **NEW** — hiring domain types, utils, business logic, seed data        |
+| `src/app/core/founder.ts`                     | **NEW** — founder business logic, threshold, status functions          |
+| `src/app/core/store/app.state.ts`             | MODIFY — add `hiring` slice                                            |
+| `src/app/core/store/app.actions.ts`           | MODIFY — add 7 actions                                                 |
+| `src/app/core/store/app.reducer.ts`           | MODIFY — add 6 hiring handlers + founder auto-assignment               |
+| `src/app/core/store/app.selectors.ts`         | MODIFY — add ~10 selectors                                             |
+| `src/app/core/store/app.effects.ts`           | MODIFY — add 3 effects, update persistState$                           |
+| `src/app/core/store/storage.ts`               | MODIFY — exclude `pendingInvite` from localStorage                     |
+| `src/app/core/account.ts`                     | MODIFY — add `founder` field, approved clinic seed account + test cred |
+| `src/app/app.routes.ts`                       | MODIFY — add 3 public routes (`/join/`, `/talent/`, `/founders`)       |
+| `src/app/features/clinic.routes.ts`           | MODIFY — add 2 protected routes                                        |
+| `src/app/features/public-hiring-page/`        | **NEW** (3 files)                                                      |
+| `src/app/features/public-talent-passport/`    | **NEW** (3 files)                                                      |
+| `src/app/features/founders/`                  | **NEW** (3 files) — static Founder 1000 Club page                      |
+| `src/app/features/clinic-opportunity-form/`   | **NEW** (3 files)                                                      |
+| `src/app/features/clinic-opportunities-list/` | **NEW** (3 files)                                                      |
+| `src/app/shared/founder-badge/`               | **NEW** (3 files) — shared badge component                             |
+| `src/app/features/clinic-talents/`            | MODIFY (3 files) — application badges + status + founder badge         |
+| `src/app/features/clinic-home/`               | MODIFY (1 file) — "Create hiring link" nav + founder badge             |
+| `src/app/features/talent-home/`               | MODIFY (3 files) — passport share section + founder badge              |
+| `src/app/features/registration/`              | MODIFY (1 file) — invite param handling                                |
+| `src/app/features/account-status/`            | MODIFY (1 file) — founder badge                                        |
+| `src/app/core/store/app.reducer.spec.ts`      | MODIFY — new tests for hiring + founder actions                        |
 
 ## Verification
 

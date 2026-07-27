@@ -7,10 +7,7 @@
         <div class="name-row">
           <h1>{{ c.displayName }}</h1>
           @if (isFounder()) {
-            <app-founder-badge
-              [compact]="true"
-              [memberNumber]="founderMemberNumber()"
-            />
+            <app-founder-badge [compact]="true" [memberNumber]="founderMemberNumber()" />
           }
         </div>
         <span class="status-badge" [class.approved]="c.status === 'approved'">
@@ -55,7 +52,9 @@
               <p class="detail-line"><span class="label">Pay range</span> {{ d.payRange }}</p>
             }
             @if (d.mustHaveSkills) {
-              <p class="detail-line"><span class="label">Must-have skills</span> {{ d.mustHaveSkills }}</p>
+              <p class="detail-line">
+                <span class="label">Must-have skills</span> {{ d.mustHaveSkills }}
+              </p>
             }
             @if (d.benefits) {
               <p class="detail-line"><span class="label">Benefits</span> {{ d.benefits }}</p>

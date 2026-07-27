@@ -7,6 +7,7 @@ export default [
   // Global ignores
   {
     ignores: [
+      '.angular/**',
       'dist/**',
       'coverage/**',
       'playwright-report/**',

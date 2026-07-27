@@ -1,7 +1,7 @@
 ---
 name: hiring-link-feature
 description: Complete spec for the Clinic Hiring Link and Talent Passport growth-loop feature
-metadata: 
+metadata:
   node_type: memory
   type: project
   originSessionId: e5940a67-42da-4467-b179-bbd67d2d7374
