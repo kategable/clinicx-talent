@@ -25,6 +25,53 @@ Node 24.15.0 is pinned in `.nvmrc`. Angular 22 requires Node ^22.22.3, ^24.15.0,
 
 ESLint 10 with typescript-eslint + angular-eslint-template. Prettier for formatting. Husky enforces lint-staged on commit (ESLint + Prettier auto-fix) and `ng lint` + `npm test` + `npm run build` on push. Claude Code hooks auto-format and lint-check TS/HTML/SCSS files on every Edit/Write.
 
+## Deployment
+
+**Never modify Azure App Service configuration manually.** Do NOT run `az webapp config set`, `az webapp restart`, or `az webapp config set --startup-file`. The F1 free tier has a hard 60 CPU-minute daily quota — container restarts and config changes trigger recycles that burn through it. When the quota is exceeded, the site returns 403 and cannot be used until midnight UTC.
+
+**All deployments go through GitHub Actions.** The only manual Azure operations allowed are:
+
+- `az webapp deployment list-publishing-profiles` — to get credentials for GitHub Secrets
+- `az webapp log tail` — read-only log viewing
+- Creating new App Services for new environments
+
+### Pipeline flow
+
+```
+PR push → CI (ci.yml) → deploy to dev
+  │
+  ▼ merge to main
+CD (cd.yml) → deploy to UAT
+  │
+  ▼ manual: "Promote to Green"
+CD → deploy to production green slot
+  │
+  ▼ manual: "Swap Green ↔ Production"
+CD → swap slots (zero-downtime)
+```
+
+- **`ci.yml`** — `pull_request` to main. Lint, build, test, E2E, then `deploy-dev` job deploys to `clinicxtalent-dev`.
+- **`cd.yml`** — Three triggers:
+  - `push` to main → `deploy-uat` to `clinicxtalent-uat`
+  - `workflow_dispatch` "promote-to-green" → build from main, deploy to `clinicxtalent` slot `green`
+  - `workflow_dispatch` "swap-green-production" → `az webapp deployment slot swap` (green ↔ production)
+
+### Azure resources (Central US, resource group `clinicx`)
+
+- Plan: `clinicx-plan` (F1 Free, Linux)
+- Dev: `clinicxtalent-dev` — `clinicxtalent-dev.azurewebsites.net`
+- UAT: `clinicxtalent-uat` — not yet created
+- Production: `clinicxtalent` with `green` deployment slot — not yet created (requires B1+ for slots)
+
+### GitHub Secrets required
+
+| Secret                              | Used By                                      |
+| ----------------------------------- | -------------------------------------------- |
+| `AZURE_WEBAPP_PUBLISH_PROFILE_DEV`  | CI dev deploy on PR                          |
+| `AZURE_WEBAPP_PUBLISH_PROFILE_UAT`  | CD deploy to UAT on merge                    |
+| `AZURE_WEBAPP_PUBLISH_PROFILE_PROD` | CD deploy to green slot                      |
+| `AZURE_CREDENTIALS`                 | CD swap slots (Azure service principal JSON) |
+
 ## Architecture
 
 **Angular 22 standalone application** — no NgModules. Standalone components loaded via `provideRouter` with lazy-loaded feature routes. **ASP.NET Core 9 backend** in `backend/` with PostgreSQL, Docker Compose dev setup.

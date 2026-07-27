@@ -28,6 +28,11 @@ jobs:
       - name: Run unit tests with coverage
         run: npm run test:coverage
 
+      - name: Upload dist for deploy
+        uses: actions/upload-artifact@v4
+        with:
+          name: dist
+          path: dist/clinicx-talent
       - name: Upload coverage report
         uses: actions/upload-artifact@v4
         with:
@@ -49,3 +54,21 @@ jobs:
         with:
           name: playwright-report
           path: playwright-report/
+
+  deploy-dev:
+    needs: build-and-test
+    environment:
+      name: dev
+      url: https://clinicxtalent-dev.azurewebsites.net
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          name: dist
+          path: dist
+      - name: Deploy to Azure (Dev)
+        uses: azure/webapps-deploy@v3
+        with:
+          app-name: clinicxtalent-dev
+          publish-profile: ${{ secrets.AZURE_WEBAPP_PUBLISH_PROFILE_DEV }}
+          package: dist/clinicx-talent/browser
