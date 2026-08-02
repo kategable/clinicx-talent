@@ -1,6 +1,5 @@
 import { Routes } from '@angular/router';
 import { adminGuard } from '../core/admin.guard';
-import { provideStoreDevtools } from '@ngrx/store-devtools';
 
 export const ADMIN_ROUTES: Routes = [
   {
@@ -46,7 +45,6 @@ export const ADMIN_ROUTES: Routes = [
         path: 'deployments',
         loadComponent: () =>
           import('./admin-deployments/admin-deployments').then((m) => m.AdminDeployments),
-        providers: [provideStoreDevtools({ maxAge: 25, logOnly: false })],
         title: 'Deployments | ClinicX Admin',
       },
     ],

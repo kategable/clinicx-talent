@@ -1,7 +1,10 @@
-import { Component, inject, signal, type OnInit } from '@angular/core';
+import { Component, computed, inject, signal } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { DatePipe } from '@angular/common';
+import { toSignal } from '@angular/core/rxjs-interop';
 import { MatButtonModule } from '@angular/material/button';
+import { of } from 'rxjs';
+import { catchError, map, startWith } from 'rxjs/operators';
 import { areDevtoolsEnabled, disableDevtools, enableDevtools } from '../../core/devtools-runtime';
 
 interface DeployInfo {
@@ -16,18 +19,28 @@ interface DeployInfo {
   styleUrl: './admin-deployments.scss',
   imports: [DatePipe, MatButtonModule],
 })
-export class AdminDeployments implements OnInit {
+export class AdminDeployments {
   private readonly http = inject(HttpClient);
-  readonly info = signal<DeployInfo | null>(null);
-  readonly error = signal<string | null>(null);
 
-  ngOnInit(): void {
-    const url = `/deploy-info.json?_=${Date.now()}`;
-    this.http.get<DeployInfo>(url).subscribe({
-      next: (data) => this.info.set(data),
-      error: () => this.error.set('Could not load deployment info.'),
-    });
-  }
+  private readonly deployInfoResult = toSignal(
+    this.http.get<DeployInfo>('/deploy-info.json').pipe(
+      map((data): { data: DeployInfo; error: null } => ({ data, error: null })),
+      catchError(() =>
+        of({ data: null as DeployInfo | null, error: 'Could not load deployment info.' }),
+      ),
+      startWith({ data: null as DeployInfo | null, error: null as string | null }),
+    ),
+    { initialValue: { data: null as DeployInfo | null, error: null as string | null } },
+  );
+
+  readonly info = computed(() => this.deployInfoResult().data);
+  readonly error = computed(() => this.deployInfoResult().error);
+
+  /** Parsed to a Date so the date pipe always renders in local time. */
+  readonly deployedAtDate = computed(() => {
+    const raw = this.info()?.deployedAt;
+    return raw ? new Date(raw) : null;
+  });
 
   readonly devtoolsEnabled = signal(areDevtoolsEnabled());
 

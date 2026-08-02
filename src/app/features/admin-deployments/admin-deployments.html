@@ -12,7 +12,7 @@
 
       <dt>Deployed</dt>
       <dd>
-        {{ info()!.deployedAt | date: 'fullDate' }} at {{ info()!.deployedAt | date: 'shortTime' }}
+        {{ deployedAtDate() | date: 'fullDate' }} at {{ deployedAtDate() | date: 'shortTime' }}
       </dd>
 
       @if (info()!.gitSha) {
