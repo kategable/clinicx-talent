@@ -31,8 +31,7 @@ export class ClinicTalents {
 
     // Start with approved talents (they appear regardless of applications)
     const approved = accountList.filter(
-      (a) =>
-        a.type === 'talent' && a.status === 'approved' && a.talentDetails,
+      (a) => a.type === 'talent' && a.status === 'approved' && a.talentDetails,
     );
 
     // Add under-review / invited talents that have an application
@@ -50,9 +49,7 @@ export class ClinicTalents {
     return [...approved, ...uniqueInvited];
   });
 
-  protected readonly founderAccounts = computed(() =>
-    this.talents().filter((a) => a.founder),
-  );
+  protected readonly founderAccounts = computed(() => this.talents().filter((a) => a.founder));
 
   protected getApplication(talentId: string) {
     return this.applications().find((a) => a.talentAccountId === talentId);

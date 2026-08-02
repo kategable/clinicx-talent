@@ -6,9 +6,7 @@ test.describe('Sign-in flow', () => {
     await clearState(page);
   });
 
-  test('signs in with valid credentials and redirects to clinic dashboard', async ({
-    page,
-  }) => {
+  test('signs in with valid credentials and redirects to clinic dashboard', async ({ page }) => {
     await page.goto('/signin');
 
     // New sign-in page shows Google first — click phone option
@@ -48,9 +46,7 @@ test.describe('Sign-in flow', () => {
 
     // Error message should appear
     await expect(page.locator('.field-error')).toBeVisible({ timeout: 5000 });
-    expect(await page.locator('.field-error').textContent()).toContain(
-      'does not match',
-    );
+    expect(await page.locator('.field-error').textContent()).toContain('does not match');
   });
 
   test('shows error for unknown phone number', async ({ page }) => {

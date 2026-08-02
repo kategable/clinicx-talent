@@ -34,7 +34,9 @@
                 [class.paused]="opp.status === 'paused'"
                 [class.closed]="opp.status === 'closed'"
               >
-                {{ opp.status === 'active' ? 'Live' : opp.status === 'paused' ? 'Paused' : 'Closed' }}
+                {{
+                  opp.status === 'active' ? 'Live' : opp.status === 'paused' ? 'Paused' : 'Closed'
+                }}
               </span>
             }
           </div>
@@ -42,9 +44,7 @@
           <p class="created">Created {{ opp.createdAt }}</p>
           <div class="card-actions">
             @if (opp.deletedAt) {
-              <button mat-stroked-button (click)="restore(opp.id)">
-                Restore
-              </button>
+              <button mat-stroked-button (click)="restore(opp.id)">Restore</button>
             } @else {
               <button
                 mat-stroked-button
@@ -53,13 +53,7 @@
               >
                 Copy link
               </button>
-              <button
-                mat-button
-                class="delete-btn"
-                (click)="softDelete(opp.id)"
-              >
-                Delete
-              </button>
+              <button mat-button class="delete-btn" (click)="softDelete(opp.id)">Delete</button>
             }
           </div>
         </div>

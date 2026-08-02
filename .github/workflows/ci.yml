@@ -9,9 +9,9 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
 
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@v5
         with:
           node-version: '24'
           cache: 'npm'
@@ -22,14 +22,22 @@ jobs:
       - name: Format check
         run: npx prettier --check .
 
+      - name: Lint
+        run: npx ng lint
+
       - name: Build
         run: npm run build
 
       - name: Run unit tests with coverage
         run: npm run test:coverage
 
+      - name: Upload dist for deploy
+        uses: actions/upload-artifact@v5
+        with:
+          name: dist
+          path: dist/clinicx-talent
       - name: Upload coverage report
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v5
         with:
           name: coverage-report
           path: coverage/
@@ -45,7 +53,53 @@ jobs:
 
       - name: Upload Playwright report
         if: failure()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v5
         with:
           name: playwright-report
           path: playwright-report/
+
+  deploy-dev:
+    needs: build-and-test
+    environment:
+      name: dev
+      url: https://clinicxtalent-dev.azurewebsites.net
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/download-artifact@v5
+        with:
+          name: dist
+          path: dist
+      - name: Prepare deployment package
+        run: |
+          cd dist/browser
+          cat > server.js << 'SERVEREOF'
+          const http = require('http');
+          const fs = require('fs');
+          const path = require('path');
+          const port = process.env.PORT || 8080;
+          const mime = { '.html':'text/html','.js':'text/javascript','.css':'text/css','.json':'application/json','.png':'image/png','.jpg':'image/jpeg','.ico':'image/x-icon','.svg':'image/svg+xml','.txt':'text/plain','.xml':'application/xml' };
+          http.createServer((req, res) => {
+            let file = path.join(__dirname, req.url === '/' ? 'index.html' : req.url);
+            fs.readFile(file, (err, data) => {
+              if (err) { fs.readFile(path.join(__dirname, 'index.html'), (e, d) => { res.writeHead(e ? 404 : 200, {'Content-Type':'text/html'}); res.end(e ? 'Not Found' : d); }); }
+              else { res.writeHead(200, {'Content-Type': mime[path.extname(file)] || 'application/octet-stream'}); res.end(data); }
+            });
+          }).listen(port);
+          SERVEREOF
+          cat > package.json << 'PKGEOF'
+          { "name": "clinicxtalent", "scripts": { "start": "node server.js" } }
+          PKGEOF
+          zip -r ../../deploy.zip .
+          cd ../..
+      - uses: azure/login@v2
+        with:
+          creds: ${{ secrets.AZURE_CREDENTIALS }}
+      - name: Configure static SPA serving
+        run: |
+          az webapp config set --name clinicxtalent-dev --resource-group clinicx \
+            --startup-file "node server.js"
+      - name: Deploy to Azure (Dev)
+        uses: azure/webapps-deploy@v3.0.8
+        with:
+          app-name: clinicxtalent-dev
+          package: deploy.zip

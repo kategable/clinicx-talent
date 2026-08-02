@@ -1,14 +1,12 @@
 import { test, expect } from '@playwright/test';
-import { clearState, signInViaUI } from '../seed';
+import { clearState } from '../seed';
 
 test.describe('Admin review', () => {
   test.beforeEach(async ({ page }) => {
     await clearState(page);
   });
 
-  test('admin login with correct credentials redirects to accounts', async ({
-    page,
-  }) => {
+  test('admin login with correct credentials redirects to accounts', async ({ page }) => {
     await page.goto('/admin/login');
 
     await page.locator('#username').fill('admin');
@@ -75,9 +73,7 @@ test.describe('Admin review', () => {
     await expect(page).toHaveURL(/\/admin\/jobs/);
   });
 
-  test('verification status section is visible on admin dashboard', async ({
-    page,
-  }) => {
+  test('verification status section is visible on admin dashboard', async ({ page }) => {
     // Login as admin
     await page.goto('/admin/login');
     await page.locator('#username').fill('admin');
@@ -90,9 +86,8 @@ test.describe('Admin review', () => {
       timeout: 5000,
     });
     // Should show operational status when no abuse detected
-    await expect(page.locator('.verification-status')).toContainText(
-      'Operational',
-      { timeout: 3000 },
-    );
+    await expect(page.locator('.verification-status')).toContainText('Operational', {
+      timeout: 3000,
+    });
   });
 });

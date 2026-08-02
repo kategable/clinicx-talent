@@ -7,10 +7,7 @@
 // ---- Types ----------------------------------------------------------------
 
 export type OpportunityStatus = 'active' | 'paused' | 'closed';
-export type ApplicationSource =
-  | 'clinic-hiring-link'
-  | 'talent-passport'
-  | 'clinicx-match';
+export type ApplicationSource = 'clinic-hiring-link' | 'talent-passport' | 'clinicx-match';
 
 export type ApplicationStatus =
   | 'invited'

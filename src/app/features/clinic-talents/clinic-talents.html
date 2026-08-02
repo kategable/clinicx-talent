@@ -36,16 +36,17 @@
                     <span class="source-badge">{{ source }}</span>
                   }
                   @if (talent.founder) {
-                    <app-founder-badge
-                      [compact]="true"
-                      [memberNumber]="founderNumber(talent.id)"
-                    />
+                    <app-founder-badge [compact]="true" [memberNumber]="founderNumber(talent.id)" />
                   }
                 </div>
                 <a
                   class="talent-name"
-                  [routerLink]="['/talent', talentSlug(profile.professionalName || talent.displayName)]"
-                >{{ profile.professionalName || talent.displayName }}</a>
+                  [routerLink]="[
+                    '/talent',
+                    talentSlug(profile.professionalName || talent.displayName),
+                  ]"
+                  >{{ profile.professionalName || talent.displayName }}</a
+                >
                 <p>{{ profile.role || 'Aesthetics professional' }} · {{ profile.location }}</p>
                 <ul>
                   @if (profile.yearsExperience) {

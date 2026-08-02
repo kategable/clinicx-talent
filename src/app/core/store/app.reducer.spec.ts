@@ -68,7 +68,14 @@ describe('ClinicX NgRx state', () => {
 
   it('flags the system after more than 5 distinct phones and locks a phone after 3 attempts', () => {
     let state = initialAppState;
-    const phones = ['3125550001', '3125550002', '3125550003', '3125550004', '3125550005', '3125550006'];
+    const phones = [
+      '3125550001',
+      '3125550002',
+      '3125550003',
+      '3125550004',
+      '3125550005',
+      '3125550006',
+    ];
     for (const phone of phones) {
       state = appReducer(state, AppActions.requestSMSCode({ phone }));
     }

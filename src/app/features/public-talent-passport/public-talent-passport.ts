@@ -22,21 +22,16 @@ export class PublicTalentPassport {
   private readonly route = inject(ActivatedRoute);
 
   private readonly talentSlug = this.route.snapshot.params['talentSlug'] as string;
-  protected readonly inviteToken =
-    this.route.snapshot.queryParamMap.get('invite') ?? undefined;
+  protected readonly inviteToken = this.route.snapshot.queryParamMap.get('invite') ?? undefined;
 
   protected readonly accounts = this.store.selectSignal(selectAccounts);
   protected readonly viewer = this.store.selectSignal(selectCurrentAccount);
-  private readonly myClinicApps = this.store.selectSignal(
-    selectApplicationsForMyClinic,
-  );
+  private readonly myClinicApps = this.store.selectSignal(selectApplicationsForMyClinic);
 
   protected readonly talent = computed(() =>
     Object.values(this.accounts()).find(
       (a) =>
-        a.type === 'talent' &&
-        a.talentDetails &&
-        generateSlug(a.displayName) === this.talentSlug,
+        a.type === 'talent' && a.talentDetails && generateSlug(a.displayName) === this.talentSlug,
     ),
   );
 

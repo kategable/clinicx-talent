@@ -1,9 +1,7 @@
 import { test, expect } from '@playwright/test';
 
 test.describe('Phone sign-in', () => {
-  test('shows phone option when "Sign in with phone" is clicked', async ({
-    page,
-  }) => {
+  test('shows phone option when "Sign in with phone" is clicked', async ({ page }) => {
     await page.goto('/signin');
 
     await page.locator('button:has-text("Sign in with phone instead")').click();

@@ -1,22 +1,35 @@
-name: CD - Deploy to Production
+name: CD - Deploy
 
 on:
   push:
     branches: [main]
+  workflow_dispatch:
+    inputs:
+      action:
+        description: 'Action'
+        required: true
+        type: choice
+        options:
+          - promote-to-green
+          - swap-green-production
 
 jobs:
   lint-build-test:
+    if: github.event_name == 'push' || github.event.inputs.action == 'promote-to-green'
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
+        with:
+          ref: ${{ github.event_name == 'workflow_dispatch' && 'main' || github.sha }}
 
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@v5
         with:
           node-version: '24'
           cache: 'npm'
 
       - run: npm ci
       - run: npx prettier --check .
+      - run: npx ng lint
       - run: npm run build
       - run: npm run test:coverage
 
@@ -28,45 +41,94 @@ jobs:
 
       - run: npx playwright test
 
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v5
         with:
           name: dist
           path: dist/clinicx-talent
 
   deploy-uat:
+    if: github.event_name == 'push'
     needs: lint-build-test
     environment:
       name: uat
-      url: https://uat.clinicx-talent.com
+      url: https://clinicxtalent-uat.azurewebsites.net
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/download-artifact@v4
+      - uses: actions/download-artifact@v5
         with:
           name: dist
           path: dist
-      - name: Deploy to Azure App Service (UAT slot)
+      - name: Prepare deployment package
         run: |
-          echo "Deploying to UAT..."
-          # az webapp deploy --resource-group clinicx --name clinicx-talent \
-          #   --slot uat --src-path dist
+          cd dist/browser
+          cat > server.js << 'SERVEREOF'
+          const http = require('http');
+          const fs = require('fs');
+          const path = require('path');
+          const port = process.env.PORT || 8080;
+          const mime = { '.html':'text/html','.js':'text/javascript','.css':'text/css','.json':'application/json','.png':'image/png','.jpg':'image/jpeg','.ico':'image/x-icon','.svg':'image/svg+xml','.txt':'text/plain','.xml':'application/xml' };
+          http.createServer((req, res) => {
+            let file = path.join(__dirname, req.url === '/' ? 'index.html' : req.url);
+            fs.readFile(file, (err, data) => {
+              if (err) { fs.readFile(path.join(__dirname, 'index.html'), (e, d) => { res.writeHead(e ? 404 : 200, {'Content-Type':'text/html'}); res.end(e ? 'Not Found' : d); }); }
+              else { res.writeHead(200, {'Content-Type': mime[path.extname(file)] || 'application/octet-stream'}); res.end(data); }
+            });
+          }).listen(port);
+          SERVEREOF
+          cat > package.json << 'PKGEOF'
+          { "name": "clinicxtalent", "scripts": { "start": "node server.js" } }
+          PKGEOF
+          zip -r ../../deploy.zip .
+          cd ../..
+      - uses: azure/login@v2
+        with:
+          creds: ${{ secrets.AZURE_CREDENTIALS }}
+      - name: Configure static SPA serving
+        run: |
+          az webapp config set --name clinicxtalent-uat --resource-group clinicx \
+            --startup-file "node server.js"
+      - name: Deploy to Azure (UAT)
+        uses: azure/webapps-deploy@v3.0.8
+        with:
+          app-name: clinicxtalent-uat
+          package: deploy.zip
 
-  deploy-production:
-    needs: deploy-uat
+  promote-green:
+    if: github.event_name == 'workflow_dispatch' && github.event.inputs.action == 'promote-to-green'
+    needs: lint-build-test
     environment:
       name: production
-      url: https://clinicx-talent.com
+      url: https://clinicxtalent.com
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/download-artifact@v4
+      - uses: actions/download-artifact@v5
         with:
           name: dist
           path: dist
+      - uses: azure/login@v2
+        with:
+          creds: ${{ secrets.AZURE_CREDENTIALS }}
       - name: Deploy to production green slot
+        uses: azure/webapps-deploy@v3.0.8
+        with:
+          app-name: clinicxtalent
+          slot-name: green
+          package: dist/browser
+
+  swap-slots:
+    if: github.event_name == 'workflow_dispatch' && github.event.inputs.action == 'swap-green-production'
+    environment:
+      name: production
+      url: https://clinicxtalent.com
+    runs-on: ubuntu-latest
+    steps:
+      - uses: azure/login@v2
+        with:
+          creds: ${{ secrets.AZURE_CREDENTIALS }}
+      - name: Swap green ↔ production
         run: |
-          echo "Deploying to production green slot..."
-          # az webapp deploy --resource-group clinicx --name clinicx-talent \
-          #   --slot green --src-path dist
-      - name: Post-deploy smoke tests
-        run: |
-          echo "Running smoke tests..."
-          # ./scripts/smoke-test.sh https://clinicx-talent.com
+          az webapp deployment slot swap \
+            --name clinicxtalent \
+            --resource-group clinicx \
+            --slot green \
+            --target-slot production

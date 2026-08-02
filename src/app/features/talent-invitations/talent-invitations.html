@@ -1,8 +1,8 @@
 <div class="page">
   <h1>My invitations</h1>
   <p class="subtitle">
-    Each invitation you accept creates a connection with a clinic. They can see
-    your profile and track your application status.
+    Each invitation you accept creates a connection with a clinic. They can see your profile and
+    track your application status.
   </p>
 
   @if (applicationCards().length) {
@@ -15,17 +15,14 @@
           </div>
           <h3>{{ card.positionTitle }}</h3>
           @if (card.clinic; as clinic) {
-            <a
-              class="clinic-name"
-              [routerLink]="['/c', clinicSlug(clinic.displayName)]"
-            >{{ clinic.displayName }}</a>
+            <a class="clinic-name" [routerLink]="['/c', clinicSlug(clinic.displayName)]">{{
+              clinic.displayName
+            }}</a>
             @if (clinic.clinicDetails?.location) {
               <p class="clinic-location">{{ clinic.clinicDetails.location }}</p>
             }
           }
-          <p class="accepted">
-            Accepted {{ card.application.acceptedAt }}
-          </p>
+          <p class="accepted">Accepted {{ card.application.acceptedAt }}</p>
           @if (card.canRespond) {
             <button
               mat-stroked-button
@@ -35,9 +32,7 @@
               I'm interested — let the clinic know
             </button>
           } @else {
-            <p class="responded" role="status">
-              You've let this clinic know you're interested.
-            </p>
+            <p class="responded" role="status">You've let this clinic know you're interested.</p>
           }
           @if (card.clinic; as clinic) {
             @if (clinic.sharePhone || clinic.shareEmail) {
@@ -62,8 +57,8 @@
     <div class="empty">
       <p>No invitations yet.</p>
       <p class="hint">
-        When a clinic invites you through a hiring link or finds your Talent
-        Passport, your connections will appear here.
+        When a clinic invites you through a hiring link or finds your Talent Passport, your
+        connections will appear here.
       </p>
     </div>
   }

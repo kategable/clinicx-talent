@@ -161,7 +161,7 @@
             placeholder="clinic@example.com"
             [ngModel]="contactEmail()"
             (ngModelChange)="contactEmail.set($event)"
-            [ngModelOptions]="{standalone: true}"
+            [ngModelOptions]="{ standalone: true }"
           />
         </mat-form-field>
 
@@ -174,7 +174,7 @@
             placeholder="(312) 555-0001"
             [ngModel]="contactDisplayPhone()"
             (ngModelChange)="contactDisplayPhone.set($event)"
-            [ngModelOptions]="{standalone: true}"
+            [ngModelOptions]="{ standalone: true }"
           />
           <mat-hint>This phone is shown when sharing is enabled. Not your login number.</mat-hint>
         </mat-form-field>
@@ -182,7 +182,7 @@
         <mat-slide-toggle
           [ngModel]="contactShareEmail()"
           (ngModelChange)="contactShareEmail.set($event)"
-          [ngModelOptions]="{standalone: true}"
+          [ngModelOptions]="{ standalone: true }"
         >
           Share my email with talent
         </mat-slide-toggle>
@@ -190,7 +190,7 @@
         <mat-slide-toggle
           [ngModel]="contactSharePhone()"
           (ngModelChange)="contactSharePhone.set($event)"
-          [ngModelOptions]="{standalone: true}"
+          [ngModelOptions]="{ standalone: true }"
         >
           Share my phone number with talent
         </mat-slide-toggle>

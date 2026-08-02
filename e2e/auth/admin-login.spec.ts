@@ -1,9 +1,7 @@
 import { test, expect } from '@playwright/test';
 
 test.describe('Admin login', () => {
-  test('admin login with valid credentials redirects to accounts', async ({
-    page,
-  }) => {
+  test('admin login with valid credentials redirects to accounts', async ({ page }) => {
     await page.goto('/admin/login');
 
     await page.locator('#username').fill('admin');

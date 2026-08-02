@@ -17,9 +17,7 @@ test.describe('Public pages (unauthenticated)', () => {
     await expect(page.locator('.talent-card').first()).toBeVisible();
 
     // CTA buttons visible for unauthenticated users
-    await expect(
-      page.locator('a:has-text("Register your clinic")').first(),
-    ).toBeVisible();
+    await expect(page.locator('a:has-text("Register your clinic")').first()).toBeVisible();
   });
 
   test('founders page renders', async ({ page }) => {
@@ -74,6 +72,8 @@ test.describe('Public pages (unauthenticated)', () => {
     await page.goto('/contact');
 
     await expect(page.locator('h1')).toBeVisible({ timeout: 5000 });
-    await expect(page.getByText(/review your access|help with your account/i).first()).toBeVisible();
+    await expect(
+      page.getByText(/review your access|help with your account/i).first(),
+    ).toBeVisible();
   });
 });

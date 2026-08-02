@@ -7,10 +7,7 @@
         <div class="clinic-header">
           <span class="clinic-name">{{ clinic.displayName }}</span>
           @if (clinic.founder) {
-            <app-founder-badge
-              [compact]="true"
-              [memberNumber]="founderMemberNumber()"
-            />
+            <app-founder-badge [compact]="true" [memberNumber]="founderMemberNumber()" />
           }
         </div>
       }
@@ -50,18 +47,10 @@
       }
 
       <div class="actions">
-        <button
-          mat-flat-button
-          class="primary-cta"
-          (click)="acceptInvite()"
-        >
+        <button mat-flat-button class="primary-cta" (click)="acceptInvite()">
           Accept invitation and create profile
         </button>
-        <a
-          mat-stroked-button
-          [routerLink]="['/signin']"
-          [queryParams]="{ invite: inviteToken }"
-        >
+        <a mat-stroked-button [routerLink]="['/signin']" [queryParams]="{ invite: inviteToken }">
           Already have an account? Sign in
         </a>
       </div>

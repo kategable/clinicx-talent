@@ -28,13 +28,13 @@ function normalizeAccounts(
 
 function migrateLegacyTalentLanguage(savedState: AppState): AppState {
   const activeAccountId =
-    savedState.activeAccountId === 'candidate-demo'
-      ? 'talent-demo'
-      : savedState.activeAccountId;
+    savedState.activeAccountId === 'candidate-demo' ? 'talent-demo' : savedState.activeAccountId;
   return {
     ...savedState,
     activeAccountId,
-    accounts: normalizeAccounts(savedState.accounts as AccountRecord[] | Record<string, AccountRecord>),
+    accounts: normalizeAccounts(
+      savedState.accounts as AccountRecord[] | Record<string, AccountRecord>,
+    ),
     registration: {
       ...savedState.registration,
       accountType:
@@ -45,31 +45,21 @@ function migrateLegacyTalentLanguage(savedState: AppState): AppState {
   };
 }
 
-export function hydrationMetaReducer(
-  reducer: ActionReducer<RootState>,
-): ActionReducer<RootState> {
+export function hydrationMetaReducer(reducer: ActionReducer<RootState>): ActionReducer<RootState> {
   return (state, action) => {
     if (action.type === INIT || action.type === UPDATE) {
       try {
         const saved = localStorage.getItem(APP_STORAGE_KEY);
         const reminderValue = sessionStorage.getItem(REVIEW_REMINDER_SESSION_KEY);
         const guestThemeValue = sessionStorage.getItem(GUEST_THEME_SESSION_KEY);
-        const pingedAccountIds = reminderValue
-          ? (JSON.parse(reminderValue) as string[])
-          : [];
+        const pingedAccountIds = reminderValue ? (JSON.parse(reminderValue) as string[]) : [];
         const guestThemePreference =
-          guestThemeValue === 'light' || guestThemeValue === 'dark'
-            ? guestThemeValue
-            : 'auto';
+          guestThemeValue === 'light' || guestThemeValue === 'dark' ? guestThemeValue : 'auto';
         if (saved) {
-          const savedState = migrateLegacyTalentLanguage(
-            JSON.parse(saved) as AppState,
-          );
+          const savedState = migrateLegacyTalentLanguage(JSON.parse(saved) as AppState);
           // Normalize and migrate accounts (handles legacy array format)
           const normalized = normalizeAccounts(
-            savedState.accounts as
-              | AccountRecord[]
-              | Record<string, AccountRecord>,
+            savedState.accounts as AccountRecord[] | Record<string, AccountRecord>,
           );
           // Ensure new fields exist on legacy accounts
           const migratedAccounts: Record<string, AccountRecord> = {};
@@ -105,8 +95,7 @@ export function hydrationMetaReducer(
               // accounts aren't hydrated, so we'd have a dangling pointer).
               accounts: initialAppState.accounts,
               activeAccountId:
-                savedState.activeAccountId &&
-                initialAppState.accounts[savedState.activeAccountId]
+                savedState.activeAccountId && initialAppState.accounts[savedState.activeAccountId]
                   ? savedState.activeAccountId
                   : null,
               verificationSecurity: initialAppState.verificationSecurity,

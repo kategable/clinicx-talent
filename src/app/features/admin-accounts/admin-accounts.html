@@ -19,24 +19,18 @@
     </span>
   </div>
   @if (verificationFlagged() || lockedPhones().length) {
-    <button mat-stroked-button (click)="resetVerification()">
-      Reset all phone locks
-    </button>
+    <button mat-stroked-button (click)="resetVerification()">Reset all phone locks</button>
   }
   <small>
-    Per-phone lockout (3 attempts each). System flags at &gt;5 distinct
-    phones. In production: per-IP time windows with server enforcement.
+    Per-phone lockout (3 attempts each). System flags at &gt;5 distinct phones. In production:
+    per-IP time windows with server enforcement.
   </small>
 </div>
 
 <div class="sort-bar">
   <span class="sort-label">Sort by:</span>
-  <button mat-button (click)="toggleSort('status')">
-    Status{{ sortIndicator('status') }}
-  </button>
-  <button mat-button (click)="toggleSort('type')">
-    Type{{ sortIndicator('type') }}
-  </button>
+  <button mat-button (click)="toggleSort('status')">Status{{ sortIndicator('status') }}</button>
+  <button mat-button (click)="toggleSort('type')">Type{{ sortIndicator('type') }}</button>
   <span class="sort-spacer"></span>
   <button
     mat-stroked-button
@@ -69,7 +63,8 @@
         class="review"
         [class.approved]="account.status === 'approved'"
         [class.hold]="account.status === 'on-hold'"
-      >{{ statusLabel(account.status) }}</span>
+        >{{ statusLabel(account.status) }}</span
+      >
       <div class="actions">
         @if (account.deletedAt) {
           <button mat-flat-button type="button" (click)="restoreAccount(account.id)">

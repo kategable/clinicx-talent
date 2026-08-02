@@ -6,9 +6,7 @@ test.describe('Talent Passport', () => {
     await clearState(page);
   });
 
-  test('generates a passport link from the talent dashboard', async ({
-    page,
-  }) => {
+  test('generates a passport link from the talent dashboard', async ({ page }) => {
     // Sign in as an approved talent
     await signInViaUI(page, '(312) 555-0102', '123456');
 
@@ -17,17 +15,13 @@ test.describe('Talent Passport', () => {
     await expect(page).toHaveURL(/\/talent\/passport/);
 
     // Click generate button
-    await page
-      .locator('button:has-text("Generate your Talent Passport link")')
-      .click();
+    await page.locator('button:has-text("Generate your Talent Passport link")').click();
 
     // Link should appear
     await expect(page.locator('.link-box code')).toBeVisible({
       timeout: 5000,
     });
-    await expect(
-      page.locator('button:has-text("Copy link")'),
-    ).toBeVisible();
+    await expect(page.locator('button:has-text("Copy link")')).toBeVisible();
   });
 
   test('public talent passport page renders profile', async ({ page }) => {
@@ -41,9 +35,7 @@ test.describe('Talent Passport', () => {
     await expect(page.getByText(/Alex Morgan|Sophia Chen/).first()).toBeVisible();
   });
 
-  test('clinic can add a talent from the public passport page', async ({
-    page,
-  }) => {
+  test('clinic can add a talent from the public passport page', async ({ page }) => {
     // First sign in as a clinic
     await signInViaUI(page, '(312) 555-0101', '123456');
 
@@ -51,9 +43,7 @@ test.describe('Talent Passport', () => {
     await page.goto('/talent/alex-morgan-rn');
 
     // Should see an "Add to my clinic" button
-    const addBtn = page.locator(
-      'button:has-text("Add to my clinic")',
-    );
+    const addBtn = page.locator('button:has-text("Add to my clinic")');
     if (await addBtn.isVisible({ timeout: 5000 }).catch(() => false)) {
       await addBtn.click();
       // Verify some success feedback (button should disappear or change)

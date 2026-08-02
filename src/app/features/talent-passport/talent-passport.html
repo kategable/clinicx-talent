@@ -1,14 +1,12 @@
 <div class="page">
   <h1>Talent Passport</h1>
   <p class="subtitle">
-    Your Talent Passport is a public profile page that clinics can visit to learn
-    about you. Share it anywhere — text, email, Instagram, or QR code.
+    Your Talent Passport is a public profile page that clinics can visit to learn about you. Share
+    it anywhere — text, email, Instagram, or QR code.
   </p>
 
   @if (!passportCreated() && activeShares().length === 0) {
-    <button mat-flat-button (click)="sharePassport()">
-      Generate your Talent Passport link
-    </button>
+    <button mat-flat-button (click)="sharePassport()">Generate your Talent Passport link</button>
   } @else {
     <!-- Active shares -->
     @for (share of activeShares(); track share.id) {
@@ -16,21 +14,17 @@
         <code>{{ passportLink() }}?invite={{ share.token }}</code>
         <div class="link-actions">
           <button mat-stroked-button (click)="copyPassportLink()">Copy link</button>
-          <button mat-button class="delete-btn" (click)="softDelete(share.id)">
-            Delete
-          </button>
+          <button mat-button class="delete-btn" (click)="softDelete(share.id)">Delete</button>
         </div>
       </div>
     }
     @if (activeShares().length === 0 && passportCreated()) {
       <p class="empty-msg">No active passport links. Generate one below.</p>
-      <button mat-flat-button (click)="sharePassport()">
-        Generate your Talent Passport link
-      </button>
+      <button mat-flat-button (click)="sharePassport()">Generate your Talent Passport link</button>
     }
     <p class="share-hint">
-      Share this link with clinics. When they visit, they'll see your professional
-      profile and can add you to their talent list.
+      Share this link with clinics. When they visit, they'll see your professional profile and can
+      add you to their talent list.
     </p>
 
     <!-- Deleted shares -->

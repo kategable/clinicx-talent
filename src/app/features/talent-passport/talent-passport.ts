@@ -3,10 +3,7 @@ import { MatButtonModule } from '@angular/material/button';
 import { Store } from '@ngrx/store';
 import { generateSlug } from '../../core/hiring';
 import { AppActions } from '../../core/store/app.actions';
-import {
-  selectAllPassportShares,
-  selectCurrentAccount,
-} from '../../core/store/app.selectors';
+import { selectAllPassportShares, selectCurrentAccount } from '../../core/store/app.selectors';
 
 @Component({
   selector: 'app-talent-passport',
@@ -27,18 +24,14 @@ export class TalentPassport {
   protected readonly activeShares = computed(() => {
     const acct = this.account();
     if (!acct) return [];
-    return this.allShares().filter(
-      (p) => p.talentAccountId === acct.id && !p.deletedAt,
-    );
+    return this.allShares().filter((p) => p.talentAccountId === acct.id && !p.deletedAt);
   });
 
   /** Deleted shares for management. */
   protected readonly deletedShares = computed(() => {
     const acct = this.account();
     if (!acct) return [];
-    return this.allShares().filter(
-      (p) => p.talentAccountId === acct.id && p.deletedAt,
-    );
+    return this.allShares().filter((p) => p.talentAccountId === acct.id && p.deletedAt);
   });
 
   protected sharePassport(): void {
@@ -53,9 +46,7 @@ export class TalentPassport {
   protected copyPassportLink(): void {
     const shares = this.activeShares();
     const latest = shares[0];
-    const link = latest
-      ? `${this.passportLink()}?invite=${latest.token}`
-      : this.passportLink();
+    const link = latest ? `${this.passportLink()}?invite=${latest.token}` : this.passportLink();
     void navigator.clipboard.writeText(link);
   }
 

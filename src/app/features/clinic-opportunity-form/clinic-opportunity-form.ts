@@ -8,10 +8,7 @@ import { RouterLink } from '@angular/router';
 import { Store } from '@ngrx/store';
 import { generateSlug } from '../../core/hiring';
 import { AppActions } from '../../core/store/app.actions';
-import {
-  selectCurrentAccount,
-  selectInvites,
-} from '../../core/store/app.selectors';
+import { selectCurrentAccount, selectInvites } from '../../core/store/app.selectors';
 import { ThemePicker } from '../../shared/theme-picker/theme-picker';
 
 interface OpportunityFormModel {

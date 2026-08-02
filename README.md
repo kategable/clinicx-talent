@@ -37,14 +37,14 @@ All data is client-side for MVP testing. No real backend yet.
 
 Registration is available at `/register`. No SMS is sent. Use one of these test phone numbers and verification codes:
 
-| Phone            | Code     | Account |
-| ---------------- | -------- | ------- |
-| `(312) 555-0101` | `246810` | Radiance Med Clinic (approved clinic) |
-| `(312) 555-0102` | `135790` | Sophia Chen, RN (approved talent) |
+| Phone            | Code     | Account                                       |
+| ---------------- | -------- | --------------------------------------------- |
+| `(312) 555-0101` | `246810` | Radiance Med Clinic (approved clinic)         |
+| `(312) 555-0102` | `135790` | Sophia Chen, RN (approved talent)             |
 | `(312) 555-0199` | `112233` | No seed — creates new account on registration |
-| `(773) 555-0142` | `445566` | Lumen Aesthetics (under-review clinic) |
-| `(847) 555-0168` | `778899` | Alex Morgan, RN (on-hold talent) |
-| `(312) 555-0200` | `998877` | Lux Aesthetics Lounge (approved clinic) |
+| `(773) 555-0142` | `445566` | Lumen Aesthetics (under-review clinic)        |
+| `(847) 555-0168` | `778899` | Alex Morgan, RN (on-hold talent)              |
+| `(312) 555-0200` | `998877` | Lux Aesthetics Lounge (approved clinic)       |
 
 New accounts default to **under review**. Sign-in routes to the appropriate dashboard: approved clinics → `/clinic/talents`, approved talent → `/talent/home`, under-review/on-hold accounts → `/clinic/status` or `/talent/status`.
 
@@ -61,25 +61,28 @@ All credentials, sessions, and admin controls are client-side for MVP testing.
 ## Architecture
 
 ### Data layer
+
 - **Abstract data sources**: `AccountDataSource` and `HiringDataSource` are abstract classes. `LocalAccountDataSource` and `LocalHiringDataSource` implement them using seeds + localStorage. Swap to HTTP implementations when the backend arrives — no component code changes.
 - **NgRx effects** are the sole integration point between the store and data sources. Components dispatch actions; effects call services; reducers update state.
 - **Accounts indexed by ID** (`Record<string, AccountRecord>`) for O(1) lookup.
 - **Per-phone verification**: each phone gets 3 code attempts before lockout; >5 distinct phones flags for admin review without blocking the system.
 
 ### Key routes
-| Route | Access |
-|-------|--------|
-| `/` | Public landing page |
-| `/register`, `/signin` | Registration and sign-in |
-| `/clinic/**` | Clinic dashboard shell (sidenav + tabs) |
-| `/talent/**` | Talent dashboard shell (sidenav + tabs) |
-| `/admin/**` | Admin dashboard shell (guarded, tabbed) |
-| `/join/:clinicSlug/:positionSlug` | Public hiring page |
-| `/talent/:talentSlug` | Public talent passport |
-| `/c/:clinicSlug` | Public clinic profile |
-| `/founders` | Founder 1000 Club page |
+
+| Route                             | Access                                  |
+| --------------------------------- | --------------------------------------- |
+| `/`                               | Public landing page                     |
+| `/register`, `/signin`            | Registration and sign-in                |
+| `/clinic/**`                      | Clinic dashboard shell (sidenav + tabs) |
+| `/talent/**`                      | Talent dashboard shell (sidenav + tabs) |
+| `/admin/**`                       | Admin dashboard shell (guarded, tabbed) |
+| `/join/:clinicSlug/:positionSlug` | Public hiring page                      |
+| `/talent/:talentSlug`             | Public talent passport                  |
+| `/c/:clinicSlug`                  | Public clinic profile                   |
+| `/founders`                       | Founder 1000 Club page                  |
 
 ### State management
+
 - Single `app` NgRx feature store with `createActionGroup`, `createReducer`, `createEffect`, `createFeatureSelector`/`createSelector`
 - All mutations through dispatched actions; all reads through selectors
 - localStorage persists accounts + hiring data; sessionStorage handles ephemeral state (review reminders, guest theme)
