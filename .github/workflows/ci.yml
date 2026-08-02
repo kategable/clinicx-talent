@@ -89,6 +89,14 @@ jobs:
           cat > package.json << 'PKGEOF'
           { "name": "clinicxtalent", "scripts": { "start": "node server.js" } }
           PKGEOF
+          DEPLOYED_AT="$(date -u +'%Y-%m-%dT%H:%M:%SZ')"
+          cat > deploy-info.json << JSONEOF
+          {
+            "environment": "dev",
+            "deployedAt": "$DEPLOYED_AT",
+            "gitSha": "$GITHUB_SHA"
+          }
+          JSONEOF
           zip -r ../../deploy.zip .
           cd ../..
       - uses: azure/login@v2

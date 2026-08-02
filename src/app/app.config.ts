@@ -1,4 +1,4 @@
-import { ApplicationConfig, provideBrowserGlobalErrorListeners } from '@angular/core';
+import { ApplicationConfig, provideBrowserGlobalErrorListeners, isDevMode } from '@angular/core';
 import { provideHttpClient, withInterceptors } from '@angular/common/http';
 import { AccountDataSource, LocalAccountDataSource } from './core/account-data.source';
 import { HttpAccountDataSource } from './core/http-account.data-source';
@@ -19,6 +19,7 @@ import { routes } from './app.routes';
 import { AppEffects } from './core/store/app.effects';
 import { appReducer } from './core/store/app.reducer';
 import { hydrationMetaReducer } from './core/store/storage';
+import { areDevtoolsEnabled } from './core/devtools-runtime';
 
 export const appConfig: ApplicationConfig = {
   providers: [
@@ -45,6 +46,18 @@ export const appConfig: ApplicationConfig = {
     provideRouter(routes, withComponentInputBinding()),
     provideStore({ app: appReducer }, { metaReducers: [hydrationMetaReducer] }),
     provideEffects(AppEffects),
-    provideStoreDevtools({ maxAge: 25, logOnly: false }),
+
+    // NgRx DevTools — enabled at runtime via sessionStorage flag + page reload.
+    // Toggle from Admin > Deployments (the page reloads and DevTools attach during bootstrap).
+    ...(areDevtoolsEnabled()
+      ? [
+          provideStoreDevtools({
+            maxAge: 25,
+            logOnly: !isDevMode(),
+            autoPause: true,
+            trace: false,
+          }),
+        ]
+      : []),
   ],
 };

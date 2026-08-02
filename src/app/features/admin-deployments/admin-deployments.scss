@@ -1,0 +1,105 @@
+.deployments {
+  padding: 2rem;
+}
+
+h2 {
+  font:
+    500 1.5rem Georgia,
+    serif;
+  margin: 0 0 1.5rem;
+}
+
+.deploy-card {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: 0.75rem 1.5rem;
+  max-width: 480px;
+  padding: 1.5rem;
+  background: #f9f7f1;
+  border: 1px solid #e0dcd0;
+  border-radius: 8px;
+
+  dt {
+    font-size: 0.75rem;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: #aaa396;
+  }
+
+  dd {
+    margin: 0;
+    font-size: 0.9375rem;
+    color: #3d4b46;
+  }
+
+  code {
+    font-size: 0.8125rem;
+    background: #e7e4d7;
+    padding: 0.125em 0.375em;
+    border-radius: 3px;
+  }
+}
+
+.env-badge {
+  display: inline-block;
+  font-size: 0.6875rem;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  padding: 0.2em 0.6em;
+  border-radius: 4px;
+  text-transform: uppercase;
+
+  &.dev {
+    background: #d4e5f7;
+    color: #2a5d8f;
+  }
+
+  &.uat {
+    background: #fdf0d5;
+    color: #8a6d2b;
+  }
+
+  &.production {
+    background: #d4edda;
+    color: #2a6e3f;
+  }
+}
+
+.error {
+  color: #b94d3d;
+  font-size: 0.9375rem;
+}
+
+.loading {
+  color: #aaa396;
+  font-size: 0.9375rem;
+}
+
+.divider {
+  max-width: 480px;
+  margin: 2rem 0;
+  border: 0;
+  border-top: 1px solid #e0dcd0;
+}
+
+.devtools {
+  max-width: 480px;
+  padding: 1.5rem;
+  background: #f9f7f1;
+  border: 1px solid #e0dcd0;
+  border-radius: 8px;
+
+  h3 {
+    margin: 0 0 0.5rem;
+    font:
+      500 1rem Georgia,
+      serif;
+    color: #3d4b46;
+  }
+
+  p {
+    margin: 0 0 1rem;
+    font-size: 0.9375rem;
+    color: #3d4b46;
+  }
+}
