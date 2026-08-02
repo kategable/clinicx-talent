@@ -18,7 +18,7 @@
       @if (info()!.gitSha) {
         <dt>Commit</dt>
         <dd>
-          <code>{{ info()!.gitSha }}</code>
+          <a [href]="commitUrl()" target="_blank" rel="noopener">{{ shortSha() }}</a>
         </dd>
       }
     </dl>

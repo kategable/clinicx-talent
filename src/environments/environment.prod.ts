@@ -7,4 +7,6 @@ export const environment = {
   useMockAuth: true,
   /** When true, use HTTP data sources (calls backend). */
   useBackend: false,
+  /** Base URL for commit links on the admin deployments page. */
+  commitBaseUrl: 'https://github.com/kategable/clinicx-talent/commit',
 };

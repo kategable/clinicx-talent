@@ -6,6 +6,7 @@ import { MatButtonModule } from '@angular/material/button';
 import { of } from 'rxjs';
 import { catchError, map, startWith } from 'rxjs/operators';
 import { areDevtoolsEnabled, disableDevtools, enableDevtools } from '../../core/devtools-runtime';
+import { environment } from '../../../environments/environment';
 
 interface DeployInfo {
   environment: string;
@@ -41,6 +42,19 @@ export class AdminDeployments {
     const raw = this.info()?.deployedAt;
     return raw ? new Date(raw) : null;
   });
+
+  /** GitHub commit URL for the deployed SHA. Falls back to repo base for dev placeholders. */
+  readonly commitUrl = computed(() => {
+    const sha = this.info()?.gitSha;
+    if (!sha) return null;
+    // Real SHAs are exactly 40 hex chars — link to the commit. Otherwise link to the repo.
+    return /^[0-9a-f]{40}$/.test(sha)
+      ? `${environment.commitBaseUrl}/${sha}`
+      : environment.commitBaseUrl;
+  });
+
+  /** Short (7-char) commit SHA for display. */
+  readonly shortSha = computed(() => this.info()?.gitSha?.slice(0, 7) ?? null);
 
   readonly devtoolsEnabled = signal(areDevtoolsEnabled());
 

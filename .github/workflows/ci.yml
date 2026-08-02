@@ -111,3 +111,19 @@ jobs:
         with:
           app-name: clinicxtalent-dev
           package: deploy.zip
+
+      - name: Wake up site
+        if: success()
+        run: |
+          URL="https://clinicxtalent-dev.azurewebsites.net/deploy-info.json"
+          echo "Waking up $URL ..."
+          for i in $(seq 1 15); do
+            STATUS=$(curl -s -o /dev/null -w '%{http_code}' "$URL")
+            if [ "$STATUS" = "200" ]; then
+              echo "Site is awake (HTTP $STATUS) after ~$((i * 4))s."
+              exit 0
+            fi
+            echo "Attempt $i/15: HTTP $STATUS. Retrying in 4s..."
+            sleep 4
+          done
+          echo "Site did not respond within 60s — it will start on the next request."
