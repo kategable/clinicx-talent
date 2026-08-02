@@ -75,7 +75,7 @@ export class Registration {
       if (this.isNewAccount() && this.step() === 'code') {
         const type = this.accountType();
         if (type) {
-          this.store.dispatch(AppActions.createAccount({ accountType: type }));
+          this.store.dispatch(AppActions.createAccount({ accountType: type, phone: this.phone() }));
         }
       }
     });
