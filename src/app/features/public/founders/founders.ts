@@ -3,10 +3,11 @@ import { RouterLink } from '@angular/router';
 import { MatButtonModule } from '@angular/material/button';
 import { Store } from '@ngrx/store';
 import { selectCurrentAccount, selectFounderCount } from '../../../core/store/app.selectors';
+import { BrandLink } from '../../../shared/brand-link/brand-link';
 
 @Component({
   selector: 'app-founders',
-  imports: [RouterLink, MatButtonModule],
+  imports: [BrandLink, RouterLink, MatButtonModule],
   templateUrl: './founders.html',
   styleUrl: './founders.scss',
 })

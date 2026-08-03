@@ -5,12 +5,20 @@ import { Store } from '@ngrx/store';
 import { GoogleSigninButton } from '../../../shared/google-signin-button/google-signin-button';
 import { PhoneInput } from '../../../shared/phone-input/phone-input';
 import { VerificationCodeInput } from '../../../shared/verification-code-input/verification-code-input';
+import { BrandLink } from '../../../shared/brand-link/brand-link';
 import { AppActions } from '../../../core/store/app.actions';
 import { selectAuthStatus, selectAuthError } from '../../../core/store/app.selectors';
 
 @Component({
   selector: 'app-signin',
-  imports: [GoogleSigninButton, PhoneInput, VerificationCodeInput, RouterLink, MatButtonModule],
+  imports: [
+    BrandLink,
+    GoogleSigninButton,
+    PhoneInput,
+    VerificationCodeInput,
+    RouterLink,
+    MatButtonModule,
+  ],
   templateUrl: './signin.html',
   styleUrl: './signin.scss',
 })

@@ -7,7 +7,7 @@ import { AppActions } from '../app.actions';
 import { selectCurrentAccount } from '../app.selectors';
 import { OnboardingService } from '../../../features/accounts/onboarding-chat/onboarding.service';
 import { OnboardingActions } from './onboarding.actions';
-import { selectOnboardingMessages } from './onboarding.selectors';
+import { selectOnboardingMessages, selectOnboardingState } from './onboarding.selectors';
 
 function emptyClinic(): ClinicDetails {
   return {
@@ -60,16 +60,16 @@ export class OnboardingEffects {
   readonly sendMessage$ = createEffect(() =>
     this.actions$.pipe(
       ofType(OnboardingActions.sendMessage),
-      withLatestFrom(this.store.select(selectOnboardingMessages)),
-      mergeMap(([{ accountType }, messages]) =>
-        from(this.service.sendMessage(accountType, messages)).pipe(
+      withLatestFrom(this.store.select(selectOnboardingState)),
+      mergeMap(([{ accountType }, state]) =>
+        from(this.service.sendMessage(accountType, state.messages)).pipe(
           map((response) => OnboardingActions.messageReceived({ response })),
           catchError(() =>
             of(
               OnboardingActions.messageReceived({
                 response: {
                   message: "Sorry, something went wrong. Let's try again.",
-                  step: 'complete',
+                  step: state.step,
                 },
               }),
             ),

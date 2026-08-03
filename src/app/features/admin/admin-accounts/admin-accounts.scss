@@ -58,7 +58,7 @@
 }
 .account-list article {
   display: grid;
-  grid-template-columns: minmax(210px, 1.4fr) 90px 110px 110px 155px;
+  grid-template-columns: minmax(210px, 1.4fr) 90px 110px 100px 240px;
   align-items: center;
   gap: 15px;
   padding: 19px 8px;
@@ -108,18 +108,17 @@
   color: #66877e;
 }
 .review {
+  font-weight: 700;
   text-transform: capitalize;
-  border: 1px solid #d1a99d;
-  padding: 7px;
-  text-align: center;
 }
 .review.approved {
   color: #456e63;
-  border-color: #8bb0a5;
 }
 .review.hold {
-  color: #7d766f;
-  border-color: #c7c3bc;
+  color: #c08070;
+}
+.review.under-review {
+  color: #8a736b;
 }
 .sort-spacer {
   flex: 1;
@@ -145,27 +144,14 @@
 }
 .actions {
   display: flex;
-  gap: 6px;
-  flex-wrap: wrap;
+  gap: 8px;
+  align-items: center;
 }
-.actions button {
-  border: 1px solid #18312c;
-  background: none;
-  padding: 8px 10px;
-  font-size: 9px;
-  cursor: pointer;
+.delete-btn {
+  color: #d32f2f !important;
 }
-.actions button:first-child {
-  background: #18312c;
-  color: white;
-}
-.actions .delete-btn {
-  border-color: #d1a99d;
-  color: #8b7770;
-}
-.actions .delete-btn:hover {
-  background: #fdf0ed;
-  color: #c04040;
+.delete-btn:hover {
+  background: #fdf0ed !important;
 }
 .security-note {
   color: #8b7770;

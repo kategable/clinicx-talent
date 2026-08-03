@@ -1,10 +1,13 @@
-import { type ChatMessage } from '../../../features/accounts/onboarding-chat/models';
+import {
+  type ChatMessage,
+  type OnboardingResponse,
+} from '../../../features/accounts/onboarding-chat/models';
 
 export interface OnboardingState {
   messages: ChatMessage[];
   sending: boolean;
   complete: boolean;
-  step: string;
+  step: OnboardingResponse['step'];
 }
 
 export const initialOnboardingState: OnboardingState = {

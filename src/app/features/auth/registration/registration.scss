@@ -9,18 +9,8 @@ header {
   justify-content: space-between;
   align-items: center;
   padding: 1.25rem 2rem;
-
-  .brand {
-    font-size: 1.5rem;
-    font-weight: 300;
-    font-weight: 700;
-    text-decoration: none;
-    color: var(--cx-text);
-
-    span {
-      color: var(--cx-text);
-    }
-  }
+  background: var(--cx-surface);
+  border-bottom: 1px solid var(--cx-border);
 
   a {
     font-size: 0.875rem;

@@ -10,10 +10,11 @@ import {
   selectCurrentAccount,
 } from '../../../core/store/app.selectors';
 import { FounderBadge } from '../../../shared/founder-badge/founder-badge';
+import { BrandLink } from '../../../shared/brand-link/brand-link';
 
 @Component({
   selector: 'app-public-talent-passport',
-  imports: [RouterLink, MatButtonModule, FounderBadge],
+  imports: [BrandLink, RouterLink, MatButtonModule, FounderBadge],
   templateUrl: './public-talent-passport.html',
   styleUrl: './public-talent-passport.scss',
 })

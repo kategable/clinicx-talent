@@ -9,10 +9,12 @@ import { Store } from '@ngrx/store';
 import { AppActions } from '../../../core/store/app.actions';
 import { selectAccounts, selectCurrentAccount } from '../../../core/store/app.selectors';
 import { FounderBadge } from '../../../shared/founder-badge/founder-badge';
+import { BrandLink } from '../../../shared/brand-link/brand-link';
 
 @Component({
   selector: 'app-talent-shell',
   imports: [
+    BrandLink,
     MatSidenavModule,
     MatToolbarModule,
     MatListModule,

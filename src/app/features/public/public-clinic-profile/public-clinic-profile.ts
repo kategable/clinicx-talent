@@ -5,10 +5,11 @@ import { Store } from '@ngrx/store';
 import { generateSlug } from '../../../core/hiring';
 import { selectAccounts } from '../../../core/store/app.selectors';
 import { FounderBadge } from '../../../shared/founder-badge/founder-badge';
+import { BrandLink } from '../../../shared/brand-link/brand-link';
 
 @Component({
   selector: 'app-public-clinic-profile',
-  imports: [RouterLink, MatButtonModule, FounderBadge],
+  imports: [BrandLink, RouterLink, MatButtonModule, FounderBadge],
   templateUrl: './public-clinic-profile.html',
   styleUrl: './public-clinic-profile.scss',
 })

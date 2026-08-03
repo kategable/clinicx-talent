@@ -13,12 +13,13 @@ import { RegTypeStep } from './steps/type-step';
 import { RegAuthStep } from './steps/auth-step';
 import { RegPhoneStep } from './steps/phone-step';
 import { RegCodeStep } from './steps/code-step';
+import { BrandLink } from '../../../shared/brand-link/brand-link';
 
 type Step = 'choose-type' | 'choose-auth' | 'phone' | 'code';
 
 @Component({
   selector: 'app-registration',
-  imports: [RouterLink, RegTypeStep, RegAuthStep, RegPhoneStep, RegCodeStep],
+  imports: [BrandLink, RouterLink, RegTypeStep, RegAuthStep, RegPhoneStep, RegCodeStep],
   templateUrl: './registration.html',
   styleUrl: './registration.scss',
 })

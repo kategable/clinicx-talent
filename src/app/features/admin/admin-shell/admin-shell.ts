@@ -5,10 +5,11 @@ import { RouterLink, RouterLinkActive, RouterOutlet } from '@angular/router';
 import { Store } from '@ngrx/store';
 import { AppActions } from '../../../core/store/app.actions';
 import { selectPendingCount } from '../../../core/store/app.selectors';
+import { BrandLink } from '../../../shared/brand-link/brand-link';
 
 @Component({
   selector: 'app-admin-shell',
-  imports: [RouterLink, RouterLinkActive, RouterOutlet, MatButtonModule, MatIconModule],
+  imports: [BrandLink, RouterLink, RouterLinkActive, RouterOutlet, MatButtonModule, MatIconModule],
   templateUrl: './admin-shell.html',
   styleUrl: './admin-shell.scss',
 })

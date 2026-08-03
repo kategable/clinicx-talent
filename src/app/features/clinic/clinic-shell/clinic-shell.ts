@@ -13,10 +13,12 @@ import {
   selectPendingTalentCount,
 } from '../../../core/store/app.selectors';
 import { FounderBadge } from '../../../shared/founder-badge/founder-badge';
+import { BrandLink } from '../../../shared/brand-link/brand-link';
 
 @Component({
   selector: 'app-clinic-shell',
   imports: [
+    BrandLink,
     MatSidenavModule,
     MatToolbarModule,
     MatListModule,

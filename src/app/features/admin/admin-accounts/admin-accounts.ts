@@ -43,8 +43,8 @@ export class AdminAccounts {
   protected readonly verificationFlagged = this.store.selectSignal(selectVerificationFlagged);
   protected readonly lockedPhones = this.store.selectSignal(selectVerificationLockedPhones);
 
-  protected readonly sortKey = signal<SortKey>('status');
-  protected readonly sortAsc = signal(false);
+  protected readonly sortKey = signal<SortKey>('createdAt');
+  protected readonly sortAsc = signal(true);
   protected readonly showDeleted = signal(false);
 
   protected readonly accounts = computed(() => {

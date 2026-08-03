@@ -23,17 +23,6 @@
   top: 0;
   z-index: 20;
 }
-.brand {
-  font-family: Georgia, serif;
-  color: var(--cx-text);
-  font-size: 23px;
-  text-decoration: none;
-  font-weight: 700;
-  letter-spacing: -0.5px;
-}
-.brand span {
-  color: var(--rust);
-}
 nav {
   display: flex;
   align-items: center;
@@ -720,9 +709,6 @@ footer div a {
   .site-header {
     height: 68px;
     padding-inline: 12px;
-  }
-  .brand {
-    font-size: 18px;
   }
   nav {
     gap: 8px;

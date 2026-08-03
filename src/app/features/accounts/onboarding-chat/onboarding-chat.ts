@@ -1,12 +1,4 @@
-import {
-  AfterViewInit,
-  Component,
-  ElementRef,
-  inject,
-  signal,
-  ViewChild,
-  viewChild,
-} from '@angular/core';
+import { AfterViewInit, Component, ElementRef, inject, signal, viewChild } from '@angular/core';
 import { DatePipe } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { takeUntilDestroyed, toObservable } from '@angular/core/rxjs-interop';
@@ -46,7 +38,7 @@ export class OnboardingChat implements AfterViewInit {
   private readonly store = inject(Store);
   private readonly messageList = viewChild<ElementRef>('messageList');
 
-  @ViewChild('chatInput', { read: MatInput }) private readonly chatInput!: MatInput;
+  private readonly chatInput = viewChild('chatInput', { read: MatInput });
 
   protected readonly account = this.store.selectSignal(selectCurrentAccount);
   protected readonly messages = this.store.selectSignal(selectOnboardingMessages);
@@ -69,7 +61,7 @@ export class OnboardingChat implements AfterViewInit {
       .subscribe(() => {
         requestAnimationFrame(() => {
           this.scrollToBottom();
-          this.chatInput?.focus();
+          this.chatInput()?.focus();
         });
       });
   }

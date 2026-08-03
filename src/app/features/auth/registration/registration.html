@@ -1,26 +1,10 @@
 <main class="auth-page">
   <header>
-    <a class="brand" routerLink="/">Clinic<span>X</span> Talent</a>
+    <app-brand-link />
     <a routerLink="/">Back to home</a>
   </header>
 
   <section class="auth-layout">
-    <div class="auth-intro">
-      <div class="eyebrow">Join the ClinicX network</div>
-      <h1>One thoughtful introduction.</h1>
-      <p>
-        Sign up with Google or your phone. Every clinic and talent begins under review before
-        entering the network.
-      </p>
-      <div class="review-note">
-        <span>Review first</span>
-        <p>
-          Creating an account lets you build your profile immediately. Matching access begins after
-          ClinicX approval.
-        </p>
-      </div>
-    </div>
-
     <div class="auth-card">
       @switch (step()) {
         @case ('choose-type') {
@@ -60,6 +44,22 @@
       }
 
       <p class="account-note">Already have an account? <a routerLink="/signin">Sign in</a>.</p>
+    </div>
+
+    <div class="auth-intro">
+      <div class="eyebrow">Join the ClinicX network</div>
+      <h1>One thoughtful introduction.</h1>
+      <p>
+        Sign up with Google or your phone. Every clinic and talent begins under review before
+        entering the network.
+      </p>
+      <div class="review-note">
+        <span>Review first</span>
+        <p>
+          Creating an account lets you build your profile immediately. Matching access begins after
+          ClinicX approval.
+        </p>
+      </div>
     </div>
   </section>
 </main>

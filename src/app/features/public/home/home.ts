@@ -4,6 +4,7 @@ import { ActivatedRoute, RouterLink } from '@angular/router';
 import { Store } from '@ngrx/store';
 import { selectCurrentAccount } from '../../../core/store/app.selectors';
 import { ThemePicker } from '../../../shared/theme-picker/theme-picker';
+import { BrandLink } from '../../../shared/brand-link/brand-link';
 
 interface Talent {
   name: string;
@@ -17,7 +18,7 @@ interface Talent {
 
 @Component({
   selector: 'app-home',
-  imports: [RouterLink, MatButtonModule, ThemePicker],
+  imports: [BrandLink, RouterLink, MatButtonModule, ThemePicker],
   templateUrl: './home.html',
   changeDetection: ChangeDetectionStrategy.Eager,
   styleUrl: './home.scss',
