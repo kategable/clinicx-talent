@@ -10,6 +10,12 @@ export const CLINIC_ROUTES: Routes = [
     children: [
       { path: '', pathMatch: 'full', redirectTo: 'home' },
       {
+        path: 'onboarding',
+        loadComponent: () =>
+          import('./onboarding-chat/onboarding-chat').then((m) => m.OnboardingChat),
+        title: 'Set up your clinic | ClinicX Talent',
+      },
+      {
         path: 'home',
         loadComponent: () => import('./clinic-home/clinic-home').then((m) => m.ClinicHome),
         title: 'Clinic home | ClinicX Talent',

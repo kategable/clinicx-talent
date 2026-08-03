@@ -321,7 +321,7 @@ export class AppEffects {
             }),
             AppActions.setAuthStatus({
               status: 'authenticated',
-              isNewAccount: false,
+              isNewAccount: true,
               phoneRequired: false,
             }),
           ]),
@@ -342,7 +342,12 @@ export class AppEffects {
         withLatestFrom(this.store.select(selectAppState)),
         tap(([, state]) => {
           if (state.auth.isNewAccount) {
-            void this.router.navigateByUrl('/onboarding');
+            const type = state.activeAccountId
+              ? state.accounts[state.activeAccountId]?.type
+              : undefined;
+            void this.router.navigateByUrl(
+              type === 'clinic' ? '/clinic/onboarding' : '/talent/onboarding',
+            );
           } else {
             this.navigateExistingAccount(state);
           }

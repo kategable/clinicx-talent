@@ -29,9 +29,7 @@ export const routes: Routes = [
   },
   {
     path: 'onboarding',
-    loadComponent: () =>
-      import('./features/profile-setup/profile-setup').then((m) => m.ProfileSetup),
-    title: 'Build your profile | ClinicX Talent',
+    redirectTo: '/talent/onboarding',
   },
   {
     path: 'account/status',

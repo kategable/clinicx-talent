@@ -9,6 +9,12 @@ export const TALENT_ROUTES: Routes = [
     children: [
       { path: '', pathMatch: 'full', redirectTo: 'home' },
       {
+        path: 'onboarding',
+        loadComponent: () =>
+          import('./onboarding-chat/onboarding-chat').then((m) => m.OnboardingChat),
+        title: 'Set up your profile | ClinicX Talent',
+      },
+      {
         path: 'home',
         loadComponent: () => import('./talent-home/talent-home').then((m) => m.TalentHome),
         title: 'Talent profile | ClinicX Talent',
