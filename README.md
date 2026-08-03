@@ -28,23 +28,23 @@ The current Angular application is a full hiring marketplace prototype:
 - Per-account light, dark, or automatic appearance preferences
 - Angular Material form controls, Signal Forms, and native control flow throughout
 - Responsive — mobile hamburger menus on all dashboards
-- 13 Vitest unit tests (Angular and reducer specs)
-- Playwright E2E test plan documented (deferred)
+- 30 Vitest unit tests (Angular and reducer specs)
+- 46 Playwright E2E tests
 
 All data is client-side for MVP testing. No real backend yet.
 
 ## MVP account access
 
-Registration is available at `/register`. No SMS is sent. Use one of these test phone numbers and verification codes:
+Registration is available at `/register`. No SMS is sent. Use one of these test phone numbers with verification code **`123456`**:
 
-| Phone            | Code     | Account                                       |
-| ---------------- | -------- | --------------------------------------------- |
-| `(312) 555-0101` | `246810` | Radiance Med Clinic (approved clinic)         |
-| `(312) 555-0102` | `135790` | Sophia Chen, RN (approved talent)             |
-| `(312) 555-0199` | `112233` | No seed — creates new account on registration |
-| `(773) 555-0142` | `445566` | Lumen Aesthetics (under-review clinic)        |
-| `(847) 555-0168` | `778899` | Alex Morgan, RN (on-hold talent)              |
-| `(312) 555-0200` | `998877` | Lux Aesthetics Lounge (approved clinic)       |
+| Phone            | Account                                       |
+| ---------------- | --------------------------------------------- |
+| `(312) 555-0101` | Radiance Med Clinic (approved clinic)         |
+| `(312) 555-0102` | Sophia Chen, RN (approved talent)             |
+| `(312) 555-0199` | No seed — creates new account on registration |
+| `(773) 555-0142` | Lumen Aesthetics (under-review clinic)        |
+| `(847) 555-0168` | Alex Morgan, RN (on-hold talent)              |
+| `(312) 555-0200` | Lux Aesthetics Lounge (approved clinic)       |
 
 New accounts default to **under review**. Sign-in routes to the appropriate dashboard: approved clinics → `/clinic/talents`, approved talent → `/talent/home`, under-review/on-hold accounts → `/clinic/status` or `/talent/status`.
 
@@ -73,6 +73,8 @@ All credentials, sessions, and admin controls are client-side for MVP testing.
 | --------------------------------- | --------------------------------------- |
 | `/`                               | Public landing page                     |
 | `/register`, `/signin`            | Registration and sign-in                |
+| `/clinic/onboarding`              | AI-assisted clinic profile setup        |
+| `/talent/onboarding`              | AI-assisted talent profile setup        |
 | `/clinic/**`                      | Clinic dashboard shell (sidenav + tabs) |
 | `/talent/**`                      | Talent dashboard shell (sidenav + tabs) |
 | `/admin/**`                       | Admin dashboard shell (guarded, tabbed) |
@@ -100,8 +102,8 @@ All credentials, sessions, and admin controls are client-side for MVP testing.
 - Native Angular template control flow (`@if`, `@for`, `@switch`)
 - `inject()` instead of constructor injection
 - SCSS component styling
-- Vitest testing (13 tests)
-- Playwright E2E test plan (deferred)
+- Vitest unit testing (30 tests)
+- Playwright E2E testing (46 tests)
 
 The intended backend is ASP.NET Core with PostgreSQL. Resume and video assets will eventually use object storage such as Amazon S3.
 

@@ -3,28 +3,30 @@ import { Routes } from '@angular/router';
 export const routes: Routes = [
   {
     path: '',
-    loadComponent: () => import('./features/home/home').then((m) => m.Home),
+    loadComponent: () => import('./features/public/home/home').then((m) => m.Home),
     title: 'ClinicX Talent | Curated Aesthetics Talent',
   },
   {
     path: 'admins',
-    loadComponent: () => import('./features/home/home').then((m) => m.Home),
+    loadComponent: () => import('./features/public/home/home').then((m) => m.Home),
     title: 'Admin access | ClinicX Talent',
     data: { showAdminLink: true },
   },
   {
     path: 'register',
-    loadComponent: () => import('./features/registration/registration').then((m) => m.Registration),
+    loadComponent: () =>
+      import('./features/auth/registration/registration').then((m) => m.Registration),
     title: 'Create an account | ClinicX Talent',
   },
   {
     path: 'register/:type',
-    loadComponent: () => import('./features/registration/registration').then((m) => m.Registration),
+    loadComponent: () =>
+      import('./features/auth/registration/registration').then((m) => m.Registration),
     title: 'Create an account | ClinicX Talent',
   },
   {
     path: 'signin',
-    loadComponent: () => import('./features/signin/signin').then((m) => m.Signin),
+    loadComponent: () => import('./features/auth/signin/signin').then((m) => m.Signin),
     title: 'Sign in | ClinicX Talent',
   },
   {
@@ -34,7 +36,7 @@ export const routes: Routes = [
   {
     path: 'account/status',
     loadComponent: () =>
-      import('./features/account-status/account-status').then((m) => m.AccountStatus),
+      import('./features/accounts/account-status/account-status').then((m) => m.AccountStatus),
     title: 'Account status | ClinicX Talent',
   },
   {
@@ -44,7 +46,7 @@ export const routes: Routes = [
   },
   {
     path: 'clinic',
-    loadChildren: () => import('./features/clinic.routes').then((m) => m.CLINIC_ROUTES),
+    loadChildren: () => import('./features/clinic/clinic.routes').then((m) => m.CLINIC_ROUTES),
   },
   {
     path: 'talent',
@@ -53,7 +55,7 @@ export const routes: Routes = [
   },
   {
     path: 'talent',
-    loadChildren: () => import('./features/talent.routes').then((m) => m.TALENT_ROUTES),
+    loadChildren: () => import('./features/talent/talent.routes').then((m) => m.TALENT_ROUTES),
   },
   {
     path: 'admin',
@@ -62,36 +64,38 @@ export const routes: Routes = [
   },
   {
     path: 'admin',
-    loadChildren: () => import('./features/admin.routes').then((m) => m.ADMIN_ROUTES),
+    loadChildren: () => import('./features/admin/admin.routes').then((m) => m.ADMIN_ROUTES),
   },
   {
     path: 'contact',
-    loadComponent: () => import('./features/contact/contact').then((m) => m.Contact),
+    loadComponent: () => import('./features/public/contact/contact').then((m) => m.Contact),
     title: 'Contact ClinicX Talent',
   },
   {
     path: 'join/:clinicSlug/:positionSlug',
     loadComponent: () =>
-      import('./features/public-hiring-page/public-hiring-page').then((m) => m.PublicHiringPage),
+      import('./features/public/public-hiring-page/public-hiring-page').then(
+        (m) => m.PublicHiringPage,
+      ),
     title: 'Job opportunity | ClinicX Talent',
   },
   {
     path: 'talent/:talentSlug',
     loadComponent: () =>
-      import('./features/public-talent-passport/public-talent-passport').then(
+      import('./features/public/public-talent-passport/public-talent-passport').then(
         (m) => m.PublicTalentPassport,
       ),
     title: 'Talent profile | ClinicX Talent',
   },
   {
     path: 'founders',
-    loadComponent: () => import('./features/founders/founders').then((m) => m.Founders),
+    loadComponent: () => import('./features/public/founders/founders').then((m) => m.Founders),
     title: 'Founder 1000 Club | ClinicX Talent',
   },
   {
     path: 'c/:clinicSlug',
     loadComponent: () =>
-      import('./features/public-clinic-profile/public-clinic-profile').then(
+      import('./features/public/public-clinic-profile/public-clinic-profile').then(
         (m) => m.PublicClinicProfile,
       ),
     title: 'Clinic profile | ClinicX Talent',

@@ -9,7 +9,7 @@ import { HiringDataSource, LocalHiringDataSource } from './core/hiring-data.sour
 import { HttpHiringDataSource } from './core/http-hiring.data-source';
 import { provideRouter, withComponentInputBinding } from '@angular/router';
 import { provideEffects } from '@ngrx/effects';
-import { provideStore } from '@ngrx/store';
+import { provideState, provideStore } from '@ngrx/store';
 import { provideStoreDevtools } from '@ngrx/store-devtools';
 import { jwtInterceptor } from './core/jwt-interceptor';
 import { errorInterceptor } from './core/error-interceptor';
@@ -18,6 +18,8 @@ import { environment } from '../environments/environment';
 import { routes } from './app.routes';
 import { AppEffects } from './core/store/app.effects';
 import { appReducer } from './core/store/app.reducer';
+import { OnboardingEffects } from './core/store/onboarding/onboarding.effects';
+import { onboardingReducer } from './core/store/onboarding/onboarding.reducer';
 import { hydrationMetaReducer } from './core/store/storage';
 import { areDevtoolsEnabled } from './core/devtools-runtime';
 
@@ -45,7 +47,8 @@ export const appConfig: ApplicationConfig = {
     provideBrowserGlobalErrorListeners(),
     provideRouter(routes, withComponentInputBinding()),
     provideStore({ app: appReducer }, { metaReducers: [hydrationMetaReducer] }),
-    provideEffects(AppEffects),
+    provideState('onboarding', onboardingReducer),
+    provideEffects(AppEffects, OnboardingEffects),
 
     // NgRx DevTools — enabled at runtime via sessionStorage flag + page reload.
     // Toggle from Admin > Deployments (the page reloads and DevTools attach during bootstrap).

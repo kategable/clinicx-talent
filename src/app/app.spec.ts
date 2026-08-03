@@ -2,7 +2,7 @@ import { TestBed } from '@angular/core/testing';
 import { provideRouter } from '@angular/router';
 import { provideStore } from '@ngrx/store';
 import { appReducer } from './core/store/app.reducer';
-import { Home } from './features/home/home';
+import { Home } from './features/public/home/home';
 
 describe('Home', () => {
   beforeEach(() =>

@@ -1,0 +1,70 @@
+<div class="chat">
+  <header class="chat-header">
+    <h1>{{ account()?.type === 'clinic' ? 'Clinic' : 'Talent' }} onboarding</h1>
+    <p>Answer a few questions to build your profile.</p>
+  </header>
+
+  <div class="message-list" #messageList>
+    @for (msg of messages(); track msg.timestamp) {
+      <div
+        class="bubble"
+        [class.user]="msg.role === 'user'"
+        [class.assistant]="msg.role === 'assistant'"
+      >
+        <p>{{ msg.content }}</p>
+        <time class="timestamp">{{ msg.timestamp | date: 'shortTime' }}</time>
+      </div>
+    }
+
+    @if (sending()) {
+      <div class="bubble assistant typing">
+        <span class="dot"></span>
+        <span class="dot"></span>
+        <span class="dot"></span>
+      </div>
+    }
+
+    @if (complete()) {
+      <div class="complete-card">
+        <p class="complete-check">&#10003;</p>
+        <strong>Your profile is ready for review!</strong>
+        <span>A ClinicX admin will review your answers and approve your account.</span>
+        <a
+          mat-flat-button
+          class="primary"
+          [routerLink]="account()?.type === 'clinic' ? '/clinic/status' : '/talent/status'"
+        >
+          View status
+        </a>
+      </div>
+    }
+  </div>
+
+  @if (!complete()) {
+    <footer class="composer">
+      <mat-form-field appearance="outline" class="composer-input">
+        <input
+          #chatInput
+          matInput
+          placeholder="Type your answer…"
+          [ngModel]="inputValue()"
+          (ngModelChange)="inputValue.set($event)"
+          (keydown.enter)="sendMessage()"
+          [disabled]="sending()"
+        />
+        @if (sending()) {
+          <mat-spinner matSuffix diameter="20"></mat-spinner>
+        }
+      </mat-form-field>
+      <button
+        mat-icon-button
+        class="send-btn"
+        (click)="sendMessage()"
+        [disabled]="sending() || !inputValue().trim()"
+        aria-label="Send message"
+      >
+        <mat-icon>send</mat-icon>
+      </button>
+    </footer>
+  }
+</div>
