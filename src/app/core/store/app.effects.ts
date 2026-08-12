@@ -193,7 +193,12 @@ export class AppEffects {
             actions.push(
               AppActions.setAuthTokens({ token: result.token, refreshToken: result.refreshToken }),
             );
-            actions.push(AppActions.setActiveAccount({ accountId: result.account.id }));
+            actions.push(
+              AppActions.setActiveAccountWithRecord({
+                accountId: result.account.id,
+                account: result.account,
+              }),
+            );
             if (result.phoneRequired) {
               actions.push(
                 AppActions.setAuthStatus({
@@ -203,7 +208,13 @@ export class AppEffects {
                 }),
               );
             } else {
-              actions.push(AppActions.setAuthStatus({ status: 'authenticated' }));
+              actions.push(
+                AppActions.setAuthStatus({
+                  status: 'authenticated',
+                  isNewAccount: false,
+                  phoneRequired: false,
+                }),
+              );
             }
             return actions;
           }),
@@ -300,12 +311,19 @@ export class AppEffects {
     this.actions$.pipe(
       ofType(AppActions.createAccount),
       tap(() => this.store.dispatch(AppActions.setAuthStatus({ status: 'loading' }))),
-      mergeMap(({ accountType }) =>
-        from(this.authProvider.createAccount('', accountType)).pipe(
+      mergeMap(({ accountType, phone }) =>
+        from(this.authProvider.createAccount(phone, accountType)).pipe(
           mergeMap((result) => [
             AppActions.setAuthTokens({ token: result.token, refreshToken: result.refreshToken }),
-            AppActions.setActiveAccount({ accountId: result.account.id }),
-            AppActions.setAuthStatus({ status: 'authenticated' }),
+            AppActions.setActiveAccountWithRecord({
+              accountId: result.account.id,
+              account: result.account,
+            }),
+            AppActions.setAuthStatus({
+              status: 'authenticated',
+              isNewAccount: true,
+              phoneRequired: false,
+            }),
           ]),
           catchError((err: Error) =>
             of(AppActions.setAuthStatus({ status: 'error', error: err.message })),
@@ -324,7 +342,12 @@ export class AppEffects {
         withLatestFrom(this.store.select(selectAppState)),
         tap(([, state]) => {
           if (state.auth.isNewAccount) {
-            void this.router.navigateByUrl('/onboarding');
+            const type = state.activeAccountId
+              ? state.accounts[state.activeAccountId]?.type
+              : undefined;
+            void this.router.navigateByUrl(
+              type === 'clinic' ? '/clinic/onboarding' : '/talent/onboarding',
+            );
           } else {
             this.navigateExistingAccount(state);
           }

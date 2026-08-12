@@ -1,0 +1,50 @@
+<div class="deployments">
+  <h2>Deployments</h2>
+
+  @if (info()) {
+    <dl class="deploy-card">
+      <dt>Environment</dt>
+      <dd>
+        <span class="env-badge" [class]="info()!.environment">
+          {{ info()!.environment }}
+        </span>
+      </dd>
+
+      <dt>Deployed</dt>
+      <dd>
+        {{ deployedAtDate() | date: 'fullDate' }} at {{ deployedAtDate() | date: 'shortTime' }}
+      </dd>
+
+      @if (info()!.gitSha) {
+        <dt>Commit</dt>
+        <dd>
+          <a [href]="commitUrl()" target="_blank" rel="noopener">{{ shortSha() }}</a>
+        </dd>
+      }
+    </dl>
+  } @else if (error()) {
+    <p class="error">{{ error() }}</p>
+  } @else {
+    <p class="loading">Loading deployment info&hellip;</p>
+  }
+
+  <hr class="divider" />
+
+  <section class="devtools" aria-labelledby="devtools-heading">
+    <h3 id="devtools-heading">Redux DevTools</h3>
+    @if (devtoolsEnabled()) {
+      <p>
+        DevTools are <strong>enabled</strong> for this browser session. Disabling removes the flag
+        and reloads the page.
+      </p>
+    } @else {
+      <p>
+        DevTools are <strong>disabled</strong>. Enabling reloads the page and loads the NgRx
+        DevTools extension for this session. Requires the Redux DevTools browser extension.
+      </p>
+    }
+    <button mat-flat-button type="button" (click)="toggleDevtools()">
+      {{ devtoolsEnabled() ? 'Disable DevTools' : 'Enable DevTools' }}
+    </button>
+  </section>
+</div>

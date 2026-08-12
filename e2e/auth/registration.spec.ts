@@ -43,8 +43,8 @@ test.describe('New account registration', () => {
     await page.locator('#code').fill('123456');
     await page.locator('button:has-text("Verify and continue")').click();
 
-    // New account should redirect to onboarding
-    await page.waitForURL('/onboarding', { timeout: 10000 });
+    // New account should redirect to onboarding chat
+    await page.waitForURL('/talent/onboarding', { timeout: 10000 });
   });
 
   test('can go back to type selection', async ({ page }) => {

@@ -61,15 +61,15 @@ test.describe('Admin review', () => {
     await page.waitForURL('/admin/accounts', { timeout: 10000 });
 
     // Navigate to Talent tab
-    await page.locator('a:has-text("Talent")').first().click();
+    await page.locator('nav a:has-text("Talent")').click();
     await expect(page).toHaveURL(/\/admin\/talent/);
 
     // Navigate to Clinics tab
-    await page.locator('a:has-text("Clinics")').first().click();
+    await page.locator('nav a:has-text("Clinics")').click();
     await expect(page).toHaveURL(/\/admin\/clinics/);
 
     // Navigate to Jobs tab
-    await page.locator('a:has-text("Jobs")').first().click();
+    await page.locator('nav a:has-text("Jobs")').click();
     await expect(page).toHaveURL(/\/admin\/jobs/);
   });
 

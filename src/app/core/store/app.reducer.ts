@@ -531,6 +531,11 @@ export const appReducer = createReducer(
     ...state,
     activeAccountId: accountId,
   })),
+  on(AppActions.setActiveAccountWithRecord, (state, { accountId, account }) => ({
+    ...state,
+    accounts: { ...state.accounts, [accountId]: account },
+    activeAccountId: accountId,
+  })),
 
   // -- Soft delete -----------------------------------------------------------
   on(AppActions.softDeleteAccount, (state, { id }) => {

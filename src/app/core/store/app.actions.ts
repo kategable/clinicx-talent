@@ -63,13 +63,17 @@ export const AppActions = createActionGroup({
     }>(),
     'Add Talent To My Clinic': props<{ talentAccountId: string }>(),
     'Set Active Account': props<{ accountId: string }>(),
+    'Set Active Account With Record': props<{
+      accountId: string;
+      account: import('../account').AccountRecord;
+    }>(),
     'Clear Pending Invite': emptyProps(),
 
     // -- Auth ----------------------------------------------------------------
     'Sign In With Google': props<{ idToken: string }>(),
     'Send Sms Code': props<{ phone: string }>(),
     'Verify Sms Code': props<{ phone: string; code: string }>(),
-    'Create Account': props<{ accountType: AccountType }>(),
+    'Create Account': props<{ accountType: AccountType; phone: string }>(),
     'Auth Admin Login': props<{ username: string; password: string }>(),
     'Auth Admin Logout': emptyProps(),
     'Auth Sign Out': emptyProps(),

@@ -25,8 +25,8 @@ test.describe('Registration flow', () => {
     await page.locator('#code').fill('123456');
     await page.locator('button:has-text("Verify and continue")').click();
 
-    await page.waitForURL('/onboarding', { timeout: 10000 });
-    expect(page.url()).toContain('/onboarding');
+    await page.waitForURL('/talent/onboarding', { timeout: 10000 });
+    expect(page.url()).toContain('/talent/onboarding');
   });
 
   test('registers a new clinic account', async ({ page }) => {
@@ -42,7 +42,7 @@ test.describe('Registration flow', () => {
     await page.locator('#code').fill('123456');
     await page.locator('button:has-text("Verify and continue")').click();
 
-    await page.waitForURL('/onboarding', { timeout: 10000 });
+    await page.waitForURL('/clinic/onboarding', { timeout: 10000 });
   });
 
   test('shows type selection on /register', async ({ page }) => {
@@ -82,6 +82,6 @@ test.describe('Registration flow', () => {
     await page.waitForURL((url) => url.pathname !== '/register', {
       timeout: 10000,
     });
-    expect(page.url()).not.toContain('/onboarding');
+    expect(page.url()).not.toContain('/talent/onboarding');
   });
 });

@@ -1,0 +1,94 @@
+<main class="auth-page">
+  <header>
+    <app-brand-link />
+    <a routerLink="/">Back to home</a>
+  </header>
+
+  <section class="auth-layout">
+    <div class="auth-card">
+      @switch (step()) {
+        @case ('choose') {
+          <div class="card-heading">
+            <h2>Sign in</h2>
+            <p>Select a method to continue.</p>
+          </div>
+
+          <app-google-signin-button
+            [loading]="isSigningIn()"
+            (googleSignIn)="signInWithGoogle($event)"
+          />
+
+          @if (!showPhoneOption()) {
+            <button mat-button class="phone-toggle" type="button" (click)="showPhone()">
+              Sign in with phone instead
+            </button>
+          } @else {
+            <p class="divider">or</p>
+          }
+
+          @if (showPhoneOption()) {
+            <app-phone-input
+              [loading]="isSigningIn()"
+              [errorMessage]="authError()"
+              (phoneSubmitted)="handlePhoneSubmit($event)"
+            />
+          }
+
+          @if (authError()) {
+            <p class="field-error" role="alert">{{ authError() }}</p>
+          }
+        }
+        @case ('phone') {
+          <div class="card-heading">
+            <h2>What's your mobile number?</h2>
+            <p>We'll send a one-time verification code.</p>
+          </div>
+
+          <app-phone-input
+            [loading]="isSigningIn()"
+            [errorMessage]="authError()"
+            (phoneSubmitted)="handlePhoneSubmit($event)"
+          />
+
+          <button
+            mat-button
+            class="back-link"
+            type="button"
+            (click)="showPhoneOption.set(false); step.set('choose')"
+          >
+            &larr; Back to sign-in options
+          </button>
+        }
+        @case ('code') {
+          <div class="card-heading">
+            <h2>Enter your code.</h2>
+            <p>
+              We sent a six-digit code to <strong>{{ phone() }}</strong
+              >.
+            </p>
+          </div>
+
+          <app-verification-code-input
+            [loading]="isSigningIn()"
+            [phone]="phone()"
+            [errorMessage]="authError()"
+            (codeVerified)="handleCodeSubmit($event)"
+            (resendRequested)="handleResend()"
+          />
+
+          <button mat-button class="back-link" type="button" (click)="backToPhone()">
+            &larr; Use a different number
+          </button>
+        }
+      }
+
+      <p class="account-note">New to ClinicX? <a routerLink="/register">Create an account</a>.</p>
+    </div>
+
+    <div class="auth-intro">
+      <div class="eyebrow">Welcome back</div>
+      <h1>Sign in to your ClinicX account.</h1>
+      <p>Choose how you'd like to sign in. Google is the fastest — no codes, no waiting.</p>
+    </div>
+  </section>
+</main>
